@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Optimizador Cadena de Suministro Cítricos</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="shortcut icon" href="assets/limon.png" type="image/x-icon">
+</head>
+
+<body class="bg-gray-50 min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-gray-200 shadow-sm">
+    <div class="max-w-5xl mx-auto px-4 py-4 text-center">
+      <h1 class="text-xl font-bold text-gray-800">
+        <img src="assets/exprimidor.png" alt="" class="w-20 h-20 mx-auto mb-2">
+        Optimizador Cadena de Suministro Cítricos
+      </h1>
+      <p class="text-sm text-gray-500 mt-0.5">
+        Multi-objetivo: Costo · Emisiones · Empleo
+      </p>
+    </div>
+  </header>
+
+  <!-- Nav Tabs -->
+  <nav class="bg-white border-b border-gray-200">
+    <div class="max-w-5xl mx-auto px-4 flex justify-center gap-1">
+      <button class="tab-btn" data-tab="config">Config</button>
+      <button class="tab-btn" data-tab="params">Parámetros</button>
+      <button class="tab-btn" data-tab="lgp">LGP</button>
+      <button class="tab-btn" data-tab="er">ER</button>
+      <button class="tab-btn" data-tab="sensitivity">Sensibilidad</button>
+    </div>
+  </nav>
+
+  <!-- Main content -->
+  <main class="max-w-5xl mx-auto px-4 py-6">
+
+    <!-- ── Config ──────────────────────────────────────────────────────── -->
+    <section id="tab-config">
+      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm max-w-md mx-auto">
+        <h2 class="text-lg font-semibold text-gray-800 mb-4">Configuración del Solver</h2>
+
+        <div class="flex items-center gap-3 mb-5">
+          <span class="text-sm text-gray-600 font-medium">Solver activo:</span>
+          <span id="solver-badge" class="solver-badge">…</span>
+        </div>
+
+        <div class="mb-4">
+          <label for="solver-select" class="block text-sm font-medium text-gray-700 mb-1">
+            Cambiar solver
+          </label>
+          <select id="solver-select"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <option value="highs">highs</option>
+            <option value="glpk">glpk</option>
+            <option value="cbc">cbc</option>
+            <option value="cplex">cplex</option>
+          </select>
+        </div>
+
+        <button id="solver-btn"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+          Cambiar solver
+        </button>
+        <p id="solver-msg" class="feedback-ok" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <!-- ── Parámetros ──────────────────────────────────────────────────── -->
+    <section id="tab-params" class="hidden">
+      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-gray-800">Parámetros del modelo</h2>
+          <div class="flex items-center gap-2">
+            <p id="params-msg" class="feedback-ok text-sm" aria-live="polite"></p>
+            <button id="params-save-btn"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              Guardar cambios
+            </button>
+            <button id="params-export-btn"
+              class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              Exportar JSON
+            </button>
+            <label
+              class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer">
+              Importar JSON
+              <input id="params-import-input" type="file" accept=".json,application/json" class="hidden" />
+            </label>
+            <button id="params-reset-btn"
+              class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              Restaurar defaults
+            </button>
+          </div>
+        </div>
+        <div id="params-container">
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Sensibilidad ───────────────────────────────────────────────── -->
+    <section id="tab-sensitivity" class="hidden">
+      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div class="flex items-start justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Análisis de Sensibilidad (OAT)</h2>
+            <p class="text-sm text-gray-500 mt-0.5">Perturbación unitaria de parámetros · Elasticidades LGP</p>
+          </div>
+          <button id="sensitivity-btn"
+            class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+            Ejecutar Análisis
+          </button>
+        </div>
+
+        <!-- Param checkboxes -->
+        <div class="mb-4">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-gray-700">Parámetros a analizar</span>
+            <div class="flex gap-2">
+              <button id="sensitivity-check-all" class="text-xs text-indigo-600 hover:underline">Todos</button>
+              <button id="sensitivity-uncheck-all" class="text-xs text-gray-500 hover:underline">Ninguno</button>
+            </div>
+          </div>
+          <div id="sensitivity-params-grid"
+            class="grid grid-cols-4 gap-2 sm:grid-cols-7 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <!-- populated by initSensitivity -->
+          </div>
+        </div>
+
+        <!-- Method + percentage inputs -->
+        <div class="flex items-center gap-4 mb-4 flex-wrap">
+          <span class="text-sm font-medium text-gray-700">Método:</span>
+          <select id="sensitivity-method"
+            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            <option value="lgp">LGP (Programación por Metas Lexicográfica)</option>
+            <option value="er">ER (Epsilon-Restricción)</option>
+          </select>
+          <div id="sensitivity-er-steps-wrap" class="flex items-center gap-2 hidden">
+            <span class="text-sm text-gray-600">Pasos ER:</span>
+            <input id="sensitivity-er-steps" type="number" value="5" min="2" max="20"
+              class="w-16 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          </div>
+          <span class="text-sm font-medium text-gray-700">Perturbaciones (%):</span>
+          <input id="sensitivity-pct-pos" type="number" value="10" min="1" max="100"
+            class="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+          <input id="sensitivity-pct-neg" type="number" value="-10" min="-100" max="-1"
+            class="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        </div>
+
+        <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-5"
+          id="sensitivity-warning">
+          Este análisis ejecuta ~<span id="sensitivity-run-count">50</span> corridas del solver LGP.
+        </p>
+
+        <div id="sensitivity-result"></div>
+      </div>
+    </section>
+
+    <!-- ── LGP ────────────────────────────────────────────────────────── -->
+    <section id="tab-lgp" class="hidden">
+      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Programación por Metas Lexicográfica</h2>
+            <p class="text-sm text-gray-500 mt-0.5">Prioridad: Costo → Emisiones → Empleo</p>
+          </div>
+          <button id="lgp-btn"
+            class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+            Ejecutar LGP
+          </button>
+        </div>
+        <div id="lgp-result"></div>
+      </div>
+    </section>
+
+    <!-- ── ER ─────────────────────────────────────────────────────────── -->
+    <section id="tab-er" class="hidden">
+      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <h2 class="text-lg font-semibold text-gray-800">Método Epsilon-Restricción</h2>
+            <p class="text-sm text-gray-500 mt-0.5">Frontera Pareto: Costo vs Emisiones</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <div>
+              <label for="er-steps" class="block text-xs font-medium text-gray-600 mb-1">
+                Pasos (steps)
+              </label>
+              <input id="er-steps" type="number" value="5" min="2" max="50"
+                class="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            </div>
+            <button id="er-btn"
+              class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors self-end">
+              Ejecutar ER
+            </button>
+          </div>
+        </div>
+        <div id="er-result"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+
+</body>
+
+</html>
