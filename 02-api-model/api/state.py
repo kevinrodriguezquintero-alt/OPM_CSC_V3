@@ -17,7 +17,7 @@ PARAM_SCHEMA: dict[str, tuple] = {
     "PRODUCER_VARIANTS": ("list",   None),
     # scalars
     "RB":  ("scalar", None),
-    "IT":  ("scalar", None),
+    "IT":  ("dict1",  None),
     # single-index dicts
     "RA":  ("dict1", None),
     "RC":  ("dict1", None),

@@ -123,5 +123,16 @@ DID = {
     (7, 1): 98.0, (7, 2): 96.1, (7, 3): 91.1,  (7, 4): 98.2
 }
 
-# IT:  Impacto Transporte / Factor Intermediario (j)
-IT = 0.2
+# IT: Factor de Emisión (Kg CO2/Km) - Depende de CV (Capacidad del Vehículo)
+# CV < 3000   => 0.4716 (C2 liviano)
+# CV < 5000   => 0.5714 (C2 mediano)
+# CV < 10000  => 0.9984 (Camión 2 ejes)
+IT = {
+    1: 0.9984,  # CV: 7000
+    2: 0.5714,  # CV: 4500
+    3: 0.4716,  # CV: 1000
+    4: 0.5714,  # CV: 4500
+    5: 0.4716,  # CV: 1000
+    6: 0.4716,  # CV: 1000
+    7: 0.4716,  # CV: 1000
+}
