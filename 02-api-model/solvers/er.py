@@ -6,15 +6,44 @@ from config import get_solver
 from solvers.build_model import build_model, extract_variables, _solver_status
 
 
-def _solve(solver, model):
-    """Solve and capture tee output. Returns (results, log_str)."""
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        res = solver.solve(model, tee=True)
-    return res, buf.getvalue()
+import os
+import tempfile
+
+import os
+import tempfile
+import contextlib
+
+def _solve(solver, model, capture_log=True):
+    """Solve and capture output. Returns (results, log_str)."""
+    if not capture_log:
+        res = solver.solve(model, tee=False)
+        return res, ""
+
+    log_str = ""
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.log') as temp_log:
+        temp_log_path = temp_log.name
+        
+    try:
+        with open(temp_log_path, 'w', encoding='utf-8') as f:
+            with contextlib.redirect_stdout(f):
+                res = solver.solve(model, tee=True)
+                
+        with open(temp_log_path, 'r', encoding='utf-8', errors='ignore') as f:
+            log_str = f.read()
+    except Exception as e:
+        res = solver.solve(model, tee=False)
+        log_str = f"Error capturando log del solver: {str(e)}"
+    finally:
+        if os.path.exists(temp_log_path):
+            try:
+                os.remove(temp_log_path)
+            except:
+                pass
+                
+    return res, log_str
 
 
-def run_er(params_obj, solver_name: str, steps: int = 5) -> dict:
+def run_er(params_obj, solver_name: str, steps: int = 5, capture_log: bool = True) -> dict:
     """
     Run Epsilon-Constraint Method.
 
@@ -50,21 +79,21 @@ def run_er(params_obj, solver_name: str, steps: int = 5) -> dict:
 
     # 1. Minimize Cost
     model.objective = pyo.Objective(expr=model.Obj_Cost, sense=pyo.minimize)
-    _, log = _solve(solver, model)
+    _, log = _solve(solver, model, capture_log)
     log_parts.append("=== Payoff: Min Costo ===\n" + log)
     payoff_min_cost = _objs()
 
     # 2. Minimize Emissions
     model.del_component(model.objective)
     model.objective = pyo.Objective(expr=model.Obj_Env, sense=pyo.minimize)
-    _, log = _solve(solver, model)
+    _, log = _solve(solver, model, capture_log)
     log_parts.append("=== Payoff: Min Emisiones ===\n" + log)
     payoff_min_env = _objs()
 
     # 3. Maximize Social
     model.del_component(model.objective)
     model.objective = pyo.Objective(expr=model.Obj_Social, sense=pyo.maximize)
-    _, log = _solve(solver, model)
+    _, log = _solve(solver, model, capture_log)
     log_parts.append("=== Payoff: Max Social ===\n" + log)
     payoff_max_soc = _objs()
 
@@ -93,7 +122,7 @@ def run_er(params_obj, solver_name: str, steps: int = 5) -> dict:
         model.del_component(model.epsilon_constr)
         model.epsilon_constr = pyo.Constraint(expr=model.Obj_Env <= epsilon)
 
-        res, log = _solve(solver, model)
+        res, log = _solve(solver, model, capture_log)
         status = _solver_status(res)
         log_parts.append(f"=== Iteración {i + 1} — ε={epsilon:.4f} ===\n" + log)
 

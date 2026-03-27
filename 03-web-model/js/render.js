@@ -60,7 +60,7 @@ function renderTerminal(text) {
 // ── LGP ────────────────────────────────────────────────────────────────────
 
 export function renderLgpResult(data) {
-  if (!data) return `<p class="text-red-500">Sin datos.</p>`;
+  if (!data) return `<p class="text-[var(--c-error-text)]">Sin datos.</p>`;
 
   const stepsHtml = (data.steps || []).map(s => {
     const objs = s.objectives || {};
@@ -135,12 +135,12 @@ function renderVarTable(title, cols, rows) {
 // ── ER ─────────────────────────────────────────────────────────────────────
 
 export function renderErResult(data) {
-  if (!data) return `<p class="text-red-500">Sin datos.</p>`;
+  if (!data) return `<p class="text-[var(--c-error-text)]">Sin datos.</p>`;
 
   // Payoff table
   const pt = data.payoff_table || {};
   const payoffHtml = `
-    <h3 class="section-subtitle">Tabla Payoff</h3>
+    <h3 class="section-subtitle">Resultados base</h3>
     <table class="data-table">
       <thead>${th("Escenario", "Costo", "Emisiones", "Empleo")}</thead>
       <tbody>
@@ -157,7 +157,7 @@ export function renderErResult(data) {
     return td(p.iteration, fmt(p.epsilon), statusBadge(p.status), fmt(o.cost), fmt(o.emissions), fmt(o.employment));
   }).join("");
   const paretoHtml = `
-    <h3 class="section-subtitle mt-6">Frontera Pareto</h3>
+    <h3 class="section-subtitle mt-6">Frontera de Pareto</h3>
     <table class="data-table">
       <thead>${th("Iter", "ε (Emisiones)", "Estado", "Costo", "Emisiones", "Empleo")}</thead>
       <tbody>${paretoRows}</tbody>
@@ -166,7 +166,7 @@ export function renderErResult(data) {
   // Last iteration variables
   const vars = data.last_iteration_variables;
   const varsHtml = vars ? `
-    <h3 class="section-subtitle mt-6">Variables — última iteración óptima</h3>
+    <h3 class="section-subtitle mt-6">Variables de decisión</h3>
     <div class="vars-grid">
       ${renderVarTable("X — Flujo productor→intermediario", ["i", "j", "value"], vars.X)}
       ${renderVarTable("Y — Flujo intermediario→retailer", ["j", "k", "value"], vars.Y)}
@@ -229,7 +229,7 @@ const PARAM_DESCRIPTIONS = {
 };
 
 export function renderParams(data) {
-  if (!data) return `<p class="text-red-500">Sin datos.</p>`;
+  if (!data) return `<p class="text-[var(--c-error-text)]">Sin datos.</p>`;
 
   const rows = Object.entries(data).map(([key, val]) => {
     let kind, inputHtml;
@@ -312,26 +312,27 @@ function elasticityClass(e) {
   return "";
 }
 
-function renderTopTable(rows, elasKey) {
-  if (!rows || rows.length === 0) return `<p class="text-gray-400 italic text-sm">Sin resultados.</p>`;
+function renderTopTable(rows, objTitle, objKey, elasKey) {
+  if (!rows || rows.length === 0) return `<p class="text-subtle italic text-sm">Sin resultados.</p>`;
   const body = rows.map(r => {
     const e = r[elasKey];
     const cls = elasticityClass(e);
     return `<tr>
       <td><strong>${r.param}</strong></td>
       <td>${r.change}</td>
+      <td>${r[objKey] !== undefined ? fmt(r[objKey]) : "—"}</td>
       <td class="${cls}">${e !== null && e !== undefined ? e.toFixed(4) : "—"}</td>
     </tr>`;
   }).join("");
   return `
     <table class="data-table">
-      <thead>${th("Parámetro", "Cambio", "Elasticidad")}</thead>
+      <thead>${th("Parámetro", "Cambio", objTitle, "Elasticidad")}</thead>
       <tbody>${body}</tbody>
     </table>`;
 }
 
 export function renderSensitivityResult(data) {
-  if (!data) return `<p class="text-red-500">Sin datos.</p>`;
+  if (!data) return `<p class="text-[var(--c-error-text)]">Sin datos.</p>`;
 
   const bo = data.base_objectives || {};
   const baseCard = `
@@ -347,20 +348,19 @@ export function renderSensitivityResult(data) {
       </table>
     </div>`;
 
-  function renderTopCard(title, tableRows, elasKey) {
+  function renderTopCard(title, tableRows, objTitle, objKey, elasKey) {
     return `
-      <div class="sens-top-card">
-        <h3 class="sens-top-title">${title}</h3>
-        ${renderTopTable(tableRows, elasKey)}
+      <div class="sens-top-card" style="margin: 0 auto;">
+        <div style="margin-bottom: 0.6rem;">
+          <h3 class="sens-top-title" style="margin-bottom:0px;">${title}</h3>
+        </div>
+        ${renderTopTable(tableRows, objTitle, objKey, elasKey)}
       </div>`;
   }
 
-  const topSection = `
-    <div class="sens-top-grid">
-      ${renderTopCard("Top Impacto — COSTO",     data.top_cost, "elas_cost")}
-      ${renderTopCard("Top Impacto — EMISIONES", data.top_env,  "elas_env")}
-      ${renderTopCard("Top Impacto — EMPLEO",    data.top_soc,  "elas_soc")}
-    </div>`;
+  const topCost = renderTopCard("PARÁMETROS CON ELASTICIDAD — COSTO", data.top_cost, "Costo", "obj_cost", "elas_cost");
+  const topEnv  = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMISIONES", data.top_env, "Emisiones", "obj_env", "elas_env");
+  const topSoc  = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMPLEO", data.top_soc, "Empleo", "obj_soc", "elas_soc");
 
   function pctCell(newVal, baseVal) {
     if (newVal === null || newVal === undefined) return `<td>—</td>`;
@@ -379,7 +379,7 @@ export function renderSensitivityResult(data) {
         <td>${r.change}</td>
         <td colspan="6">
           <span class="badge badge-err">Sin solución factible</span>
-          <span class="text-gray-400 text-xs ml-2">${r.error}</span>
+          <span class="text-subtle text-xs ml-2">${r.error}</span>
         </td>
       </tr>`;
     }
@@ -398,13 +398,49 @@ export function renderSensitivityResult(data) {
   }).join("");
 
   const fullTable = `
-    <h3 class="section-subtitle mt-6">Resultados Completos</h3>
+    <div class="flex justify-end mb-2">
+      <button class="text-xs text-accent hover:underline" onclick="
+        const table = this.closest('div').nextElementSibling;
+        const rows = Array.from(table.querySelectorAll('tr'));
+        const tsv = rows.map(r => {
+          return Array.from(r.querySelectorAll('th, td')).map(c => {
+            const v = c.querySelector('.sens-val');
+            return (v ? v.innerText : c.innerText).trim();
+          }).join('\\t');
+        }).join('\\n');
+        navigator.clipboard.writeText(tsv);
+        const old = this.textContent;
+        this.textContent = 'Copiado';
+        setTimeout(() => this.textContent = old, 1500);
+      ">Copiar</button>
+    </div>
     <table class="data-table">
       <thead>${th("Parámetro", "Cambio", "Costo", "Emisiones", "Empleo", "E.Costo", "E.Emisiones", "E.Empleo")}</thead>
       <tbody>${allRows}</tbody>
     </table>`;
 
-  return `${baseCard}${topSection}${fullTable}`;
+  const chartsSection = `
+    <div class="sens-charts-grid" style="display:flex; flex-direction:column; gap:1.5rem;">
+      <div class="sens-chart-wrap" style="height:400px; background:var(--c-bg-surface); border:1px solid var(--c-border); border-radius:0.5rem; padding:1rem; position:relative;">
+        <canvas id="sens-combined-cost"></canvas>
+      </div>
+      <div class="sens-chart-wrap" style="height:400px; background:var(--c-bg-surface); border:1px solid var(--c-border); border-radius:0.5rem; padding:1rem; position:relative;">
+        <canvas id="sens-combined-env"></canvas>
+      </div>
+      <div class="sens-chart-wrap" style="height:400px; background:var(--c-bg-surface); border:1px solid var(--c-border); border-radius:0.5rem; padding:1rem; position:relative;">
+        <canvas id="sens-combined-soc"></canvas>
+      </div>
+    </div>`;
+
+  const tabsContent = renderInnerTabs("sens", [
+    { id: "graficos", label: "Gráficos", content: chartsSection },
+    { id: "top-costo", label: "Costo", content: topCost },
+    { id: "top-emisiones", label: "Emisiones", content: topEnv },
+    { id: "top-empleo", label: "Empleo", content: topSoc },
+    { id: "completos", label: "Tabla Completa", content: fullTable },
+  ]);
+
+  return `${baseCard}${tabsContent}`;
 }
 
 // ── Solver Config ──────────────────────────────────────────────────────────
@@ -421,4 +457,93 @@ export function renderSolverConfig(data, badgeEl, selectEl) {
       .map(s => `<option value="${s}" ${s === current ? "selected" : ""}>${s}</option>`)
       .join("");
   }
+}
+
+export function renderScenariosResult(data) {
+  if (!data) return `<p class="text-[var(--c-error-text)] text-center py-4">Sin datos de escenario.</p>`;
+  
+  const { base, propuesto, inverso, params_modified } = data;
+
+  function renderScenarioCard(title, objs, hint) {
+    if (!objs) return `
+      <div class="sens-top-card" style="border-color: var(--c-error-border); background: var(--c-error-bg);">
+        <h3 class="sens-top-title" style="color: var(--c-error-text);">${title}</h3>
+        <div class="flex flex-col items-center justify-center py-8 text-[var(--c-error-text)] text-center px-4">
+           <svg class="w-10 h-10 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+           <p class="font-bold">Inviabilidad Detectada</p>
+           <p class="text-xs mt-2 text-[var(--c-error-text)] leading-relaxed">${hint || "Las restricciones del modelo no se cumplen para esta configuración."}</p>
+        </div>
+      </div>`;
+    
+    const diff = (val, baseVal, reverse = false) => {
+       if (baseVal === undefined || baseVal === null || baseVal === 0) return "";
+       const p = ((val - baseVal) / baseVal) * 100;
+       let cls = "sens-delta-neutral";
+       if (Math.abs(p) > 0.001) {
+         if (reverse) {
+           cls = p > 0 ? "sens-delta-good" : "sens-delta-bad";
+         } else {
+           cls = p < 0 ? "sens-delta-good" : "sens-delta-bad";
+         }
+       }
+       return `<div class="sens-delta ${cls}">${p >= 0 ? "+" : ""}${p.toFixed(2)}%</div>`;
+    };
+
+    return `
+      <div class="sens-top-card">
+        <h3 class="sens-top-title">${title}</h3>
+        <table class="data-table mt-2">
+          <thead>${th("Objetivo", "Valor", "Variación")}</thead>
+          <tbody>
+            <tr>
+              <td><span class="font-medium">Costo</span></td>
+              <td>${fmt(objs.cost)}</td>
+              <td>${diff(objs.cost, base.cost)}</td>
+            </tr>
+            <tr>
+              <td><span class="font-medium">Emisiones</span></td>
+              <td>${fmt(objs.emissions)}</td>
+              <td>${diff(objs.emissions, base.emissions)}</td>
+            </tr>
+            <tr>
+              <td><span class="font-medium">Empleo</span></td>
+              <td>${fmt(objs.employment)}</td>
+              <td>${diff(objs.employment, base.employment, true)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
+  }
+
+  const cardsHtml = `
+    <div class="sens-top-grid">
+      ${renderScenarioCard(`Escenario Propuesto`, propuesto, "La configuración de parámetros ingresada ha vuelto inviable el plan de producción.")}
+      ${renderScenarioCard(`Escenario Inverso`, inverso, "La configuración inversa de los parámetros es incompatible con las restricciones del sistema.")}
+    </div>`;
+
+  const paramsEntries = Object.entries(params_modified || {});
+
+  return `
+    <div class="bg-surface border border-line rounded-xl p-6 mb-6 shadow-sm">
+      <h4 class="text-xs font-bold text-muted uppercase tracking-widest mb-3">Parámetros en el Escenario</h4>
+      <p class="text-sm text-muted mb-4">
+        Se han aplicado perturbaciones individuales a <strong>${paramsEntries.length}</strong> variables:
+      </p>
+      <div class="flex flex-wrap gap-2">
+        ${paramsEntries.map(([p, pct]) => `
+          <div class="flex items-center bg-surface border border-line rounded-lg shadow-sm overflow-hidden">
+            <span class="px-3 py-1.5 text-xs font-bold text-main bg-surface-alt border-r border-line">${p}</span>
+            <span class="px-3 py-1.5 text-sm text-muted font-mono font-semibold">${pct >= 0 ? "+" : ""}${pct}%</span>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+
+    <div class="bg-surface border border-line rounded-xl p-6 mb-6 shadow-sm">
+       <div class="text-center mb-6">
+         <h3 class="text-xs font-bold text-main uppercase tracking-[0.2em]">Comparativa vs Base</h3>
+       </div>
+       ${cardsHtml}
+    </div>
+  `;
 }

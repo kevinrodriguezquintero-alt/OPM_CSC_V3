@@ -9,31 +9,74 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.5.0/chart.umd.min.js"></script>
   <link rel="stylesheet" href="css/app.css" />
   <link rel="shortcut icon" href="assets/limon.png" type="image/x-icon">
+  <script>
+    if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @theme {
+      --color-page: var(--c-bg-page);
+      --color-surface: var(--c-bg-surface);
+      --color-surface-hover: var(--c-bg-surface-hover);
+      --color-surface-alt: var(--c-bg-surface-alt);
+      --color-table-head: var(--c-bg-table-head);
+      
+      --color-line: var(--c-border);
+      --color-line-strong: var(--c-border-strong);
+      
+      --color-main: var(--c-text-main);
+      --color-muted: var(--c-text-muted);
+      --color-subtle: var(--c-text-subtle);
+      
+      --color-accent: var(--c-accent);
+      --color-accent-hover: var(--c-accent-hover);
+      --color-accent-fg: var(--c-accent-fg);
+      --color-accent-bg: var(--c-accent-bg);
+      --color-accent-bg-hover: var(--c-accent-bg-hover);
+    }
+  </style>
 </head>
 
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-page text-main min-h-screen">
 
   <!-- Header -->
-  <header class="bg-white border-b border-gray-200 shadow-sm">
+  <header class="bg-surface border-b border-line shadow-sm relative">
+    <div class="absolute top-4 right-4">
+      <button id="theme-toggle" class="theme-switch" aria-label="Alternar modo oscuro">
+        <div class="switch-pill">
+          <svg class="switch-icon switch-icon-sun" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+          </svg>
+          <svg class="switch-icon switch-icon-moon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+          </svg>
+          <div class="switch-circle"></div>
+        </div>
+      </button>
+    </div>
     <div class="max-w-5xl mx-auto px-4 py-4 text-center">
-      <h1 class="text-xl font-bold text-gray-800">
+      <h1 class="text-xl font-bold text-main">
         <img src="assets/exprimidor.png" alt="" class="w-20 h-20 mx-auto mb-2">
         Optimizador Cadena de Suministro Cítricos
       </h1>
-      <p class="text-sm text-gray-500 mt-0.5">
+      <p class="text-sm text-muted mt-0.5">
         Multi-objetivo: Costo · Emisiones · Empleo
       </p>
     </div>
   </header>
 
   <!-- Nav Tabs -->
-  <nav class="bg-white border-b border-gray-200">
+  <nav class="bg-surface border-b border-line">
     <div class="max-w-5xl mx-auto px-4 flex justify-center gap-1">
-      <button class="tab-btn" data-tab="config">Config</button>
+      <button class="tab-btn" data-tab="config">Configuración</button>
       <button class="tab-btn" data-tab="params">Parámetros</button>
       <button class="tab-btn" data-tab="lgp">LGP</button>
       <button class="tab-btn" data-tab="er">ER</button>
-      <button class="tab-btn" data-tab="sensitivity">Sensibilidad</button>
+      <button class="tab-btn" data-tab="oat">OAT</button>
+      <button class="tab-btn" data-tab="scenarios">Escenarios</button>
     </div>
   </nav>
 
@@ -42,20 +85,20 @@
 
     <!-- ── Config ──────────────────────────────────────────────────────── -->
     <section id="tab-config">
-      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm max-w-md mx-auto">
-        <h2 class="text-lg font-semibold text-gray-800 mb-4">Configuración del Solver</h2>
+      <div class="bg-surface rounded-xl border border-line p-6 shadow-sm max-w-md mx-auto">
+        <h2 class="text-lg font-semibold text-main mb-4">Configuración del Solver</h2>
 
         <div class="flex items-center gap-3 mb-5">
-          <span class="text-sm text-gray-600 font-medium">Solver activo:</span>
+          <span class="text-sm text-muted font-medium">Solver activo:</span>
           <span id="solver-badge" class="solver-badge">…</span>
         </div>
 
         <div class="mb-4">
-          <label for="solver-select" class="block text-sm font-medium text-gray-700 mb-1">
+          <label for="solver-select" class="block text-sm font-medium text-main mb-1">
             Cambiar solver
           </label>
           <select id="solver-select"
-            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
+            class="w-full border border-strong rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
             <option value="highs">highs</option>
             <option value="glpk">glpk</option>
             <option value="cbc">cbc</option>
@@ -64,7 +107,7 @@
         </div>
 
         <button id="solver-btn"
-          class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+          class="bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
           Cambiar solver
         </button>
         <p id="solver-msg" class="feedback-ok" aria-live="polite"></p>
@@ -73,26 +116,26 @@
 
     <!-- ── Parámetros ──────────────────────────────────────────────────── -->
     <section id="tab-params" class="hidden">
-      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div class="bg-surface rounded-xl border border-line p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-semibold text-gray-800">Parámetros del modelo</h2>
+          <h2 class="text-lg font-semibold text-main">Parámetros del modelo</h2>
           <div class="flex items-center gap-2">
             <p id="params-msg" class="feedback-ok text-sm" aria-live="polite"></p>
             <button id="params-save-btn"
-              class="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              class="bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
               Guardar cambios
             </button>
             <button id="params-export-btn"
-              class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              class="bg-surface-alt hover:bg-surface-hover text-main text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
               Exportar JSON
             </button>
             <label
-              class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer">
+              class="bg-surface-alt hover:bg-surface-hover text-main text-sm font-semibold px-4 py-2 rounded-lg transition-colors cursor-pointer">
               Importar JSON
-              <input id="params-import-input" type="file" accept=".json,application/json" class="hidden" />
+              <input id="params-import-input" type="file" accept=".json,application/json" class="hidden bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
             </label>
             <button id="params-reset-btn"
-              class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+              class="bg-surface-alt hover:bg-surface-hover text-main text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
               Restaurar defaults
             </button>
           </div>
@@ -103,16 +146,16 @@
       </div>
     </section>
 
-    <!-- ── Sensibilidad ───────────────────────────────────────────────── -->
-    <section id="tab-sensitivity" class="hidden">
-      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+    <!-- ── OAT ────────────────────────────────────────────────────────── -->
+    <section id="tab-oat" class="hidden">
+      <div class="bg-surface rounded-xl border border-line p-6 shadow-sm">
         <div class="flex items-start justify-between mb-5">
           <div>
-            <h2 class="text-lg font-semibold text-gray-800">Análisis de Sensibilidad (OAT)</h2>
-            <p class="text-sm text-gray-500 mt-0.5">Perturbación unitaria de parámetros · Elasticidades LGP</p>
+            <h2 class="text-lg font-semibold text-main">Análisis OAT</h2>
+            <p class="text-sm text-muted mt-0.5">Perturbación unitaria de parámetros · Elasticidades</p>
           </div>
-          <button id="sensitivity-btn"
-            class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+          <button id="oat-btn"
+            class="bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-fg text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
             Ejecutar Análisis
           </button>
         </div>
@@ -120,57 +163,83 @@
         <!-- Param checkboxes -->
         <div class="mb-4">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-sm font-medium text-gray-700">Parámetros a analizar</span>
+            <span class="text-sm font-medium text-main">Parámetros a analizar</span>
             <div class="flex gap-2">
-              <button id="sensitivity-check-all" class="text-xs text-indigo-600 hover:underline">Todos</button>
-              <button id="sensitivity-uncheck-all" class="text-xs text-gray-500 hover:underline">Ninguno</button>
+              <button id="oat-check-all" class="text-xs text-accent hover:underline">Todos</button>
+              <button id="oat-uncheck-all" class="text-xs text-muted hover:underline">Ninguno</button>
             </div>
           </div>
-          <div id="sensitivity-params-grid"
-            class="grid grid-cols-4 gap-2 sm:grid-cols-7 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <div id="oat-params-grid"
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 p-3 bg-page rounded-lg border border-line">
             <!-- populated by initSensitivity -->
           </div>
         </div>
 
         <!-- Method + percentage inputs -->
-        <div class="flex items-center gap-4 mb-4 flex-wrap">
-          <span class="text-sm font-medium text-gray-700">Método:</span>
-          <select id="sensitivity-method"
-            class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400">
-            <option value="lgp">LGP (Programación por Metas Lexicográfica)</option>
-            <option value="er">ER (Epsilon-Restricción)</option>
-          </select>
-          <div id="sensitivity-er-steps-wrap" class="flex items-center gap-2 hidden">
-            <span class="text-sm text-gray-600">Pasos ER:</span>
-            <input id="sensitivity-er-steps" type="number" value="5" min="2" max="20"
-              class="w-16 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+        <div class="bg-page border border-line rounded-xl p-4 mb-4">
+          <div class="flex items-center gap-x-3 gap-y-2 flex-wrap">
+            
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-main">Método:</span>
+              <select id="oat-method"
+                class="border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
+                <option value="lgp">LGP (Goles Lexicográficos)</option>
+                <option value="er">ER (Epsilon-Restricción)</option>
+              </select>
+            </div>
+
+            <div id="oat-er-steps-wrap" class="flex items-center gap-2 hidden">
+              <span class="text-sm font-semibold text-main">Pasos:</span>
+              <input id="oat-er-steps" type="number" value="5" min="2" max="20"
+                class="w-14 border border-strong rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
+            </div>
+
+            <div id="oat-er-pilar-wrap" class="flex items-center gap-2 hidden">
+              <span class="text-sm font-semibold text-main">Escenario:</span>
+              <select id="oat-er-pilar"
+                class="border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
+                <option value="middle">Centro (Pareto)</option>
+                <option value="cost">Min Costo</option>
+                <option value="emissions">Min Emisiones</option>
+                <option value="employment">Max Social</option>
+              </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-main">Parada:</span>
+              <input id="oat-max-pct" type="number" value="10" min="1" max="100"
+                class="w-16 border border-strong rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
+              <span class="text-xs text-muted">±%</span>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-main">Paso:</span>
+              <input id="oat-num-steps" type="number" value="1" min="0.1" step="any" max="100"
+                class="w-16 border border-strong rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
+              <span class="text-xs text-muted">%</span>
+            </div>
           </div>
-          <span class="text-sm font-medium text-gray-700">Perturbaciones (%):</span>
-          <input id="sensitivity-pct-pos" type="number" value="10" min="1" max="100"
-            class="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
-          <input id="sensitivity-pct-neg" type="number" value="-10" min="-100" max="-1"
-            class="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
         </div>
 
-        <p class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2 mb-5"
-          id="sensitivity-warning">
-          Este análisis ejecuta ~<span id="sensitivity-run-count">50</span> corridas del solver LGP.
-        </p>
+        <div class="warning-box mt-2 mb-6" id="oat-warning">
+            Este análisis ejecuta ~<span id="oat-run-count">50</span> iteraciones del solver.
+          </div>
 
-        <div id="sensitivity-result"></div>
+          <div id="oat-result"></div>
+        </div>
       </div>
     </section>
 
     <!-- ── LGP ────────────────────────────────────────────────────────── -->
     <section id="tab-lgp" class="hidden">
-      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div class="bg-surface rounded-xl border border-line p-6 shadow-sm">
         <div class="flex items-center justify-between mb-5">
           <div>
-            <h2 class="text-lg font-semibold text-gray-800">Programación por Metas Lexicográfica</h2>
-            <p class="text-sm text-gray-500 mt-0.5">Prioridad: Costo → Emisiones → Empleo</p>
+            <h2 class="text-lg font-semibold text-main">Programación por Metas Lexicográfica</h2>
+            <p class="text-sm text-muted mt-0.5">Prioridad: Costo → Emisiones → Empleo</p>
           </div>
           <button id="lgp-btn"
-            class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+            class="bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-fg text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
             Ejecutar LGP
           </button>
         </div>
@@ -180,27 +249,107 @@
 
     <!-- ── ER ─────────────────────────────────────────────────────────── -->
     <section id="tab-er" class="hidden">
-      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
+      <div class="bg-surface rounded-xl border border-line p-6 shadow-sm">
         <div class="flex items-center justify-between mb-5">
           <div>
-            <h2 class="text-lg font-semibold text-gray-800">Método Epsilon-Restricción</h2>
-            <p class="text-sm text-gray-500 mt-0.5">Frontera Pareto: Costo vs Emisiones</p>
+            <h2 class="text-lg font-semibold text-main">Método Epsilon-Restricción</h2>
+            <p class="text-sm text-muted mt-0.5">Frontera Pareto: Costo · Emisiones · Empleo</p>
           </div>
           <div class="flex items-center gap-3">
             <div>
-              <label for="er-steps" class="block text-xs font-medium text-gray-600 mb-1">
+              <label for="er-steps" class="block text-xs font-medium text-muted mb-1">
                 Pasos (steps)
               </label>
               <input id="er-steps" type="number" value="5" min="2" max="50"
-                class="w-20 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+                class="w-20 border border-strong rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
             </div>
             <button id="er-btn"
-              class="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors self-end">
+              class="bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-fg text-sm font-semibold px-5 py-2 rounded-lg transition-colors self-end">
               Ejecutar ER
             </button>
           </div>
         </div>
         <div id="er-result"></div>
+      </div>
+    </section>
+
+    <!-- ── Escenarios ─────────────────────────────────────────────────────── -->
+    <section id="tab-scenarios" class="hidden">
+      <div class="bg-surface rounded-xl border border-line p-6 shadow-sm mb-6">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h2 class="text-lg font-semibold text-main mb-1">Análisis por Escenarios</h2>
+            <p class="text-sm text-muted">Simulación multivariable · Optimista vs Pesimista</p>
+          </div>
+          <button id="scenarios-btn"
+            class="bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-fg text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+            Ejecutar Escenarios
+          </button>
+        </div>
+
+        <div class="mb-5">
+          <div class="flex justify-between items-center mb-3">
+            <div>
+              <span class="text-sm font-semibold text-main">Configuración de Escenario</span>
+              <p class="text-xs text-subtle">Define el porcentaje de cambio individual (+/-) para cada parámetro.</p>
+            </div>
+            <div class="flex gap-4">
+              <button id="scenarios-check-all" class="text-xs text-accent hover:underline">Todos</button>
+              <button id="scenarios-uncheck-all" class="text-xs text-subtle hover:underline">Ninguno</button>
+            </div>
+          </div>
+          <div id="scenarios-params-grid"
+            class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 bg-page p-4 rounded-xl border border-line">
+            <!-- Dinámico: Checkbox + Nombre + Input % -->
+          </div>
+        </div>
+
+        <div class="bg-page border border-line rounded-xl p-4 mb-5">
+          <div class="flex items-center gap-4">
+            <span class="text-sm font-bold text-main">Cargar Escenario Predefinido:</span>
+            <select id="scenarios-preset"
+              class="flex-1 border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
+              <option value="">— Seleccionar un escenario —</option>
+              <option value="crecimiento">Crecimiento del Mercado</option>
+              <option value="expansion">Expansión planificada del sistema</option>
+              <option value="restriccion">Restricción operativa</option>
+              <option value="presion">Presión ambiental</option>
+              <option value="regulacion">Regulación ambiental estricta con demanda creciente</option>
+              <option value="adversas">Condiciones Adversas</option>
+              <option value="critica">Interacción crítica del sistema</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="bg-page border border-line rounded-xl p-4 mb-5">
+          <div class="flex items-center gap-6">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-main">Método:</span>
+              <select id="scenarios-method"
+                class="border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
+                <option value="lgp">LGP (Goles Lexicográficos)</option>
+                <option value="er">ER (Epsilon-Restricción)</option>
+              </select>
+            </div>
+            <div id="scenarios-er-steps-wrap" class="flex items-center gap-2 hidden">
+              <span class="text-sm font-semibold text-main">Pasos:</span>
+              <input id="scenarios-er-steps" type="number" value="5" min="2" max="20"
+                class="w-14 border border-strong rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
+            </div>
+            <div id="scenarios-er-pilar-wrap" class="flex items-center gap-2 hidden">
+              <span class="text-sm font-semibold text-main">Escenario:</span>
+              <select id="scenarios-er-pilar"
+                class="border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
+                <option value="middle">Centro (Pareto)</option>
+                <option value="cost">Min Costo</option>
+                <option value="emissions">Min Emisiones</option>
+                <option value="employment">Max Social</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="scenarios-result"></div>
       </div>
     </section>
 

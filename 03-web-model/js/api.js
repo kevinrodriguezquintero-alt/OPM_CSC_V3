@@ -25,6 +25,24 @@ export const api = {
   resetParams: () => apiFetch("/params/reset", { method: "POST" }),
   solveLgp:    () => apiFetch("/solve/lgp", { method: "POST" }),
   solveEr:     (steps) => apiFetch("/solve/er", { method: "POST", body: { steps } }),
-  solveSensitivity: (params_to_test, percentages, method, steps) =>
-    apiFetch("/solve/sensitivity", { method: "POST", body: { params_to_test, percentages, method, steps } }),
+  
+  async solveSensitivity(params_to_test, percentages, method = "lgp", steps = 5, er_pilar = "middle") {
+    const r = await fetch(`${BASE}/solve/sensitivity`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ params_to_test, percentages, method, steps, er_pilar }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
+
+  async solveScenarios(params_to_test, method = "lgp", steps = 5, er_pilar = "middle") {
+    const r = await fetch(`${BASE}/solve/scenarios`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ params_to_test, method, steps, er_pilar }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
 };

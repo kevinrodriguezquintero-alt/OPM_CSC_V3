@@ -112,15 +112,45 @@ def solve_er(body: ERRequest = ERRequest()):
 
 def _run_and_extract(solver_name: str, steps: int) -> dict | None:
     """Run LGP or ER and return a unified objectives dict, or None if infeasible."""
-    res = run_lgp(app_state.get_params_object(), solver_name)
+    res = run_lgp(app_state.get_params_object(), solver_name, capture_log=False)
     if res.get("status") == "optimal":
         return res["objectives"]
     return None
 
 
-def _run_er_and_extract(solver_name: str, steps: int) -> dict | None:
-    """Run ER and return objectives from the middle point of the Pareto frontier."""
-    res = run_er(app_state.get_params_object(), solver_name, steps)
+def _run_er_and_extract(solver_name: str, steps: int, pilar: str = "middle") -> dict | None:
+    """Run ER and return objectives from a specific point of the Pareto frontier or a pilar."""
+    # If a specific pilar is requested, we only need to solve once for that objective
+    params = app_state.get_params_object()
+    from config import get_solver
+    from solvers.build_model import build_model
+    import pyomo.environ as pyo
+
+    def _get_objs(m):
+        return {
+            "cost": pyo.value(m.Obj_Cost),
+            "emissions": pyo.value(m.Obj_Env),
+            "employment": pyo.value(m.Obj_Social),
+        }
+
+    if pilar in ("cost", "emissions", "employment"):
+        model = pyo.ConcreteModel()
+        build_model(model, params)
+        solver = get_solver(solver_name)
+        if pilar == "cost":
+            model.obj = pyo.Objective(expr=model.Obj_Cost, sense=pyo.minimize)
+        elif pilar == "emissions":
+            model.obj = pyo.Objective(expr=model.Obj_Env, sense=pyo.minimize)
+        else:
+            model.obj = pyo.Objective(expr=model.Obj_Social, sense=pyo.maximize)
+        
+        res = solver.solve(model, tee=False)
+        if _solver_status(res) == "optimal":
+            return _get_objs(model)
+        return None
+
+    # Default: Run ER and take middle point
+    res = run_er(params, solver_name, steps, capture_log=False)
     frontier = [p for p in res.get("pareto_frontier", []) if p.get("status") == "optimal"]
     if not frontier:
         return None
@@ -133,6 +163,7 @@ class SensitivityRequest(BaseModel):
     percentages: List[float] = [10.0, -10.0]
     method: str = "lgp"
     steps: int = Field(default=5, ge=2, le=20)
+    er_pilar: str = "middle"
 
 
 @router.post("/sensitivity")
@@ -143,7 +174,7 @@ def solve_sensitivity(body: SensitivityRequest):
 
     def _solve() -> dict | None:
         if body.method == "er":
-            return _run_er_and_extract(app_state.solver_name, body.steps)
+            return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar)
         return _run_and_extract(app_state.solver_name, body.steps)
 
     base_data = copy.deepcopy(app_state.params)
@@ -182,12 +213,12 @@ def solve_sensitivity(body: SensitivityRequest):
     finally:
         app_state.params = base_data
 
-    valid_cost = [r for r in results if r.get("elas_cost") is not None]
-    valid_env  = [r for r in results if r.get("elas_env")  is not None]
-    valid_soc  = [r for r in results if r.get("elas_soc")  is not None]
-    top_cost = sorted(valid_cost, key=lambda x: abs(x["elas_cost"]), reverse=True)[:5]
-    top_env  = sorted(valid_env,  key=lambda x: abs(x["elas_env"]),  reverse=True)[:5]
-    top_soc  = sorted(valid_soc,  key=lambda x: abs(x["elas_soc"]),  reverse=True)[:5]
+    valid_cost = [r for r in results if r.get("elas_cost") is not None and abs(r["elas_cost"]) > 0]
+    valid_env  = [r for r in results if r.get("elas_env")  is not None and abs(r["elas_env"]) > 0]
+    valid_soc  = [r for r in results if r.get("elas_soc")  is not None and abs(r["elas_soc"]) > 0]
+    top_cost = sorted(valid_cost, key=lambda x: abs(x["elas_cost"]), reverse=True)
+    top_env  = sorted(valid_env,  key=lambda x: abs(x["elas_env"]),  reverse=True)
+    top_soc  = sorted(valid_soc,  key=lambda x: abs(x["elas_soc"]),  reverse=True)
 
     return {
         "base_objectives": base_objs,
@@ -196,3 +227,76 @@ def solve_sensitivity(body: SensitivityRequest):
         "top_env": top_env,
         "top_soc": top_soc,
     }
+
+
+class ScenariosRequest(BaseModel):
+    params_to_test: dict[str, float]  # { "param_name": percentage }
+    method: str = "lgp"
+    steps: int = Field(default=5, ge=2, le=20)
+    er_pilar: str = "middle"
+
+
+def _perturb_in_place(data: dict, param_name: str, percentage: float):
+    multiplier = 1.0 + (percentage / 100.0)
+    if param_name not in data:
+        return
+    val = data[param_name]
+    if isinstance(val, (int, float)):
+        data[param_name] = val * multiplier
+    elif isinstance(val, dict):
+        for k in val:
+            if isinstance(val[k], (int, float)):
+               val[k] = val[k] * multiplier
+    elif isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
+        for item in data[param_name]:
+            if "value" in item and isinstance(item["value"], (int, float)):
+                item["value"] = item["value"] * multiplier
+
+
+@router.post("/scenarios")
+def solve_scenarios(body: ScenariosRequest):
+    """
+    Multivariable Scenario Analysis (Manual Sign Control).
+    Perturbs selected params using EXACT user-provided signs (Propuesto) and their inverse (Inverso).
+    """
+    if body.method not in ("lgp", "er"):
+        raise HTTPException(status_code=422, detail="method must be 'lgp' or 'er'")
+
+    def _safe_solve() -> dict | None:
+        try:
+            if body.method == "er":
+                return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar)
+            return _run_and_extract(app_state.solver_name, body.steps)
+        except Exception:
+            return None
+
+    base_data = copy.deepcopy(app_state.params)
+    try:
+        base_objs = _safe_solve()
+        if base_objs is None:
+            raise HTTPException(status_code=422, detail="Base model not optimal")
+
+        # 1. Escenario Propuesto (Exact user input)
+        prop_data = copy.deepcopy(base_data)
+        for p, pct in body.params_to_test.items():
+            _perturb_in_place(prop_data, p, pct)
+        
+        app_state.params = prop_data
+        prop_objs = _safe_solve()
+
+        # 2. Escenario Inverso (User input * -1)
+        inv_data = copy.deepcopy(base_data)
+        for p, pct in body.params_to_test.items():
+            _perturb_in_place(inv_data, p, -pct)
+
+        app_state.params = inv_data
+        inv_objs = _safe_solve()
+
+        return {
+            "base": base_objs,
+            "propuesto": prop_objs, # Propuesto result
+            "inverso": inv_objs,   # Inverso result
+            "params_modified": body.params_to_test,
+        }
+    finally:
+        app_state.params = base_data

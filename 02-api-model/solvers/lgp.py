@@ -1,6 +1,4 @@
 """Lexicographic Goal Programming solver."""
-import io
-import contextlib
 import pyomo.environ as pyo
 from config import get_solver
 from solvers.build_model import build_model, extract_variables, _solver_status
@@ -8,15 +6,44 @@ from solvers.build_model import build_model, extract_variables, _solver_status
 TOLERANCE = 1e-4
 
 
-def _solve(solver, model):
-    """Solve and capture tee output. Returns (results, log_str)."""
-    buf = io.StringIO()
-    with contextlib.redirect_stdout(buf):
-        res = solver.solve(model, tee=True)
-    return res, buf.getvalue()
+import os
+import tempfile
+
+import os
+import tempfile
+import contextlib
+
+def _solve(solver, model, capture_log=True):
+    """Solve model. Returns (results, log_str)."""
+    if not capture_log:
+        res = solver.solve(model, tee=False)
+        return res, ""
+        
+    log_str = ""
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.log') as temp_log:
+        temp_log_path = temp_log.name
+        
+    try:
+        with open(temp_log_path, 'w', encoding='utf-8') as f:
+            with contextlib.redirect_stdout(f):
+                res = solver.solve(model, tee=True)
+                
+        with open(temp_log_path, 'r', encoding='utf-8', errors='ignore') as f:
+            log_str = f.read()
+    except Exception as e:
+        res = solver.solve(model, tee=False) # Fallback
+        log_str = f"Error capturando log del solver: {str(e)}"
+    finally:
+        if os.path.exists(temp_log_path):
+            try:
+                os.remove(temp_log_path)
+            except:
+                pass
+                
+    return res, log_str
 
 
-def run_lgp(params_obj, solver_name: str) -> dict:
+def run_lgp(params_obj, solver_name: str, capture_log: bool = True) -> dict:
     """
     Run Lexicographic Goal Programming.
 
@@ -47,7 +74,7 @@ def run_lgp(params_obj, solver_name: str) -> dict:
 
     # ── STEP 1: Minimize Cost ──────────────────────────────────────────────
     model.objective = pyo.Objective(expr=model.Obj_Cost, sense=pyo.minimize)
-    res, log1 = _solve(solver, model)
+    res, log1 = _solve(solver, model, capture_log)
     status1 = _solver_status(res)
 
     step1 = {"step": 1, "priority": "Costo", "status": status1, "objectives": _objs(), "log": log1}
@@ -64,7 +91,7 @@ def run_lgp(params_obj, solver_name: str) -> dict:
     # ── STEP 2: Minimize Emissions ─────────────────────────────────────────
     model.del_component(model.objective)
     model.objective = pyo.Objective(expr=model.Obj_Env, sense=pyo.minimize)
-    res, log2 = _solve(solver, model)
+    res, log2 = _solve(solver, model, capture_log)
     status2 = _solver_status(res)
 
     step2 = {"step": 2, "priority": "Emisiones", "status": status2, "objectives": _objs(), "log": log2}
@@ -81,7 +108,7 @@ def run_lgp(params_obj, solver_name: str) -> dict:
     # ── STEP 3: Maximize Employment ────────────────────────────────────────
     model.del_component(model.objective)
     model.objective = pyo.Objective(expr=model.Obj_Social, sense=pyo.maximize)
-    res, log3 = _solve(solver, model)
+    res, log3 = _solve(solver, model, capture_log)
     status3 = _solver_status(res)
 
     final_objs = _objs()
