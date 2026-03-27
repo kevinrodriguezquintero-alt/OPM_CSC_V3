@@ -17,4 +17,7 @@ desktop.ini
 docs/*.json
 docs/*.csv
 
+# Evitar duplicado accidental del proyecto dentro de sí mismo
+/V3/
+
 kevin-tesis.zip
