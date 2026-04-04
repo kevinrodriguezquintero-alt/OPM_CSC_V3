@@ -110,11 +110,58 @@ def solve_er(body: ERRequest = ERRequest()):
     return result
 
 
+def _extract_operational_metrics(variables: dict) -> dict:
+    if not variables:
+        return {}
+    
+    # 1. Personal
+    pers_int = sum(item["value"] for item in variables.get("S", []))
+    pers_det = sum(item["value"] for item in variables.get("SS", []))
+    
+    # 2. Viajes
+    viajes_pi = sum(item["value"] for item in variables.get("Z", []))
+    viajes_id = sum(item["value"] for item in variables.get("ZZ", []))
+    
+    # 3. Flujos
+    x_list = variables.get("X", [])
+    y_list = variables.get("Y", [])
+    flujo_p_i = sum(item["value"] for item in x_list)
+    flujo_i_d = sum(item["value"] for item in y_list)
+    
+    # 4. Top Intermediarios (by incoming flow X)
+    int_flows = {}
+    for item in x_list:
+        j = item["j"]
+        int_flows[j] = int_flows.get(j, 0) + item["value"]
+    top_ints = sorted(int_flows.items(), key=lambda kv: kv[1], reverse=True)[:3]
+    top_ints_str = ", ".join([f"{k} ({v:,.0f} kg)" for k, v in top_ints]) if top_ints else "Ninguno"
+    
+    # 5. Top Rutas
+    all_routes = []
+    for item in x_list:
+        all_routes.append((f"X[{item['i']}→{item['j']}]", item["value"]))
+    for item in y_list:
+        all_routes.append((f"Y[{item['j']}→{item['k']}]", item["value"]))
+    top_routes = sorted(all_routes, key=lambda x: x[1], reverse=True)[:3]
+    top_routes_str = ", ".join([f"{r} ({v:,.0f} kg)" for r, v in top_routes]) if top_routes else "Ninguna"
+    
+    return {
+        "pers_int": pers_int,
+        "pers_det": pers_det,
+        "viajes_totales": viajes_pi + viajes_id,
+        "flujo_pi": flujo_p_i,
+        "flujo_id": flujo_i_d,
+        "top_intermediarios": top_ints_str,
+        "top_rutas": top_routes_str
+    }
+
 def _run_and_extract(solver_name: str, steps: int) -> dict | None:
     """Run LGP or ER and return a unified objectives dict, or None if infeasible."""
     res = run_lgp(app_state.get_params_object(), solver_name, capture_log=False)
     if res.get("status") == "optimal":
-        return res["objectives"]
+        objs = res["objectives"]
+        objs["metrics"] = _extract_operational_metrics(res.get("variables", {}))
+        return objs
     return None
 
 
@@ -123,15 +170,17 @@ def _run_er_and_extract(solver_name: str, steps: int, pilar: str = "middle") -> 
     # If a specific pilar is requested, we only need to solve once for that objective
     params = app_state.get_params_object()
     from config import get_solver
-    from solvers.build_model import build_model
+    from solvers.build_model import build_model, extract_variables
     import pyomo.environ as pyo
 
-    def _get_objs(m):
-        return {
+    def _get_objs_and_metrics(m):
+        objs = {
             "cost": pyo.value(m.Obj_Cost),
             "emissions": pyo.value(m.Obj_Env),
             "employment": pyo.value(m.Obj_Social),
         }
+        objs["metrics"] = _extract_operational_metrics(extract_variables(m))
+        return objs
 
     if pilar in ("cost", "emissions", "employment"):
         model = pyo.ConcreteModel()
@@ -146,7 +195,7 @@ def _run_er_and_extract(solver_name: str, steps: int, pilar: str = "middle") -> 
         
         res = solver.solve(model, tee=False)
         if _solver_status(res) == "optimal":
-            return _get_objs(model)
+            return _get_objs_and_metrics(model)
         return None
 
     # Default: Run ER and take middle point
@@ -155,7 +204,9 @@ def _run_er_and_extract(solver_name: str, steps: int, pilar: str = "middle") -> 
     if not frontier:
         return None
     mid = frontier[len(frontier) // 2]
-    return mid.get("objectives")
+    objs = mid.get("objectives", {})
+    objs["metrics"] = _extract_operational_metrics(mid.get("variables", {}))
+    return objs
 
 
 class SensitivityRequest(BaseModel):
@@ -258,45 +309,267 @@ def solve_scenarios(body: ScenariosRequest):
     """
     Multivariable Scenario Analysis (Manual Sign Control).
     Perturbs selected params using EXACT user-provided signs (Propuesto) and their inverse (Inverso).
+    If method=='both', returns comparison of LGP vs ER.
     """
-    if body.method not in ("lgp", "er"):
-        raise HTTPException(status_code=422, detail="method must be 'lgp' or 'er'")
+    if body.method not in ("lgp", "er", "both"):
+        raise HTTPException(status_code=422, detail="method must be 'lgp', 'er' or 'both'")
 
-    def _safe_solve() -> dict | None:
+    def _safe_solve(meth: str) -> dict | None:
         try:
-            if body.method == "er":
+            if meth == "er":
                 return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar)
             return _run_and_extract(app_state.solver_name, body.steps)
         except Exception:
             return None
 
     base_data = copy.deepcopy(app_state.params)
+    
+    def _run_full_scenario(meth: str):
+        # Reset to base to compute base objs for this method
+        app_state.params = copy.deepcopy(base_data)
+        b_objs = _safe_solve(meth)
+        if b_objs is None: return None
+
+        # Proposed
+        p_data = copy.deepcopy(base_data)
+        for p, pct in body.params_to_test.items():
+            _perturb_in_place(p_data, p, pct)
+        app_state.params = p_data
+        p_objs = _safe_solve(meth)
+
+        # Inverse
+        i_data = copy.deepcopy(base_data)
+        for p, pct in body.params_to_test.items():
+            _perturb_in_place(i_data, p, -pct)
+        app_state.params = i_data
+        i_objs = _safe_solve(meth)
+
+        return {"base": b_objs, "propuesto": p_objs, "inverso": i_objs}
+
     try:
-        base_objs = _safe_solve()
-        if base_objs is None:
-            raise HTTPException(status_code=422, detail="Base model not optimal")
+        if body.method == "both":
+            lgp_res = _run_full_scenario("lgp")
+            er_res = _run_full_scenario("er")
+            return {
+                "method": "both",
+                "lgp": lgp_res,
+                "er": er_res,
+                "params_modified": body.params_to_test
+            }
+        else:
+            res = _run_full_scenario(body.method)
+            if res is None:
+                raise HTTPException(status_code=422, detail="Model could not be solved")
+            
+            return {
+                "method": body.method,
+                **res,
+                "params_modified": body.params_to_test
+            }
+    finally:
+        app_state.params = base_data
 
-        # 1. Escenario Propuesto (Exact user input)
-        prop_data = copy.deepcopy(base_data)
-        for p, pct in body.params_to_test.items():
-            _perturb_in_place(prop_data, p, pct)
+
+
+# ── Sensitivity Ranges (Shadow Prices + Allowable Ranges) ────────────────
+
+RANGE_PARAMS_DEFAULT = ["CA", "CB", "CN", "RA", "RC", "CV", "DI", "DD", "IT"]
+
+
+def _quick_feasible(solver_name: str, epsilon: float = None) -> dict | None:
+    """Minimize cost only (1 solve). Optionally constrained by epsilon emissions. Returns objectives dict or None."""
+    import pyomo.environ as pyo
+    from config import get_solver
+    from solvers.build_model import build_model, _solver_status
+
+    model = pyo.ConcreteModel()
+    build_model(model, app_state.get_params_object())
+    
+    # Add epsilon constraint if provided (Compromise target)
+    if epsilon is not None:
+        model.Cons_Epsilon_Range = pyo.Constraint(expr=model.Obj_Env <= epsilon + 1e-5)
         
-        app_state.params = prop_data
-        prop_objs = _safe_solve()
-
-        # 2. Escenario Inverso (User input * -1)
-        inv_data = copy.deepcopy(base_data)
-        for p, pct in body.params_to_test.items():
-            _perturb_in_place(inv_data, p, -pct)
-
-        app_state.params = inv_data
-        inv_objs = _safe_solve()
-
+    model.obj = pyo.Objective(expr=model.Obj_Cost, sense=pyo.minimize)
+    solver = get_solver(solver_name)
+    res = solver.solve(model, tee=False)
+    if _solver_status(res) == "optimal":
         return {
-            "base": base_objs,
-            "propuesto": prop_objs, # Propuesto result
-            "inverso": inv_objs,   # Inverso result
-            "params_modified": body.params_to_test,
+            "cost": pyo.value(model.Obj_Cost),
+            "emissions": pyo.value(model.Obj_Env),
+            "employment": pyo.value(model.Obj_Social),
         }
+    return None
+
+
+def _shadow_prices_for(base_data, param, base_objs, method, solver_name, delta=1.0, epsilon=None):
+    """Compute shadow prices using centered finite difference at ±delta%."""
+    results = {}
+    for sign, label in [(+1, "plus"), (-1, "minus")]:
+        pct = sign * delta
+        try:
+            new_data = _perturb_param(base_data, param, pct)
+            app_state.params = new_data
+            # Use quick solve (1 step) instead of full LGP for shadow prices (much faster)
+            objs = _quick_feasible(solver_name)
+        except Exception:
+            objs = None
+            
+        results[label] = objs
+
+    app_state.params = base_data
+
+    # Calcular el cambio total en unidades físicas
+    multiplier = delta / 100.0
+    total_delta_units = 0
+    val = base_data[param]
+    if isinstance(val, (int, float)):
+        total_delta_units = abs(val * multiplier)
+    elif isinstance(val, dict):
+        total_delta_units = sum(abs(v * multiplier) for v in val.values() if isinstance(v, (int, float)))
+    elif isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
+        total_delta_units = sum(abs(item["value"] * multiplier) for item in val if isinstance(item.get("value"), (int, float)))
+
+    p, m = results["plus"], results["minus"]
+    if p is None or m is None or total_delta_units == 0:
+        return {"cost": None, "emissions": None, "employment": None}
+    
+    # SP = Delta_Obj / (Total_Delta_Units * 2)  -- *2 porque es diferencia centrada (+delta% menos -delta%)
+    denom = 2 * total_delta_units
+    return {
+        "cost":       (p["cost"] - m["cost"]) / denom,
+        "emissions":  (p["emissions"] - m["emissions"]) / denom,
+        "employment": (p["employment"] - m["employment"]) / denom,
+    }
+
+
+def _find_max_feasible(base_data, param, direction, solver_name, epsilon=None):
+    """Find max perturbation % before infeasibility using binary search (1% precision). direction: +1 or -1."""
+    low = 0.0
+    high = 100.0 if direction > 0 else 99.0  # Max search bound
+    best_ok = 0.0
+
+    # Verificar primero si el límite máximo es factible para ahorrar iteraciones
+    try:
+        app_state.params = _perturb_param(base_data, param, direction * high)
+        objs = _quick_feasible(solver_name, epsilon=epsilon)
+        if objs is not None:
+            app_state.params = base_data
+            return high
+    except Exception:
+        pass
+
+    # Búsqueda binaria (bisección) para encontrar el límite exacto
+    tolerance = 1.0  # Precisión de 1%
+    while (high - low) > tolerance:
+        mid = (low + high) / 2.0
+        try:
+            app_state.params = _perturb_param(base_data, param, direction * mid)
+            objs = _quick_feasible(solver_name, epsilon=epsilon)
+            if objs is not None:
+                low = mid
+                best_ok = mid
+            else:
+                high = mid
+        except Exception:
+            high = mid
+            
+    app_state.params = base_data
+    return round(best_ok, 1)
+
+
+def _param_summary_value(params, name):
+    """Representative value for display. SUM for additive metrics, MEAN for intensive ones."""
+    val = params[name]
+    additive_params = ["CN", "CH", "CHI", "CR", "DI", "DD", "H", "CMO", "CD"]
+    
+    def _extract_nums(v):
+        if isinstance(v, (int, float)): return [v]
+        if isinstance(v, dict): return [x for x in v.values() if isinstance(x, (int, float))]
+        if isinstance(v, list) and len(v)>0 and isinstance(v[0], dict):
+            return [x.get("value") for x in v if isinstance(x.get("value"), (int, float))]
+        return []
+
+    nums = _extract_nums(val)
+    if not nums: return None
+    
+    if name in additive_params:
+        return round(sum(nums), 2)
+    else:
+        return round(sum(nums) / len(nums), 4)
+
+
+class RangesRequest(BaseModel):
+    params: List[str] = RANGE_PARAMS_DEFAULT
+
+
+@router.post("/sensitivity-ranges")
+def solve_sensitivity_ranges(body: RangesRequest = RangesRequest()):
+    """
+    Compute shadow prices (LGP vs ER) and allowable ranges for key params.
+    Shadow prices use ±1% centered finite difference.
+    Ranges use step-based feasibility checks.
+    """
+    base_data = copy.deepcopy(app_state.params)
+    solver = app_state.solver_name
+
+    try:
+        lgp_base = _run_and_extract(solver, 5)
+
+        # Shadow prices — ER (Compromise point)
+        # Find target epsilon from a standard 5-step ER run
+        target_epsilon = None
+        full_er = run_er(app_state.get_params_object(), solver, steps=5, capture_log=False)
+        frontier = [p for p in full_er.get("pareto_frontier", []) if p.get("status") == "optimal"]
+        if frontier:
+            mid = frontier[len(frontier)//2]
+            target_epsilon = mid["objectives"]["emissions"]
+
+        er_base = _quick_feasible(solver, epsilon=target_epsilon)
+
+        if lgp_base is None and er_base is None:
+            raise HTTPException(status_code=422, detail="Modelo base infactible")
+
+        rows = []
+        for param in body.params:
+            if param not in base_data:
+                continue
+
+            entry = {
+                "param": param,
+                "label": _PARAM_LABEL.get(param, param),
+                "base_value": _param_summary_value(base_data, param),
+            }
+
+            # Shadow prices — LGP
+            if lgp_base:
+                sp = _shadow_prices_for(base_data, param, lgp_base, "lgp", solver)
+                entry["lgp_shadow_cost"] = sp["cost"]
+                entry["lgp_shadow_env"] = sp["emissions"]
+                entry["lgp_shadow_soc"] = sp["employment"]
+            else:
+                entry["lgp_shadow_cost"] = entry["lgp_shadow_env"] = entry["lgp_shadow_soc"] = None
+
+            # Shadow prices — ER (Compromise / Fixed Epsilon)
+            if er_base:
+                sp = _shadow_prices_for(base_data, param, er_base, "er", solver, epsilon=target_epsilon)
+                entry["er_shadow_cost"] = sp["cost"]
+                entry["er_shadow_env"] = sp["emissions"]
+                entry["er_shadow_soc"] = sp["employment"]
+            else:
+                entry["er_shadow_cost"] = entry["er_shadow_env"] = entry["er_shadow_soc"] = None
+
+            # Allowable ranges (Physical feasibility buffer — No epsilon constraint)
+            ai = _find_max_feasible(base_data, param, +1, solver, epsilon=None)
+            ad = _find_max_feasible(base_data, param, -1, solver, epsilon=None)
+            bv = entry["base_value"]
+
+            entry["allowable_increase_pct"] = ai
+            entry["allowable_decrease_pct"] = ad
+            entry["min_value"] = round(bv * (1 - ad / 100), 4) if bv and ad else None
+            entry["max_value"] = round(bv * (1 + ai / 100), 4) if bv and ai else None
+
+            rows.append(entry)
+
+        return {"lgp_base": lgp_base, "er_base": er_base, "ranges": rows}
     finally:
         app_state.params = base_data

@@ -6,7 +6,7 @@ load_dotenv()
 
 SOLVERS = {
     "cplex":  lambda: pyo.SolverFactory("cplex", solver_io="nl", executable="cplex"),
-    "highs":  lambda: pyo.SolverFactory("appsi_highs"),
+    "highs":  lambda: pyo.SolverFactory("highs"),
     "glpk":   lambda: pyo.SolverFactory("glpk"),
     "cbc":    lambda: pyo.SolverFactory("cbc"),
 }

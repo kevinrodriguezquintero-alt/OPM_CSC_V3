@@ -77,6 +77,7 @@
       <button class="tab-btn" data-tab="er">ER</button>
       <button class="tab-btn" data-tab="oat">OAT</button>
       <button class="tab-btn" data-tab="scenarios">Escenarios</button>
+      <button class="tab-btn" data-tab="robustness">Rangos</button>
     </div>
   </nav>
 
@@ -183,7 +184,7 @@
               <span class="text-sm font-semibold text-main">Método:</span>
               <select id="oat-method"
                 class="border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
-                <option value="lgp">LGP (Goles Lexicográficos)</option>
+                <option value="lgp">LGP (Metas Lexicográficas)</option>
                 <option value="er">ER (Epsilon-Restricción)</option>
               </select>
             </div>
@@ -193,18 +194,6 @@
               <input id="oat-er-steps" type="number" value="5" min="2" max="20"
                 class="w-14 border border-strong rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
             </div>
-
-            <div id="oat-er-pilar-wrap" class="flex items-center gap-2 hidden">
-              <span class="text-sm font-semibold text-main">Escenario:</span>
-              <select id="oat-er-pilar"
-                class="border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
-                <option value="middle">Centro (Pareto)</option>
-                <option value="cost">Min Costo</option>
-                <option value="emissions">Min Emisiones</option>
-                <option value="employment">Max Social</option>
-              </select>
-            </div>
-
             <div class="flex items-center gap-2">
               <span class="text-sm font-semibold text-main">Parada:</span>
               <input id="oat-max-pct" type="number" value="10" min="1" max="100"
@@ -327,8 +316,9 @@
               <span class="text-sm font-bold text-main">Método:</span>
               <select id="scenarios-method"
                 class="border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
-                <option value="lgp">LGP (Goles Lexicográficos)</option>
+                <option value="lgp">LGP (Metas Lexicográficas)</option>
                 <option value="er">ER (Epsilon-Restricción)</option>
+                <option value="both" selected>Comparar LGP vs ER</option>
               </select>
             </div>
             <div id="scenarios-er-steps-wrap" class="flex items-center gap-2 hidden">
@@ -336,20 +326,44 @@
               <input id="scenarios-er-steps" type="number" value="5" min="2" max="20"
                 class="w-14 border border-strong rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
             </div>
-            <div id="scenarios-er-pilar-wrap" class="flex items-center gap-2 hidden">
-              <span class="text-sm font-semibold text-main">Escenario:</span>
-              <select id="scenarios-er-pilar"
-                class="border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
-                <option value="middle">Centro (Pareto)</option>
-                <option value="cost">Min Costo</option>
-                <option value="emissions">Min Emisiones</option>
-                <option value="employment">Max Social</option>
-              </select>
-            </div>
+
           </div>
         </div>
 
         <div id="scenarios-result"></div>
+      </div>
+    </section>
+
+    <!-- ── Rangos ───────────────────────────────────────────────────────── -->
+    <section id="tab-robustness" class="hidden">
+      <div class="bg-surface rounded-xl border border-line p-6 shadow-sm mb-6">
+        <div class="flex justify-between items-start mb-6">
+          <div>
+            <h2 class="text-lg font-semibold text-main mb-1">Análisis de Rangos</h2>
+            <p class="text-sm text-muted">Precios Sombra y Rangos de Variación Admisibles</p>
+          </div>
+          <button id="robustness-btn"
+            class="bg-accent hover:bg-accent-hover disabled:opacity-50 text-accent-fg text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+            Calcular Rangos
+          </button>
+        </div>
+
+        <!-- Param checkboxes -->
+        <div class="mb-6">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-sm font-medium text-main">Parámetros a analizar</span>
+            <div class="flex gap-2">
+              <button id="robustness-check-all" class="text-xs text-accent hover:underline">Todos</button>
+              <button id="robustness-uncheck-all" class="text-xs text-muted hover:underline">Ninguno</button>
+            </div>
+          </div>
+          <div id="robustness-params-grid"
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 p-3 bg-page rounded-lg border border-line">
+            <!-- populated by JS -->
+          </div>
+        </div>
+
+        <div id="robustness-result"></div>
       </div>
     </section>
 

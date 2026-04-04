@@ -16,10 +16,13 @@ import contextlib
 def _solve(solver, model, capture_log=True):
     """Solve model. Returns (results, log_str)."""
     if not capture_log:
-        res = solver.solve(model, tee=False)
-        return res, ""
-        
+        try:
+            return solver.solve(model, tee=False), ""
+        except:
+            return solver.solve(model, tee=False), "" # Retry without flags if possible
+            
     log_str = ""
+    # Only redirect stdout if explicitly requested, as it's thread-unsafe in many Pyomo interfaces
     with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.log') as temp_log:
         temp_log_path = temp_log.name
         

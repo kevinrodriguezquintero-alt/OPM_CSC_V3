@@ -34,8 +34,12 @@ function initTabs() {
 
 // ── Spinner helpers ────────────────────────────────────────────────────────
 
-function showSpinner(el) {
-  el.innerHTML = `<div class="spinner" role="status" aria-label="Cargando…"></div>`;
+function showSpinner(el, msg = "Cargando…") {
+  el.innerHTML = `
+    <div class="flex flex-col items-center py-6 text-center">
+      <div class="spinner !m-0 mb-4" role="status" aria-label="${msg}"></div>
+      <p class="text-xs font-bold text-muted uppercase tracking-[0.2em] animate-pulse">${msg}</p>
+    </div>`;
 }
 
 function showError(el, msg) {
@@ -112,7 +116,7 @@ function initParams() {
   const msg         = document.getElementById("params-msg");
 
   async function loadParams() {
-    showSpinner(container);
+    showSpinner(container, "Cargando Parámetros...");
     try {
       const data = await api.getParams();
       container.innerHTML = renderParams(data);
@@ -185,6 +189,30 @@ function initParams() {
   loadParams();
 }
 
+/**
+ * Muestra una barra de progreso premium en un contenedor.
+ * Retorna una función para actualizar el % (0-100) y el subtítulo.
+ */
+function showProgressBar(container, title, total) {
+  container.innerHTML = `
+    <div class="p-8 bg-surface-alt rounded-xl border border-line shadow-sm text-center">
+      <p class="text-xs font-bold text-main uppercase tracking-[0.2em] mb-4" id="pbar-title">${title}</p>
+      <div class="w-full bg-page rounded-full h-2.5 mb-2 overflow-hidden border border-line">
+        <div id="pbar-fill" class="bg-accent h-full transition-all duration-500 ease-out" style="width: 0%"></div>
+      </div>
+      <p class="text-[11px] text-muted font-medium" id="pbar-subtext">Iniciando...</p>
+    </div>
+  `;
+  const fill = document.getElementById("pbar-fill");
+  const subtext = document.getElementById("pbar-subtext");
+  
+  return (current, subtitle) => {
+    const pct = Math.min(100, Math.round((current / total) * 100));
+    fill.style.width = `${pct}%`;
+    if (subtitle) subtext.innerText = subtitle;
+  };
+}
+
 // ── LGP ────────────────────────────────────────────────────────────────────
 
 function initLgp() {
@@ -193,9 +221,11 @@ function initLgp() {
 
   btn.addEventListener("click", async () => {
     btn.disabled = true;
-    showSpinner(container);
+    const update = showProgressBar(container, "Modelado Lexicográfico", 1);
+    update(0.1, "Construyendo modelo y cargando parámetros...");
     try {
       const data = await api.solveLgp();
+      update(1, "¡Optimización exitosa!");
       container.innerHTML = renderLgpResult(data);
     } catch (e) {
       showError(container, e.message);
@@ -216,9 +246,11 @@ function initEr() {
   btn.addEventListener("click", async () => {
     const steps = parseInt(stepsInput.value, 10) || 5;
     btn.disabled = true;
-    showSpinner(container);
+    const update = showProgressBar(container, "Frontera de Pareto (ER)", 1);
+    update(0.1, `Generando ${steps} puntos en la frontera de Pareto...`);
     try {
       const data = await api.solveEr(steps);
+      update(1, "Frontera generada correctamente.");
       container.innerHTML = renderErResult(data);
     } catch (e) {
       showError(container, e.message);
@@ -250,13 +282,9 @@ function initOat() {
   const methodSelect  = document.getElementById("oat-method");
   const erStepsWrap   = document.getElementById("oat-er-steps-wrap");
   const erStepsInput  = document.getElementById("oat-er-steps");
-  const erPilarWrap   = document.getElementById("oat-er-pilar-wrap");
-  const erPilarInput  = document.getElementById("oat-er-pilar");
-
   methodSelect.addEventListener("change", () => {
     const isEr = methodSelect.value === "er";
     erStepsWrap.classList.toggle("hidden", !isEr);
-    erPilarWrap.classList.toggle("hidden", !isEr);
   });
 
   // Build checkbox grid
@@ -320,11 +348,11 @@ function initOat() {
       return;
     }
     const percentages = [];
-    let val = stepSize;
-    while (val <= maxPct + 0.0001) {
-        percentages.push(parseFloat(val.toFixed(2)));
-        percentages.push(parseFloat((-val).toFixed(2)));
-        val += stepSize;
+    let valStep = stepSize;
+    while (valStep <= maxPct + 0.0001) {
+        percentages.push(parseFloat(valStep.toFixed(2)));
+        percentages.push(parseFloat((-valStep).toFixed(2)));
+        valStep += stepSize;
     }
     const lastPushed = percentages[percentages.length - 2];
     if (lastPushed === undefined || Math.abs(lastPushed - maxPct) > 0.001) {
@@ -334,12 +362,105 @@ function initOat() {
     const method = methodSelect.value;
     const steps  = parseInt(erStepsInput.value, 10) || 5;
     btn.disabled = true;
-    showSpinner(container);
+
+    const total = params_to_test.length;
+    const update = showProgressBar(container, "Sensibilidad OAT", total);
+    
     try {
-      const pilar = erPilarInput.value;
-      const data = await api.solveSensitivity(params_to_test, percentages, method, steps, pilar);
-      container.innerHTML = renderSensitivityResult(data);
-      drawOatCharts(data);
+      const pilar = "middle";
+      let finalData = null;
+
+      for (let i = 0; i < total; i++) {
+        const p = params_to_test[i];
+        update(i, `Procesando parámetro: ${p} (${i+1}/${total})`);
+        
+        const part = await api.solveSensitivity([p], percentages, method, steps, pilar);
+        if (!finalData) {
+          finalData = part;
+        } else {
+          finalData.results.push(...part.results);
+        }
+      }
+
+      // Recalcular Top rankings (ordenar por valor absoluto de elasticidad)
+      const sortElas = (arr, key) => [...arr].filter(r => r[key] !== null && r[key] !== undefined && Math.abs(r[key]) > 0)
+                                           .sort((a, b) => Math.abs(b[key]) - Math.abs(a[key]));
+
+      finalData.top_cost = sortElas(finalData.results, "elas_cost");
+      finalData.top_env  = sortElas(finalData.results, "elas_env");
+      finalData.top_soc  = sortElas(finalData.results, "elas_soc");
+
+      update(total, "Analizando rankings de impacto...");
+      container.innerHTML = renderSensitivityResult(finalData);
+      drawOatCharts(finalData);
+    } catch (e) {
+      showError(container, e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+}
+
+// ── Rangos (LGP vs ER) ───────────────────────────────────────────────────
+
+function initRobustness() {
+  const btn = document.getElementById("robustness-btn");
+  const container = document.getElementById("robustness-result");
+  const grid = document.getElementById("robustness-params-grid");
+  const checkAll = document.getElementById("robustness-check-all");
+  const uncheckAll = document.getElementById("robustness-uncheck-all");
+
+  if (!btn || !container) return;
+
+  const DEFAULT_PARAMS = ["CA", "CB", "CN", "RA", "RC", "CV", "DI", "DD", "IT"];
+
+  grid.innerHTML = SENSITIVITY_PARAMS.map(p => `
+    <div class="scenario-item">
+      <label class="scenario-label">
+        <input type="checkbox" class="robustness-param-cb" value="${p}" ${DEFAULT_PARAMS.includes(p) ? "checked" : ""} />
+        <span class="font-mono">${p}</span>
+      </label>
+    </div>`).join("");
+
+  checkAll.addEventListener("click", () => {
+    grid.querySelectorAll(".robustness-param-cb").forEach(cb => cb.checked = true);
+  });
+  uncheckAll.addEventListener("click", () => {
+    grid.querySelectorAll(".robustness-param-cb").forEach(cb => cb.checked = false);
+  });
+
+  btn.addEventListener("click", async () => {
+    const params_to_test = [...grid.querySelectorAll(".robustness-param-cb:checked")].map(cb => cb.value);
+    if (params_to_test.length === 0) {
+      showError(container, "Selecciona al menos un parámetro.");
+      return;
+    }
+    
+    btn.disabled = true;
+    const total = params_to_test.length;
+    const update = showProgressBar(container, "Análisis de Rangos", total);
+
+    try {
+      const { renderRangesComparison } = await import("./render.js");
+      
+      update(0, "Calculando base (Compromiso Pareto)...");
+      const baseResult = await api.solveSensitivityRanges([]);
+      
+      const allRows = [];
+      for (let i = 0; i < total; i++) {
+        const p = params_to_test[i];
+        update(i, `Analizando límites de factibilidad: ${p} (${i + 1}/${total})`);
+        
+        const paramResult = await api.solveSensitivityRanges([p]);
+        if (paramResult.ranges && paramResult.ranges.length > 0) {
+          allRows.push(paramResult.ranges[0]);
+        }
+      }
+
+      update(total, "Finalizando reporte de robustez...");
+      const finalData = { ...baseResult, ranges: allRows };
+      container.innerHTML = renderRangesComparison(finalData);
+
     } catch (e) {
       showError(container, e.message);
     } finally {
@@ -475,13 +596,9 @@ function initScenarios() {
     });
   });
 
-  const erPilarWrap  = document.getElementById("scenarios-er-pilar-wrap");
-  const erPilarInput = document.getElementById("scenarios-er-pilar");
-
   method.addEventListener("change", () => {
     const isEr = method.value === "er";
     erWrap.classList.toggle("hidden", !isEr);
-    erPilarWrap.classList.toggle("hidden", !isEr);
   });
 
   grid.innerHTML = SENSITIVITY_PARAMS.map(p => `
@@ -505,26 +622,42 @@ function initScenarios() {
   });
 
   btn.addEventListener("click", async () => {
-    const params_to_test = {};
+    const params_vals = {};
     grid.querySelectorAll(".scenarios-param-cb:checked").forEach(cb => {
       const input = grid.querySelector(`.scenarios-param-input[data-param="${cb.value}"]`);
-      params_to_test[cb.value] = parseFloat(input?.value) || 0;
+      params_vals[cb.value] = parseFloat(input?.value) || 0;
     });
 
-    if (Object.keys(params_to_test).length === 0) {
+    if (Object.keys(params_vals).length === 0) {
       showError(container, "Selecciona al menos un parámetro.");
       return;
     }
 
     const m = method.value;
     const s = parseInt(erSteps.value, 10) || 5;
-
     btn.disabled = true;
-    showSpinner(container);
+
+    const stepsTotal = m === "both" ? 2 : 1;
+    const update = showProgressBar(container, "Análisis de Escenarios", stepsTotal);
+
     try {
-      const { renderScenariosResult } = await import("./render.js");
-      const data = await api.solveScenarios(params_to_test, m, s, erPilarInput.value);
-      container.innerHTML = renderScenariosResult(data);
+      const { renderScenariosResult, renderCombinedScenariosResult } = await import("./render.js");
+
+      if (m === "both") {
+        update(0, "Fase 1/2: Resolviendo Metas Lexicográficas (LGP)...");
+        const lgpData = await api.solveScenarios(params_vals, "lgp", s, "middle");
+        
+        update(1, "Fase 2/2: Resolviendo Epsilon-Restricción (ER)...");
+        const erData = await api.solveScenarios(params_vals, "er", s, "middle");
+        
+        update(2, "¡Simulación mutivariables completada!");
+        container.innerHTML = renderCombinedScenariosResult(lgpData, erData);
+      } else {
+        update(0.5, `Evaluando configuración bajo método ${m.toUpperCase()}...`);
+        const data = await api.solveScenarios(params_vals, m, s, "middle");
+        update(1, "Listo.");
+        container.innerHTML = renderScenariosResult(data);
+      }
     } catch (e) {
       showError(container, e.message);
     } finally {
@@ -561,6 +694,7 @@ document.addEventListener("DOMContentLoaded", () => {
   initParams();
   initOat();
   initScenarios();
+  initRobustness();
   initLgp();
   initEr();
 });

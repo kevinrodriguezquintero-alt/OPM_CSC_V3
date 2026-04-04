@@ -45,4 +45,14 @@ export const api = {
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   },
+
+  async solveSensitivityRanges(params = ["CA","CB","CN","RA","RC","CV","DI","DD","IT"]) {
+    const r = await fetch(`${BASE}/solve/sensitivity-ranges`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ params }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    return r.json();
+  },
 };
