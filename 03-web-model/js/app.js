@@ -362,35 +362,73 @@ function initOat() {
     const method = methodSelect.value;
     const steps  = parseInt(erStepsInput.value, 10) || 5;
     btn.disabled = true;
-
-    const total = params_to_test.length;
-    const update = showProgressBar(container, "Sensibilidad OAT", total);
-    
     try {
       const pilar = "middle";
+      const totalParams = params_to_test.length;
+      const totalSteps = totalParams * percentages.length;
+      const update = showProgressBar(container, "Sensibilidad OAT", totalSteps);
+      
       let finalData = null;
+      let globalIdx = 0;
 
-      for (let i = 0; i < total; i++) {
+      for (let i = 0; i < totalParams; i++) {
         const p = params_to_test[i];
-        update(i, `Procesando parámetro: ${p} (${i+1}/${total})`);
         
-        const part = await api.solveSensitivity([p], percentages, method, steps, pilar);
-        if (!finalData) {
-          finalData = part;
-        } else {
-          finalData.results.push(...part.results);
+        for (let j = 0; j < percentages.length; j++) {
+            const pct = percentages[j];
+            globalIdx++;
+            update(globalIdx, `Simulación ${globalIdx}/${totalSteps}: ${p} (${pct >= 0 ? "+" : ""}${pct}%)`);
+            
+            try {
+                const part = await api.solveSensitivity([p], [pct], method, steps, pilar);
+                if (!finalData) {
+                    finalData = part;
+                } else {
+                    finalData.results.push(...part.results);
+                }
+            } catch (err) {
+                console.error(`Error en simulación ${p} (${pct}%):`, err);
+                // Si falla una individual, agregamos el error al set de resultados para no perder consistencia
+                if (finalData) {
+                    finalData.results.push({
+                        param: p,
+                        change: `${pct >= 0 ? "+" : ""}${pct}%`,
+                        error: "Se perdió la conexión con el servidor en esta simulación específica."
+                    });
+                }
+            }
         }
       }
 
-      // Recalcular Top rankings (ordenar por valor absoluto de elasticidad)
-      const sortElas = (arr, key) => [...arr].filter(r => r[key] !== null && r[key] !== undefined && Math.abs(r[key]) > 0)
-                                           .sort((a, b) => Math.abs(b[key]) - Math.abs(a[key]));
+      // Recalcular Top rankings agrupado por diversidad y frecuencia
+      const sortElas = (arr, key) => {
+        const valid = arr.filter(r => r[key] !== null && r[key] !== undefined && Math.abs(r[key]) > 0);
+        const grouped = {};
+        valid.forEach(r => {
+          if (!grouped[r.param]) {
+            grouped[r.param] = { param: r.param, count: 0, maxAbs: 0, bestRow: null };
+          }
+          grouped[r.param].count++;
+          const absVal = Math.abs(r[key]);
+          if (absVal > grouped[r.param].maxAbs) {
+            grouped[r.param].maxAbs = absVal;
+            grouped[r.param].bestRow = r;
+          }
+        });
+
+        return Object.values(grouped)
+          .sort((a, b) => {
+            if (Math.abs(b.maxAbs - a.maxAbs) > 1e-7) return b.maxAbs - a.maxAbs; // Primero por magnitud de elasticidad (Promesa del Top)
+            return b.count - a.count; // Desempate por frecuencia de impactos
+          })
+          .map(g => ({ ...g.bestRow, frequency: g.count }));
+      };
 
       finalData.top_cost = sortElas(finalData.results, "elas_cost");
       finalData.top_env  = sortElas(finalData.results, "elas_env");
       finalData.top_soc  = sortElas(finalData.results, "elas_soc");
 
-      update(total, "Analizando rankings de impacto...");
+      update(totalSteps, "Analizando rankings de impacto...");
       container.innerHTML = renderSensitivityResult(finalData);
       drawOatCharts(finalData);
     } catch (e) {

@@ -1,4 +1,6 @@
 import copy
+import sys
+import io
 from typing import List
 
 from fastapi import APIRouter, HTTPException
@@ -8,6 +10,15 @@ from solvers.lgp import run_lgp
 from solvers.er import run_er
 
 router = APIRouter(prefix="/solve", tags=["solve"])
+
+
+def _ensure_stdout_safety():
+    """Emergency fix for 'I/O operation on closed file' errors caused by thread-unsafe redirection."""
+    try:
+        sys.stdout.write("")
+    except (ValueError, AttributeError):
+        # Restore sys.stdout to the original system stdout if it's corrupted/closed
+        sys.stdout = sys.__stdout__ if sys.__stdout__ else io.StringIO()
 
 
 # ── Sensitivity helpers ──────────────────────────────────────────────────────
@@ -82,6 +93,7 @@ def _infeasibility_hint(param: str, pct: float) -> str:
 @router.post("/lgp")
 def solve_lgp():
     """Run Lexicographic Goal Programming and return structured JSON results."""
+    _ensure_stdout_safety()
     try:
         result = run_lgp(
             params_obj=app_state.get_params_object(),
@@ -99,6 +111,7 @@ class ERRequest(BaseModel):
 @router.post("/er")
 def solve_er(body: ERRequest = ERRequest()):
     """Run Epsilon-Constraint Method and return Pareto frontier JSON."""
+    _ensure_stdout_safety()
     try:
         result = run_er(
             params_obj=app_state.get_params_object(),
@@ -220,6 +233,7 @@ class SensitivityRequest(BaseModel):
 @router.post("/sensitivity")
 def solve_sensitivity(body: SensitivityRequest):
     """One-At-A-Time sensitivity analysis: perturb each param ±%, run LGP or ER, compute elasticities."""
+    _ensure_stdout_safety()
     if body.method not in ("lgp", "er"):
         raise HTTPException(status_code=422, detail="method must be 'lgp' or 'er'")
 

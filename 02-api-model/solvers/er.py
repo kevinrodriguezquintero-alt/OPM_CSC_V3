@@ -8,33 +8,46 @@ from solvers.build_model import build_model, extract_variables, _solver_status
 
 import os
 import tempfile
-
-import os
-import tempfile
 import contextlib
 
 def _solve(solver, model, capture_log=True):
-    """Solve and capture output. Returns (results, log_str)."""
+    """Solve model. Returns (results, log_str)."""
     if not capture_log:
         try:
             return solver.solve(model, tee=False), ""
-        except:
-            return solver.solve(model, tee=False), "" # Retry without flags if possible
-
+        except Exception:
+            return solver.solve(model), "" # Hard fallback
+            
     log_str = ""
-    # Only redirect stdout if explicitly requested
     with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.log') as temp_log:
         temp_log_path = temp_log.name
+        temp_log.close() # Close to allow solver to write to it
         
     try:
-        with open(temp_log_path, 'w', encoding='utf-8') as f:
-            with contextlib.redirect_stdout(f):
-                res = solver.solve(model, tee=True)
+        # Try to use solver-native log files (Thread-Safe)
+        sname = str(solver.name).lower()
+        options = {}
+        if "highs" in sname:
+            options = {"log_file": temp_log_path}
+        elif "glpk" in sname or "cbc" in sname:
+            options = {"log": temp_log_path}
+            
+        if options:
+            res = solver.solve(model, options=options, tee=False)
+        else:
+            # Fallback for solvers without easy log_file option
+            with open(temp_log_path, 'w', encoding='utf-8') as f:
+                with contextlib.redirect_stdout(f):
+                    res = solver.solve(model, tee=True)
                 
-        with open(temp_log_path, 'r', encoding='utf-8', errors='ignore') as f:
-            log_str = f.read()
+        if os.path.exists(temp_log_path):
+            with open(temp_log_path, 'r', encoding='utf-8', errors='ignore') as f:
+                log_str = f.read()
     except Exception as e:
-        res = solver.solve(model, tee=False)
+        try:
+            res = solver.solve(model, tee=False)
+        except:
+            res = None
         log_str = f"Error capturando log del solver: {str(e)}"
     finally:
         if os.path.exists(temp_log_path):

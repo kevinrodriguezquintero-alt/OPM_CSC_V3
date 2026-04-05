@@ -382,15 +382,22 @@ function renderTopTable(rows, objTitle, objKey, elasKey) {
     const e = r[elasKey];
     const cls = elasticityClass(e);
     return `<tr>
-      <td><strong>${r.param}</strong></td>
-      <td>${r.change}</td>
-      <td>${r[objKey] !== undefined ? fmt(r[objKey]) : "—"}</td>
-      <td class="${cls}">${e !== null && e !== undefined ? e.toFixed(4) : "—"}</td>
+      <td class="px-4 text-left"><strong>${r.param}</strong></td>
+      <td class="text-center font-mono text-sm text-muted">${r.change}</td>
+      <td class="text-center font-mono text-sm">${r[objKey] !== undefined ? fmt(r[objKey]) : "—"}</td>
+      <td class="text-center font-bold font-mono text-sm ${cls}">${e !== null && e !== undefined ? e.toFixed(4) : "—"}</td>
     </tr>`;
   }).join("");
   return `
-    <table class="data-table">
-      <thead>${th("Parámetro", "Cambio", objTitle, "Elasticidad")}</thead>
+    <table class="data-table text-[13px] w-full">
+      <thead>
+        <tr>
+          <th class="px-4 text-left">Parámetro</th>
+          <th class="text-center">Cambio</th>
+          <th class="text-center">${objTitle.toUpperCase()}</th>
+          <th class="text-center">Elasticidad</th>
+        </tr>
+      </thead>
       <tbody>${body}</tbody>
     </table>`;
 }
