@@ -376,7 +376,7 @@ function elasticityClass(e) {
   return "";
 }
 
-function renderTopTable(rows, objTitle, objKey, elasKey) {
+function renderTopTable(rows, objTitle, objKey, elasKey, tableId) {
   if (!rows || rows.length === 0) return `<p class="text-subtle italic text-sm">Sin resultados.</p>`;
   const body = rows.map(r => {
     const e = r[elasKey];
@@ -389,7 +389,7 @@ function renderTopTable(rows, objTitle, objKey, elasKey) {
     </tr>`;
   }).join("");
   return `
-    <table class="data-table text-[13px] w-full">
+    <table class="data-table text-[13px] w-full" id="${tableId || ''}">
       <thead>
         <tr>
           <th class="px-4 text-left">Parámetro</th>
@@ -435,19 +435,30 @@ export function renderSensitivityResult(data) {
       </table>
     </div>`;
 
-  function renderTopCard(title, tableRows, objTitle, objKey, elasKey) {
+  function renderTopCard(title, tableRows, objTitle, objKey, elasKey, tableId) {
     return `
       <div class="sens-top-card" style="margin: 0 auto;">
-        <div style="margin-bottom: 0.6rem;">
+        <div class="flex justify-between items-center mb-2">
           <h3 class="sens-top-title" style="margin-bottom:0px;">${title}</h3>
+          <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="
+            const table = document.getElementById('${tableId}');
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const tsv = rows.map(r => Array.from(r.querySelectorAll('th, td')).map(c => c.innerText.replace(/\\n/g, ' ').trim()).join('\\t')).join('\\n');
+            navigator.clipboard.writeText(tsv);
+            const old = this.innerHTML; 
+            this.innerHTML = '<span class=\\'text-[11px] font-bold px-1\\'>Copiado ✓</span>'; 
+            setTimeout(() => this.innerHTML = old, 1500);
+          ">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+          </button>
         </div>
-        ${renderTopTable(tableRows, objTitle, objKey, elasKey)}
+        ${renderTopTable(tableRows, objTitle, objKey, elasKey, tableId)}
       </div>`;
   }
 
-  const topCost = renderTopCard("PARÁMETROS CON ELASTICIDAD — COSTO", data.top_cost, "Costo", "obj_cost", "elas_cost");
-  const topEnv  = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMISIONES", data.top_env, "Emisiones", "obj_env", "elas_env");
-  const topSoc  = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMPLEO", data.top_soc, "Empleo", "obj_soc", "elas_soc");
+  const topCost = renderTopCard("PARÁMETROS CON ELASTICIDAD — COSTO", data.top_cost, "Costo", "obj_cost", "elas_cost", "table-top-cost");
+  const topEnv  = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMISIONES", data.top_env, "Emisiones", "obj_env", "elas_env", "table-top-env");
+  const topSoc  = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMPLEO", data.top_soc, "Empleo", "obj_soc", "elas_soc", "table-top-soc");
 
   function pctCell(newVal, baseVal) {
     if (newVal === null || newVal === undefined) return `<td>—</td>`;
@@ -652,31 +663,30 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
 
   const fmtO = (v) => typeof v === "number" ? fmt(v) : v;
 
-  const row = (name, vL, vE, interp) => `
+  const row = (name, vL, vE) => `
     <tr>
       <td class="!text-left font-bold !px-3 !py-2">${name}</td>
       <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmtO(vL)}</td>
       <td class="!text-center font-mono !px-3 !py-2">${fmtO(vE)}</td>
       <td class="!text-center !px-3 !py-2">${diffStr(vL, vE)}</td>
-      <td class="!text-left text-xs text-muted !px-3 !py-2 leading-tight" style="white-space:normal; max-w:250px;">${interp}</td>
     </tr>
   `;
 
   const rowsHtml = [
-    row("Personal Intermediarios", l.pers_int, e.pers_int, "Cambio en el empleo secundario (intermediarios)"),
-    row("Personal Detallistas", l.pers_det, e.pers_det, "Cambio en el empleo de distribución (detallistas)"),
-    row("Viajes Totales (Rutas)", l.viajes_totales, e.viajes_totales, "Número de viajes impacta directamente en costos fijos y logística"),
-    row("Flujo Productor → Inter. (kg)", l.flujo_pi, e.flujo_pi, "Volumen originado desde granjas hacia procesamiento"),
-    row("Flujo Inter. → Detallista (kg)", l.flujo_id, e.flujo_id, "Volumen final procesado hacia el cliente"),
-    row("Top Intermediarios", l.top_intermediarios, e.top_intermediarios, "Revela si un método centraliza más que el otro"),
-    row("Top Rutas Activas", l.top_rutas, e.top_rutas, "Muestra cómo se reconfigura la red de transporte físico")
+    row("Personal Intermediarios", l.pers_int, e.pers_int),
+    row("Personal Detallistas", l.pers_det, e.pers_det),
+    row("Viajes Totales (Rutas)", l.viajes_totales, e.viajes_totales),
+    row("Flujo Productor → Inter. (kg)", l.flujo_pi, e.flujo_pi),
+    row("Flujo Inter. → Detallista (kg)", l.flujo_id, e.flujo_id),
+    row("Top Intermediarios", l.top_intermediarios, e.top_intermediarios),
+    row("Top Rutas Activas", l.top_rutas, e.top_rutas)
   ].join("");
 
   return `
     <div class="mt-4 border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
       <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
         <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Decisiones Operativas Clave</h5>
-        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Exportar a Excel/Word" onclick="
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="
           const table = document.getElementById('${tableId}');
           const rows = Array.from(table.querySelectorAll('tr'));
           const tsv = rows.map(r => Array.from(r.querySelectorAll('th, td')).map(c => c.innerText.replace(/\\n/g, ' ').trim()).join('\\t')).join('\\n');
@@ -696,7 +706,6 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
               <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Valor LGP</th>
               <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Valor ER</th>
               <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
-              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Interpretación</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
