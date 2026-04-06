@@ -1,5 +1,5 @@
 import { api } from "./api.js";
-import { renderLgpResult, renderErResult, renderParams, renderSolverConfig, renderSensitivityResult } from "./render.js";
+import { renderLgpResult, renderErResult, renderParams, renderSolverConfig, renderSensitivityResult, fmt } from "./render.js";
 // ── Theme Toggle ───────────────────────────────────────────────────────────
 
 function initThemeToggle() {
@@ -377,7 +377,7 @@ function initOat() {
         for (let j = 0; j < percentages.length; j++) {
             const pct = percentages[j];
             globalIdx++;
-            update(globalIdx, `Simulación ${globalIdx}/${totalSteps}: ${p} (${pct >= 0 ? "+" : ""}${pct}%)`);
+            update(globalIdx, `Simulación ${globalIdx}/${totalSteps}: ${p} (${pct >= 0 ? "+" : ""}${fmt(pct)}%)`);
             
             try {
                 const part = await api.solveSensitivity([p], [pct], method, steps, pilar);
@@ -392,13 +392,18 @@ function initOat() {
                 if (finalData) {
                     finalData.results.push({
                         param: p,
-                        change: `${pct >= 0 ? "+" : ""}${pct}%`,
+                        change: `${pct >= 0 ? "+" : ""}${fmt(pct)}%`,
                         error: "Se perdió la conexión con el servidor en esta simulación específica."
                     });
                 }
             }
         }
       }
+      
+      // Sanitizar formatos de punto decimal en las cadenas de cambio antes de procesar rankings
+      (finalData.results || []).forEach(r => {
+        if (typeof r.change === "string") r.change = r.change.replace('.', ',');
+      });
 
       // Recalcular Top rankings agrupado por diversidad y frecuencia
       const sortElas = (arr, key) => {
@@ -594,7 +599,7 @@ function drawOatCharts(data) {
             callbacks: {
               label: ctx => {
                 const pct = ctx.parsed.x;
-                const tag = pct === 0 ? "Base" : `${pct > 0 ? "+" : ""}${pct}%`;
+                const tag = pct === 0 ? "Base" : `${pct > 0 ? "+" : ""}${fmt(pct)}%`;
                 return `${ctx.dataset.label} (${tag}): ${ctx.parsed.y.toLocaleString("es-CO", { maximumFractionDigits: 2 })}`;
               },
             },

@@ -1,8 +1,41 @@
 // ── Helpers ────────────────────────────────────────────────────────────────
+window.copyTableToClipboard = function(btn, tableId) {
+  const table = tableId ? document.getElementById(tableId) : btn.closest('div').nextElementSibling;
+  if (!table) return;
+  const rows = Array.from(table.querySelectorAll('tr'));
+  
+  // Regex para quitar puntos de miles (ej: 1.234) pero mantener el punto decimal (ej: 1.2345)
+  // En es-CO, el punto es de miles, pero si toFixed o similar se usa, puede ser decimal.
+  // Solo quitamos puntos que tengan exactamente 3 dígitos detrás y no otro dígito.
+  const clean = (s) => {
+    if (!s) return "";
+    return s.replace(/\u00A0/g, ' ')       // NBSP a espacio
+            .replace(/[\u2212\u2013]/g, '-') // Menos tipográfico y En-dash a guion ASCII
+            .replace(/\.(?=\d{3}(?!\d))/g, '') 
+            .trim();
+  };
 
-function fmt(n) {
+  const tsv = rows.map(r => {
+    return Array.from(r.querySelectorAll('th, td')).map(c => {
+      const v = c.querySelector('.sens-val');
+      let val = (v ? v.innerText : c.innerText);
+      // Quitar saltos de línea internos para Excel
+      return clean(val.replace(/\n/g, ' '));
+    }).join('\t');
+  }).join('\n');
+
+  navigator.clipboard.writeText(tsv);
+  const old = btn.innerHTML;
+  btn.innerHTML = '<span class="text-[10px] font-bold px-1">Copiado ✓</span>';
+  setTimeout(() => btn.innerHTML = old, 1500);
+};
+
+export function fmt(n, minFrac = 0) {
   if (n === null || n === undefined) return "—";
-  return typeof n === "number" ? n.toLocaleString("es-CO", { maximumFractionDigits: 4 }) : String(n);
+  return typeof n === "number" ? n.toLocaleString("es-CO", { 
+    minimumFractionDigits: minFrac, 
+    maximumFractionDigits: 4 
+  }) : String(n);
 }
 
 function statusBadge(status) {
@@ -385,7 +418,7 @@ function renderTopTable(rows, objTitle, objKey, elasKey, tableId) {
       <td class="px-4 text-left"><strong>${r.param}</strong></td>
       <td class="text-center font-mono text-sm text-muted">${r.change}</td>
       <td class="text-center font-mono text-sm">${r[objKey] !== undefined ? fmt(r[objKey]) : "—"}</td>
-      <td class="text-center font-bold font-mono text-sm ${cls}">${e !== null && e !== undefined ? e.toFixed(4) : "—"}</td>
+      <td class="text-center font-bold font-mono text-sm ${cls}">${e !== null && e !== undefined ? fmt(e, 4) : "—"}</td>
     </tr>`;
   }).join("");
   return `
@@ -407,12 +440,7 @@ function renderGlobalRankings(elasRows, freqRows) {
     <div class="sens-top-card" style="margin:0;">
       <div class="flex justify-between items-center mb-2">
         <h3 class="sens-top-title">GLOBAL: MÁXIMA ELASTICIDAD</h3>
-        <button class="text-accent hover:text-main transition-colors p-1" onclick="
-          const t = this.closest('.sens-top-card').querySelector('table');
-          const tsv = Array.from(t.querySelectorAll('tr')).map(r => Array.from(r.querySelectorAll('th, td')).map(c => c.innerText.trim()).join('\\t')).join('\\n');
-          navigator.clipboard.writeText(tsv);
-          const old = this.innerHTML; this.innerHTML = '<span class=\\'text-[10px]\\'>Copiado ✓</span>'; setTimeout(() => this.innerHTML = old, 1500);
-        ">
+        <button class="text-accent hover:text-main transition-colors p-1" onclick="copyTableToClipboard(this)">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
         </button>
       </div>
@@ -428,7 +456,7 @@ function renderGlobalRankings(elasRows, freqRows) {
           ${(elasRows || []).map(r => `
             <tr>
               <td class="px-4 text-left"><strong>${r.param}</strong></td>
-              <td class="text-center font-bold font-mono ${elasticityClass(r.maxElasticity)}">${r.maxElasticity.toFixed(4)}</td>
+              <td class="text-center font-bold font-mono ${elasticityClass(r.maxElasticity)}">${fmt(r.maxElasticity, 4)}</td>
               <td class="text-center text-[11px] text-muted">${r.pillarsStr}</td>
             </tr>`).join("")}
         </tbody>
@@ -439,12 +467,7 @@ function renderGlobalRankings(elasRows, freqRows) {
     <div class="sens-top-card" style="margin:0;">
       <div class="flex justify-between items-center mb-2">
         <h3 class="sens-top-title">GLOBAL: DIVERSIDAD DE IMPACTO</h3>
-        <button class="text-accent hover:text-main transition-colors p-1" onclick="
-          const t = this.closest('.sens-top-card').querySelector('table');
-          const tsv = Array.from(t.querySelectorAll('tr')).map(r => Array.from(r.querySelectorAll('th, td')).map(c => c.innerText.trim()).join('\\t')).join('\\n');
-          navigator.clipboard.writeText(tsv);
-          const old = this.innerHTML; this.innerHTML = '<span class=\\'text-[10px]\\'>Copiado ✓</span>'; setTimeout(() => this.innerHTML = old, 1500);
-        ">
+        <button class="text-accent hover:text-main transition-colors p-1" onclick="copyTableToClipboard(this)">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
         </button>
       </div>
@@ -513,15 +536,7 @@ export function renderSensitivityResult(data) {
       <div class="sens-top-card" style="margin: 0 auto;">
         <div class="flex justify-between items-center mb-2">
           <h3 class="sens-top-title" style="margin-bottom:0px;">${title}</h3>
-          <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="
-            const table = document.getElementById('${tableId}');
-            const rows = Array.from(table.querySelectorAll('tr'));
-            const tsv = rows.map(r => Array.from(r.querySelectorAll('th, td')).map(c => c.innerText.replace(/\\n/g, ' ').trim()).join('\\t')).join('\\n');
-            navigator.clipboard.writeText(tsv);
-            const old = this.innerHTML; 
-            this.innerHTML = '<span class=\\'text-[11px] font-bold px-1\\'>Copiado ✓</span>'; 
-            setTimeout(() => this.innerHTML = old, 1500);
-          ">
+          <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this, '${tableId}')">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
           </button>
         </div>
@@ -540,7 +555,7 @@ export function renderSensitivityResult(data) {
     const sign = pct >= 0 ? "+" : "";
     return `<td>
       <div class="sens-val">${fmt(newVal)}</div>
-      <div class="sens-delta sens-delta-neutral">${sign}${pct.toFixed(2)}%</div>
+      <div class="sens-delta sens-delta-neutral">${sign}${fmt(pct, 2)}%</div>
     </td>`;
   }
 
@@ -563,28 +578,15 @@ export function renderSensitivityResult(data) {
       ${pctCell(r.obj_cost, bo.cost)}
       ${pctCell(r.obj_env,  bo.emissions)}
       ${pctCell(r.obj_soc,  bo.employment)}
-      <td class="${cc}">${r.elas_cost !== null && r.elas_cost !== undefined ? r.elas_cost.toFixed(4) : "—"}</td>
-      <td class="${ec}">${r.elas_env  !== null && r.elas_env  !== undefined ? r.elas_env.toFixed(4)  : "—"}</td>
-      <td>${r.elas_soc !== null && r.elas_soc !== undefined ? r.elas_soc.toFixed(4) : "—"}</td>
+      <td class="${cc}">${r.elas_cost !== null && r.elas_cost !== undefined ? fmt(r.elas_cost, 4) : "—"}</td>
+      <td class="${ec}">${r.elas_env  !== null && r.elas_env  !== undefined ? fmt(r.elas_env, 4)  : "—"}</td>
+      <td>${r.elas_soc !== null && r.elas_soc !== undefined ? fmt(r.elas_soc, 4) : "—"}</td>
     </tr>`;
   }).join("");
 
   const fullTable = `
     <div class="flex justify-end mb-2">
-      <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="
-        const table = this.closest('div').nextElementSibling;
-        const rows = Array.from(table.querySelectorAll('tr'));
-        const tsv = rows.map(r => {
-          return Array.from(r.querySelectorAll('th, td')).map(c => {
-            const v = c.querySelector('.sens-val');
-            return (v ? v.innerText : c.innerText).trim();
-          }).join('\\t');
-        }).join('\\n');
-        navigator.clipboard.writeText(tsv);
-        const old = this.innerHTML;
-        this.innerHTML = '<span class=\\'text-[11px] font-bold px-1\\'>Copiado ✓</span>';
-        setTimeout(() => this.innerHTML = old, 1500);
-      ">
+      <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
       </button>
     </div>
@@ -656,7 +658,7 @@ function _renderScenarioCard(title, objs, base, hint) {
          cls = p < 0 ? "sens-delta-good" : "sens-delta-bad";
        }
      }
-     return `<div class="sens-delta ${cls}">${p >= 0 ? "+" : ""}${p.toFixed(2)}%</div>`;
+     return `<div class="sens-delta ${cls}">${p >= 0 ? "+" : ""}${fmt(p, 2)}%</div>`;
   };
 
   return `
@@ -708,7 +710,7 @@ export function renderScenariosResult(data) {
         ${paramsEntries.map(([p, pct]) => `
           <div class="flex items-center bg-surface border border-line rounded-lg shadow-sm overflow-hidden">
             <span class="px-3 py-1.5 text-xs font-bold text-main bg-surface-alt border-r border-line">${p}</span>
-            <span class="px-3 py-1.5 text-sm text-muted font-mono font-semibold">${pct >= 0 ? "+" : ""}${pct}%</span>
+            <span class="px-3 py-1.5 text-sm text-muted font-mono font-semibold">${pct >= 0 ? "+" : ""}${fmt(pct)}%</span>
           </div>
         `).join("")}
       </div>
@@ -733,7 +735,7 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
     if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return "—";
     const p = ((vE - vL) / vL) * 100;
     const cls = Math.abs(p) > 0.001 ? (p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400") : "text-muted";
-    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${p.toFixed(1)}%</span>`;
+    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
   };
 
   const fmtO = (v) => typeof v === "number" ? fmt(v) : v;
@@ -761,15 +763,7 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
     <div class="mt-4 border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
       <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
         <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Decisiones Operativas Clave</h5>
-        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="
-          const table = document.getElementById('${tableId}');
-          const rows = Array.from(table.querySelectorAll('tr'));
-          const tsv = rows.map(r => Array.from(r.querySelectorAll('th, td')).map(c => c.innerText.replace(/\\n/g, ' ').trim()).join('\\t')).join('\\n');
-          navigator.clipboard.writeText(tsv);
-          const old = this.innerHTML; 
-          this.innerHTML = '<span class=\\'text-[11px] font-bold px-1\\'>Copiado ✓</span>'; 
-          setTimeout(() => this.innerHTML = old, 1500);
-        ">
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this, '${tableId}')">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
         </button>
       </div>
@@ -829,7 +823,7 @@ export function renderCombinedScenariosResult(lgp, er) {
         ${paramsEntries.map(([p, pct]) => `
           <div class="flex items-center bg-surface border border-line rounded-lg shadow-sm overflow-hidden text-xs">
             <span class="px-2 py-1 font-bold text-main bg-surface-alt border-r border-line">${p}</span>
-            <span class="px-2 py-1 text-muted font-mono font-semibold">${pct >= 0 ? "+" : ""}${pct}%</span>
+            <span class="px-2 py-1 text-muted font-mono font-semibold">${pct >= 0 ? "+" : ""}${fmt(pct)}%</span>
           </div>
         `).join("")}
       </div>
@@ -859,8 +853,11 @@ function _renderBaseRangeComparison(lgp, er) {
   if (!lgp && !er) return "";
   return `
     <div class="mb-8 border border-line rounded-xl overflow-hidden bg-surface-alt shadow-sm">
-      <div class="bg-surface px-4 py-3 border-b border-line text-center">
+      <div class="bg-surface px-4 py-3 border-b border-line flex justify-between items-center">
         <h3 class="text-[11px] font-bold text-main uppercase tracking-widest">Referencia de Objetivos Base</h3>
+        <button class="text-accent hover:text-main transition-colors p-1" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
       </div>
       <div class="overflow-x-auto">
         <table class="data-table text-[11px] w-full">
@@ -941,18 +938,23 @@ export function renderRangesComparison(data) {
     <td class="!text-center font-mono border-r border-line/50 align-middle !px-2 !py-1.5">${fmt(r.base_value)}</td>
     <td class="!text-center font-mono align-middle !px-2 !py-1.5 ${_shadowClass(r.lgp_shadow_cost)}">${_fmtShadow(r.lgp_shadow_cost)}</td>
     <td class="!text-center font-mono align-middle !px-2 !py-1.5 ${_shadowClass(r.lgp_shadow_env)}">${_fmtShadow(r.lgp_shadow_env)}</td>
-    <td class="!text-center font-mono border-r border-line/50 align-middle !px-2 !py-1.5 ${_shadowClass(r.lgp_shadow_soc)}">${_fmtShadow(r.lgp_shadow_soc)}</td>
-    <td class="!text-center font-mono text-xs text-green-600 dark:text-green-400 align-middle !px-2 !py-1.5">${r.allowable_increase_pct != null ? "+" + r.allowable_increase_pct + "%" : "—"}</td>
-    <td class="!text-center font-mono text-xs text-red-600 dark:text-red-400 border-r border-line/50 align-middle !px-2 !py-1.5">${r.allowable_decrease_pct != null ? "−" + r.allowable_decrease_pct + "%" : "—"}</td>
+    <td class="!text-center font-mono align-middle !px-2 !py-1.5 ${_shadowClass(r.lgp_shadow_soc)}">${_fmtShadow(r.lgp_shadow_soc)}</td>
+    <td class="!text-center font-mono text-xs text-green-600 dark:text-green-400 align-middle !px-2 !py-1.5">${r.allowable_increase_pct != null ? "+" + fmt(r.allowable_increase_pct, 1) + "%" : "—"}</td>
+    <td class="!text-center font-mono text-xs text-red-600 dark:text-red-400 border-r border-line/50 align-middle !px-2 !py-1.5">${r.allowable_decrease_pct != null ? "-" + fmt(r.allowable_decrease_pct, 1) + "%" : "—"}</td>
     <td class="!text-center font-mono text-[11px] align-middle !px-2 !py-1.5">${r.min_value != null ? fmt(r.min_value) : "—"}</td>
     <td class="!text-center font-mono text-[11px] align-middle !px-2 !py-1.5">${r.max_value != null ? fmt(r.max_value) : "—"}</td>
   </tr>`).join("");
 
   const lgpTable = `
     <div class="mb-8 p-1">
-      <h3 class="text-xs font-bold text-main uppercase tracking-[0.1em] mb-2 text-center">
-        Programación por Metas Lexicográfica (LGP)
-      </h3>
+      <div class="flex justify-between items-center mb-2 px-1">
+        <h3 class="text-xs font-bold text-main uppercase tracking-[0.1em]">
+          Programación por Metas Lexicográfica (LGP)
+        </h3>
+        <button class="text-accent hover:text-main transition-colors p-1" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
       <table class="data-table text-[11px] w-full" style="table-layout: auto;">
         <thead>${theadStr}</thead>
         <tbody>${lgpRowsStr}</tbody>
@@ -966,18 +968,23 @@ export function renderRangesComparison(data) {
     <td class="!text-center font-mono border-r border-line/50 align-middle !px-2 !py-1.5">${fmt(r.base_value)}</td>
     <td class="!text-center font-mono align-middle !px-2 !py-1.5 ${_shadowClass(r.er_shadow_cost)}">${_fmtShadow(r.er_shadow_cost)}</td>
     <td class="!text-center font-mono align-middle !px-2 !py-1.5 ${_shadowClass(r.er_shadow_env)}">${_fmtShadow(r.er_shadow_env)}</td>
-    <td class="!text-center font-mono border-r border-line/50 align-middle !px-2 !py-1.5 ${_shadowClass(r.er_shadow_soc)}">${_fmtShadow(r.er_shadow_soc)}</td>
-    <td class="!text-center font-mono text-xs text-green-600 dark:text-green-400 align-middle !px-2 !py-1.5">${r.allowable_increase_pct != null ? "+" + r.allowable_increase_pct + "%" : "—"}</td>
-    <td class="!text-center font-mono text-xs text-red-600 dark:text-red-400 border-r border-line/50 align-middle !px-2 !py-1.5">${r.allowable_decrease_pct != null ? "−" + r.allowable_decrease_pct + "%" : "—"}</td>
+    <td class="!text-center font-mono align-middle !px-2 !py-1.5 ${_shadowClass(r.er_shadow_soc)}">${_fmtShadow(r.er_shadow_soc)}</td>
+    <td class="!text-center font-mono text-xs text-green-600 dark:text-green-400 align-middle !px-2 !py-1.5">${r.allowable_increase_pct != null ? "+" + fmt(r.allowable_increase_pct, 1) + "%" : "—"}</td>
+    <td class="!text-center font-mono text-xs text-red-600 dark:text-red-400 border-r border-line/50 align-middle !px-2 !py-1.5">${r.allowable_decrease_pct != null ? "-" + fmt(r.allowable_decrease_pct, 1) + "%" : "—"}</td>
     <td class="!text-center font-mono text-[11px] align-middle !px-2 !py-1.5">${r.min_value != null ? fmt(r.min_value) : "—"}</td>
     <td class="!text-center font-mono text-[11px] align-middle !px-2 !py-1.5">${r.max_value != null ? fmt(r.max_value) : "—"}</td>
   </tr>`).join("");
 
   const erTable = `
     <div class="mb-4 p-1">
-      <h3 class="text-xs font-bold text-main uppercase tracking-[0.1em] mb-2 text-center">
-        Epsilon-Restricción (ER)
-      </h3>
+      <div class="flex justify-between items-center mb-2 px-1">
+        <h3 class="text-xs font-bold text-main uppercase tracking-[0.1em]">
+          Epsilon-Restricción (ER)
+        </h3>
+        <button class="text-accent hover:text-main transition-colors p-1" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
       <table class="data-table text-[11px] w-full" style="table-layout: auto;">
         <thead>${theadStr}</thead>
         <tbody>${erRowsStr}</tbody>
