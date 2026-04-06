@@ -428,6 +428,35 @@ function initOat() {
       finalData.top_env  = sortElas(finalData.results, "elas_env");
       finalData.top_soc  = sortElas(finalData.results, "elas_soc");
 
+      // Ranking Global (Agrupado por parámetro)
+      const globalAgg = {};
+      (finalData.results || []).forEach(r => {
+        if (!globalAgg[r.param]) {
+          globalAgg[r.param] = { 
+            param: r.param, 
+            maxElas: 0, 
+            pillars: new Set() 
+          };
+        }
+        const ec = Math.abs(r.elas_cost || 0);
+        const ee = Math.abs(r.elas_env || 0);
+        const es = Math.abs(r.elas_soc || 0);
+        globalAgg[r.param].maxElas = Math.max(globalAgg[r.param].maxElas, ec, ee, es);
+        if (ec > 1e-5) globalAgg[r.param].pillars.add("Costo");
+        if (ee > 1e-5) globalAgg[r.param].pillars.add("Emisiones");
+        if (es > 1e-5) globalAgg[r.param].pillars.add("Empleo");
+      });
+
+      const globalList = Object.values(globalAgg).map(g => ({
+        param: g.param,
+        maxElasticity: g.maxElas,
+        pillarCount: g.pillars.size,
+        pillarsStr: Array.from(g.pillars).join(", ")
+      }));
+
+      finalData.top_global_elas = [...globalList].sort((a,b) => b.maxElasticity - a.maxElasticity);
+      finalData.top_global_freq = [...globalList].sort((a,b) => b.pillarCount - a.pillarCount || b.maxElasticity - a.maxElasticity);
+
       update(totalSteps, "Analizando rankings de impacto...");
       container.innerHTML = renderSensitivityResult(finalData);
       drawOatCharts(finalData);
