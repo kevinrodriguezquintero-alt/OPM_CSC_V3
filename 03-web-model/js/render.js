@@ -136,8 +136,8 @@ export function renderLgpResult(data) {
   let varsHtml = "";
   if (vars) {
     varsHtml = `
-      <h3 class="section-subtitle">Variables de decisión</h3>
-      <div class="vars-grid">
+      <h3 class="text-xs font-bold text-muted uppercase tracking-widest mb-3 mt-6">Decisiones Operativas</h3>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         ${renderVarTable("X — Flujo productor→intermediario", ["i", "j", "value"], vars.X)}
         ${renderVarTable("Y — Flujo intermediario→retailer", ["j", "k", "value"], vars.Y)}
         ${renderVarTable("Z — Viajes productor→intermediario", ["i", "j", "value"], vars.Z)}
@@ -173,12 +173,19 @@ function renderVarTable(title, cols, rows) {
   const header = th(...cols.map(c => c.toUpperCase()));
   const body = rows.map(r => td(...cols.map(c => fmt(r[c])))).join("");
   return `
-    <div class="var-block">
-      <h4 class="var-title">${title}</h4>
-      <table class="data-table">
-        <thead>${header}</thead>
-        <tbody>${body}</tbody>
-      </table>
+    <div class="bg-surface border border-line rounded-xl overflow-hidden shadow-sm mb-4">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">${title}</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table text-[11px] w-full">
+          <thead>${header}</thead>
+          <tbody>${body}</tbody>
+        </table>
+      </div>
     </div>`;
 }
 
@@ -263,8 +270,8 @@ export function renderErResult(data) {
   // Last iteration variables
   const vars = data.last_iteration_variables;
   const varsHtml = vars ? `
-    <h3 class="section-subtitle mt-6">Variables de decisión</h3>
-    <div class="vars-grid">
+    <h3 class="text-xs font-bold text-muted uppercase tracking-widest mb-3 mt-6">Decisiones Operativas — Última Iteración</h3>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       ${renderVarTable("X — Flujo productor→intermediario", ["i", "j", "value"], vars.X)}
       ${renderVarTable("Y — Flujo intermediario→retailer", ["j", "k", "value"], vars.Y)}
       ${renderVarTable("Z — Viajes productor→intermediario", ["i", "j", "value"], vars.Z)}
@@ -690,12 +697,11 @@ function _renderScenarioCard(title, objs, base, hint) {
 export function renderScenariosResult(data) {
   if (!data) return `<p class="text-[var(--c-error-text)] text-center py-4">Sin datos de escenario.</p>`;
   
-  const { base, propuesto, inverso, params_modified } = data;
+  const { base, propuesto, params_modified } = data;
 
   const cardsHtml = `
     <div class="sens-top-grid">
       ${_renderScenarioCard(`Escenario Propuesto`, propuesto, base, "La configuración de parámetros ingresada ha vuelto inviable el plan de producción.")}
-      ${_renderScenarioCard(`Escenario Inverso`, inverso, base, "La configuración inversa de los parámetros es incompatible con las restricciones del sistema.")}
     </div>`;
 
   const paramsEntries = Object.entries(params_modified || {});
@@ -725,6 +731,971 @@ export function renderScenariosResult(data) {
   `;
 }
 
+function _renderCostBreakdownComparison(lgpObjs, erObjs) {
+  if (!lgpObjs || !erObjs) return "";
+  
+  const lgpCost = lgpObjs.cost_breakdown;
+  const erCost = erObjs.cost_breakdown;
+  
+  if (!lgpCost || !erCost) return "";
+  
+  const diffCost = (vL, vE) => {
+    if (vL === 0) return "—";
+    const p = ((vE - vL) / vL) * 100;
+    const absP = Math.abs(p);
+    if (absP < 0.05) {
+      return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
+    }
+    // Menor costo es mejor (verde), mayor es peor (rojo)
+    const cls = p < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
+  };
+  
+  const diffValue = (vL, vE) => {
+    const diff = vE - vL;
+    if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
+    const sign = diff > 0 ? "+" : "";
+    const cls = diff < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
+  };
+  
+  const row = (label, lgpVal, erVal, indent = false) => `
+    <tr>
+      <td class="!text-left ${indent ? 'pl-6' : ''} !px-3 !py-2 ${indent ? 'text-muted' : 'font-bold'}">${label}</td>
+      <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmt(lgpVal)}</td>
+      <td class="!text-center font-mono !px-3 !py-2">${fmt(erVal)}</td>
+      <td class="!text-center !px-3 !py-2">${diffValue(lgpVal, erVal)}</td>
+      <td class="!text-center !px-3 !py-2">${diffCost(lgpVal, erVal)}</td>
+    </tr>
+  `;
+  
+  const categoryRow = (label, lgpVal, erVal) => `
+    <tr class="bg-surface-alt/50">
+      <td class="!text-left font-bold !px-3 !py-2">${label}</td>
+      <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmt(lgpVal)}</td>
+      <td class="!text-center font-mono !px-3 !py-2">${fmt(erVal)}</td>
+      <td class="!text-center !px-3 !py-2">${diffValue(lgpVal, erVal)}</td>
+      <td class="!text-center !px-3 !py-2">${diffCost(lgpVal, erVal)}</td>
+    </tr>
+  `;
+  
+  return `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Desglose de Costos</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Categoría de Costo</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">LGP</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">ER</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia ($)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${row("Producción", lgpCost.production, erCost.production)}
+            ${row("Intermediación", lgpCost.intermediation, erCost.intermediation)}
+            ${categoryRow("Mano de Obra Total", lgpCost.labor_total, erCost.labor_total)}
+            ${row("Intermediarios", lgpCost.labor_intermediary, erCost.labor_intermediary, true)}
+            ${row("Detallistas", lgpCost.labor_retailer, erCost.labor_retailer, true)}
+            ${categoryRow("Transporte Total", lgpCost.transport_total, erCost.transport_total)}
+            ${row("Productor a Intermediario", lgpCost.transport_pi, erCost.transport_pi, true)}
+            ${row("Intermediario a Detallista", lgpCost.transport_id, erCost.transport_id, true)}
+            ${categoryRow("Daño Total", lgpCost.damage_total, erCost.damage_total)}
+            ${row("Productor a Intermediario", lgpCost.damage_pi, erCost.damage_pi, true)}
+            ${row("Intermediario a Detallista", lgpCost.damage_id, erCost.damage_id, true)}
+            <tr class="border-t-2 border-line">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">COSTO TOTAL</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(lgpCost.total)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(erCost.total)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(lgpCost.total, erCost.total)}</td>
+              <td class="!text-center !px-3 !py-2">${diffCost(lgpCost.total, erCost.total)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function _renderEmissionsBreakdownComparison(lgpObjs, erObjs) {
+  if (!lgpObjs || !erObjs) return "";
+  
+  const lgpEmissions = lgpObjs.emissions_breakdown;
+  const erEmissions = erObjs.emissions_breakdown;
+  
+  if (!lgpEmissions || !erEmissions) return "";
+  
+  const diffEmissions = (vL, vE) => {
+    if (vL === 0) return "—";
+    const p = ((vE - vL) / vL) * 100;
+    const absP = Math.abs(p);
+    if (absP < 0.05) {
+      return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
+    }
+    // Menor emisión es mejor (verde), mayor es peor (rojo)
+    const cls = p < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
+  };
+  
+  const diffValue = (vL, vE) => {
+    const diff = vE - vL;
+    if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
+    const sign = diff > 0 ? "+" : "";
+    const cls = diff < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
+  };
+  
+  const row = (label, lgpVal, erVal, indent = false) => `
+    <tr>
+      <td class="!text-left ${indent ? 'pl-6' : ''} !px-3 !py-2 ${indent ? 'text-muted' : 'font-bold'}">${indent ? '└─ ' : ''}${label}</td>
+      <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmt(lgpVal)}</td>
+      <td class="!text-center font-mono !px-3 !py-2">${fmt(erVal)}</td>
+      <td class="!text-center !px-3 !py-2">${diffValue(lgpVal, erVal)}</td>
+      <td class="!text-center !px-3 !py-2">${diffEmissions(lgpVal, erVal)}</td>
+    </tr>
+  `;
+  
+  return `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Desglose de Emisiones</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Componente</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">LGP</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">ER</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (kg CO2)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${row("Transporte P→I", lgpEmissions.transport_pi, erEmissions.transport_pi)}
+            ${row("Transporte I→D", lgpEmissions.transport_id, erEmissions.transport_id)}
+            <tr class="border-t-2 border-line bg-surface-alt/50">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">EMISIONES TOTALES</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(lgpEmissions.total)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(erEmissions.total)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(lgpEmissions.total, erEmissions.total)}</td>
+              <td class="!text-center !px-3 !py-2">${diffEmissions(lgpEmissions.total, erEmissions.total)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
+  if (!lgpObjs || !erObjs) return "";
+  
+  const lgpEmployment = lgpObjs.employment_breakdown;
+  const erEmployment = erObjs.employment_breakdown;
+  
+  if (!lgpEmployment || !erEmployment) return "";
+  
+  // Obtener detalles por ubicación
+  const lgpIntersDetail = lgpEmployment.intermediaries_detail || [];
+  const erIntersDetail = erEmployment.intermediaries_detail || [];
+  const lgpRetailersDetail = lgpEmployment.retailers_detail || [];
+  const erRetailersDetail = erEmployment.retailers_detail || [];
+  
+  // Funciones de diff
+  const diffEmployment = (vL, vE) => {
+    if (vL === 0) return "—";
+    const p = ((vE - vL) / vL) * 100;
+    const absP = Math.abs(p);
+    if (absP < 0.05) {
+      return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
+    }
+    const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
+  };
+  
+  const diffValue = (vL, vE) => {
+    const diff = vE - vL;
+    if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
+    const sign = diff > 0 ? "+" : "";
+    const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
+  };
+  
+  // Crear maps para empleo por ubicación
+  const lgpIntersMap = Object.fromEntries(lgpIntersDetail.map(i => [i.location, i.value]));
+  const erIntersMap = Object.fromEntries(erIntersDetail.map(i => [i.location, i.value]));
+  const lgpRetailersMap = Object.fromEntries(lgpRetailersDetail.map(r => [r.location, r.value]));
+  const erRetailersMap = Object.fromEntries(erRetailersDetail.map(r => [r.location, r.value]));
+  
+  // Todos los IDs únicos
+  const allIntersIds = Array.from(new Set([...lgpIntersDetail.map(i => i.location), ...erIntersDetail.map(i => i.location)]));
+  const allRetailersIds = Array.from(new Set([...lgpRetailersDetail.map(r => r.location), ...erRetailersDetail.map(r => r.location)]));
+  
+  // Ordenar por empleo total descendente
+  allIntersIds.sort((a, b) => ((lgpIntersMap[b] || 0) + (erIntersMap[b] || 0)) - ((lgpIntersMap[a] || 0) + (erIntersMap[a] || 0)));
+  allRetailersIds.sort((a, b) => ((lgpRetailersMap[b] || 0) + (erRetailersMap[b] || 0)) - ((lgpRetailersMap[a] || 0) + (erRetailersMap[a] || 0)));
+  
+  // Generar filas para intermediarios
+  const intersRowsHtml = allIntersIds.map(loc => {
+    const lgpVal = lgpIntersMap[loc] || 0;
+    const erVal = erIntersMap[loc] || 0;
+    const lgpHas = lgpVal > 0.01;
+    const erHas = erVal > 0.01;
+    const isNewLGP = lgpHas && !erHas;
+    const isNewER = erHas && !lgpHas;
+    const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
+    
+    return `
+      <tr class="${rowClass}">
+        <td class="!text-left font-mono text-xs !px-3 !py-1.5">${loc}</td>
+        <td class="!text-center font-mono border-l border-line/50 !px-3 !py-1.5 ${lgpHas ? '' : 'text-muted'}">${lgpHas ? fmt(lgpVal, 0) : '—'}</td>
+        <td class="!text-center font-mono !px-3 !py-1.5 ${erHas ? '' : 'text-muted'}">${erHas ? fmt(erVal, 0) : '—'}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffValue(lgpVal, erVal)}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffEmployment(lgpVal, erVal)}</td>
+      </tr>
+    `;
+  }).join("");
+  
+  // Generar filas para detallistas
+  const retailersRowsHtml = allRetailersIds.map(loc => {
+    const lgpVal = lgpRetailersMap[loc] || 0;
+    const erVal = erRetailersMap[loc] || 0;
+    const lgpHas = lgpVal > 0.01;
+    const erHas = erVal > 0.01;
+    const isNewLGP = lgpHas && !erHas;
+    const isNewER = erHas && !lgpHas;
+    const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
+    
+    return `
+      <tr class="${rowClass}">
+        <td class="!text-left font-mono text-xs !px-3 !py-1.5">${loc}</td>
+        <td class="!text-center font-mono border-l border-line/50 !px-3 !py-1.5 ${lgpHas ? '' : 'text-muted'}">${lgpHas ? fmt(lgpVal, 0) : '—'}</td>
+        <td class="!text-center font-mono !px-3 !py-1.5 ${erHas ? '' : 'text-muted'}">${erHas ? fmt(erVal, 0) : '—'}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffValue(lgpVal, erVal)}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffEmployment(lgpVal, erVal)}</td>
+      </tr>
+    `;
+  }).join("");
+  
+  // Totales
+  const totalIntersLGP = lgpEmployment.intermediaries;
+  const totalIntersER = erEmployment.intermediaries;
+  const totalRetailersLGP = lgpEmployment.retailers;
+  const totalRetailersER = erEmployment.retailers;
+  const totalLGP = lgpEmployment.total;
+  const totalER = erEmployment.total;
+  
+  // Tabla de Empleo en Intermediarios
+  const tableInters = allIntersIds.length > 0 ? `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Empleo en Intermediarios (S)</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead class="bg-surface-alt">
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Ubicación</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">LGP (personas)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">ER (personas)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${intersRowsHtml}
+            <tr class="border-t-2 border-line bg-surface-alt/50">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">TOTAL INTERMEDIARIOS</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(totalIntersLGP, 0)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(totalIntersER, 0)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(totalIntersLGP, totalIntersER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffEmployment(totalIntersLGP, totalIntersER)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-surface-alt/50 text-[10px] text-muted border-t border-line">
+        <span class="inline-block w-3 h-3 bg-green-500/20 rounded mr-1"></span> Ubicación solo en LGP
+        <span class="inline-block w-3 h-3 bg-red-500/20 rounded ml-3 mr-1"></span> Ubicación solo en ER
+      </div>
+    </div>
+  ` : '';
+  
+  // Tabla de Empleo en Detallistas
+  const tableRetailers = allRetailersIds.length > 0 ? `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Empleo en Detallistas (SS)</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead class="bg-surface-alt">
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Ubicación</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">LGP (personas)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">ER (personas)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${retailersRowsHtml}
+            <tr class="border-t-2 border-line bg-surface-alt/50">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">TOTAL DETALLISTAS</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(totalRetailersLGP, 0)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(totalRetailersER, 0)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(totalRetailersLGP, totalRetailersER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffEmployment(totalRetailersLGP, totalRetailersER)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-surface-alt/50 text-[10px] text-muted border-t border-line">
+        <span class="inline-block w-3 h-3 bg-green-500/20 rounded mr-1"></span> Ubicación solo en LGP
+        <span class="inline-block w-3 h-3 bg-red-500/20 rounded ml-3 mr-1"></span> Ubicación solo en ER
+      </div>
+    </div>
+  ` : '';
+  
+  // Tabla de Resumen Total - ELIMINADA
+  
+  return tableInters + tableRetailers;
+}
+
+function _renderProducerVariantsComparison(lgpObjs, erObjs) {
+  if (!lgpObjs || !erObjs) return "";
+  
+  const lgpVariants = lgpObjs.producer_variants;
+  const erVariants = erObjs.producer_variants;
+  
+  if (!lgpVariants || !erVariants) return "";
+  
+  // Funciones de diff
+  const diffValue = (vL, vE) => {
+    const diff = vE - vL;
+    if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
+    const sign = diff > 0 ? "+" : "";
+    const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 1)}</span>`;
+  };
+  
+  const diffPct = (vL, vE) => {
+    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return `<span class="text-muted">—</span>`;
+    const p = ((vE - vL) / vL) * 100;
+    const absP = Math.abs(p);
+    if (absP < 0.05) return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
+    const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
+  };
+  
+  // Obtener desglose de hectáreas
+  const lgpBreakdown = lgpVariants.hectares_breakdown || [];
+  const erBreakdown = erVariants.hectares_breakdown || [];
+  
+  // Crear maps de variantes
+  const lgpHaMap = Object.fromEntries(lgpBreakdown.map(v => [v.variant, v.hectares]));
+  const erHaMap = Object.fromEntries(erBreakdown.map(v => [v.variant, v.hectares]));
+  const lgpYieldMap = Object.fromEntries(lgpBreakdown.map(v => [v.variant, v.yield_kg_ha]));
+  const erYieldMap = Object.fromEntries(erBreakdown.map(v => [v.variant, v.yield_kg_ha]));
+  
+  // Todos los IDs de variantes únicos
+  const allVariantIds = Array.from(new Set([...lgpBreakdown.map(v => v.variant), ...erBreakdown.map(v => v.variant)]));
+  
+  // Ordenar por hectáreas totales descendente
+  allVariantIds.sort((a, b) => ((lgpHaMap[b] || 0) + (erHaMap[b] || 0)) - ((lgpHaMap[a] || 0) + (erHaMap[a] || 0)));
+  
+  // Generar filas para cada variante - Tabla de Hectáreas
+  const haRowsHtml = allVariantIds.map(variant => {
+    const lgpHa = lgpHaMap[variant] || 0;
+    const erHa = erHaMap[variant] || 0;
+    const lgpHas = lgpHa > 0.01;
+    const erHas = erHa > 0.01;
+    const isNewLGP = lgpHas && !erHas;
+    const isNewER = erHas && !lgpHas;
+    const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
+    
+    return `
+      <tr class="${rowClass}">
+        <td class="!text-left font-mono text-xs !px-3 !py-1.5">Variante ${variant}</td>
+        <td class="!text-center font-mono border-l border-line/50 !px-3 !py-1.5 ${lgpHas ? '' : 'text-muted'}">${lgpHas ? fmt(lgpHa, 1) : '—'}</td>
+        <td class="!text-center font-mono !px-3 !py-1.5 ${erHas ? '' : 'text-muted'}">${erHas ? fmt(erHa, 1) : '—'}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffValue(lgpHa, erHa)}</td>
+      </tr>
+    `;
+  }).join("");
+  
+  // Generar filas para cada variante - Tabla de Rendimientos
+  const yieldRowsHtml = allVariantIds.map(variant => {
+    const lgpYield = lgpYieldMap[variant] || 0;
+    const erYield = erYieldMap[variant] || 0;
+    const lgpHa = lgpHaMap[variant] || 0;
+    const erHa = erHaMap[variant] || 0;
+    const lgpHas = lgpHa > 0.01;
+    const erHas = erHa > 0.01;
+    const isNewLGP = lgpHas && !erHas;
+    const isNewER = erHas && !lgpHas;
+    const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
+    
+    return `
+      <tr class="${rowClass}">
+        <td class="!text-left font-mono text-xs !px-3 !py-1.5">Variante ${variant}</td>
+        <td class="!text-center font-mono border-l border-line/50 !px-3 !py-1.5 ${lgpHas ? '' : 'text-muted'}">${lgpHas ? fmt(lgpYield, 1) : '—'}</td>
+        <td class="!text-center font-mono !px-3 !py-1.5 ${erHas ? '' : 'text-muted'}">${erHas ? fmt(erYield, 1) : '—'}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffValue(lgpYield, erYield)}</td>
+      </tr>
+    `;
+  }).join("");
+  
+  // Totales
+  const totalHaLGP = lgpVariants.total_hectares || 0;
+  const totalHaER = erVariants.total_hectares || 0;
+  const totalVariantsLGP = lgpVariants.total_variants || 0;
+  const totalVariantsER = erVariants.total_variants || 0;
+  
+  // Tabla 1: Hectáreas
+  const tableHa = allVariantIds.length > 0 ? `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Hectáreas por Variante</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead class="bg-surface-alt">
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Variante</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Hectáreas LGP</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Hectáreas ER</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${haRowsHtml}
+            <tr class="border-t-2 border-line bg-surface-alt/50">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">TOTAL HECTÁREAS</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(totalHaLGP, 1)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(totalHaER, 1)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(totalHaLGP, totalHaER)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-surface-alt/50 text-[10px] text-muted border-t border-line">
+        <span class="inline-block w-3 h-3 bg-green-500/20 rounded mr-1"></span> Variante solo en LGP
+        <span class="inline-block w-3 h-3 bg-red-500/20 rounded ml-3 mr-1"></span> Variante solo en ER
+      </div>
+    </div>
+  ` : '';
+  
+  // Tabla 2: Rendimientos
+  const tableYield = allVariantIds.length > 0 ? `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Rendimiento por Variante (kg/Ha)</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead class="bg-surface-alt">
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Variante</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Rend. LGP</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Rend. ER</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${yieldRowsHtml}
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-surface-alt/50 text-[10px] text-muted border-t border-line">
+        <span class="inline-block w-3 h-3 bg-green-500/20 rounded mr-1"></span> Variante solo en LGP
+        <span class="inline-block w-3 h-3 bg-red-500/20 rounded ml-3 mr-1"></span> Variante solo en ER
+      </div>
+    </div>
+  ` : '';
+  
+  return tableHa + tableYield;
+}
+
+function _renderIntermediariesComparison(lgpObjs, erObjs) {
+  if (!lgpObjs || !erObjs) return "";
+  
+  const lgpInters = lgpObjs.metrics?.inters_list || [];
+  const erInters = erObjs.metrics?.inters_list || [];
+  
+  if (lgpInters.length === 0 && erInters.length === 0) return "";
+  
+  // Crear mapa de todos los intermediarios únicos
+  const allInterIds = new Set();
+  lgpInters.forEach(i => allInterIds.add(i.id));
+  erInters.forEach(i => allInterIds.add(i.id));
+  
+  // Funciones de diff
+  const diffValue = (vL, vE) => {
+    if (typeof vL !== "number" || typeof vE !== "number") return `<span class="text-muted">—</span>`;
+    const diff = vE - vL;
+    if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
+    const sign = diff > 0 ? "+" : "";
+    const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
+  };
+  
+  const diffPct = (vL, vE) => {
+    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return `<span class="text-muted">—</span>`;
+    const p = ((vE - vL) / vL) * 100;
+    const absP = Math.abs(p);
+    if (absP < 0.05) return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
+    const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
+  };
+  
+  // Crear filas para cada intermediario
+  const lgpMap = Object.fromEntries(lgpInters.map(i => [i.id, i.flow]));
+  const erMap = Object.fromEntries(erInters.map(i => [i.id, i.flow]));
+  
+  const sortedInters = Array.from(allInterIds).sort((a, b) => {
+    // Ordenar por flujo total (suma de ambos métodos) descendente
+    const flowA = (lgpMap[a] || 0) + (erMap[a] || 0);
+    const flowB = (lgpMap[b] || 0) + (erMap[b] || 0);
+    return flowB - flowA;
+  });
+  
+  const rowsHtml = sortedInters.map(interId => {
+    const lgpFlow = lgpMap[interId] || 0;
+    const erFlow = erMap[interId] || 0;
+    const lgpHas = lgpFlow > 0.01;
+    const erHas = erFlow > 0.01;
+    
+    // Clase especial si el intermediario solo existe en uno de los métodos
+    const isNewLGP = lgpHas && !erHas;
+    const isNewER = erHas && !lgpHas;
+    const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
+    
+    return `
+      <tr class="${rowClass}">
+        <td class="!text-left font-mono text-xs !px-3 !py-1.5">${interId}</td>
+        <td class="!text-center font-mono border-l border-line/50 !px-3 !py-1.5 ${lgpHas ? '' : 'text-muted'}">${lgpHas ? fmt(lgpFlow) : '—'}</td>
+        <td class="!text-center font-mono !px-3 !py-1.5 ${erHas ? '' : 'text-muted'}">${erHas ? fmt(erFlow) : '—'}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffValue(lgpFlow, erFlow)}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffPct(lgpFlow, erFlow)}</td>
+      </tr>
+    `;
+  }).join("");
+  
+  // Calcular totales
+  const totalLGP = Object.values(lgpMap).reduce((a, b) => a + b, 0);
+  const totalER = Object.values(erMap).reduce((a, b) => a + b, 0);
+  
+  return `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Intermediarios Activos (Detalle)</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead class="bg-surface-alt">
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Intermediario</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Flujo LGP (kg)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Flujo ER (kg)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+            <tr class="border-t-2 border-line bg-surface-alt/50">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">TOTAL FLUJO</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(totalLGP)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(totalER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(totalLGP, totalER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffPct(totalLGP, totalER)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-surface-alt/50 text-[10px] text-muted border-t border-line">
+        <span class="inline-block w-3 h-3 bg-green-500/20 rounded mr-1"></span> Intermediario solo en LGP
+        <span class="inline-block w-3 h-3 bg-red-500/20 rounded ml-3 mr-1"></span> Intermediario solo en ER
+      </div>
+    </div>
+  `;
+}
+
+function _renderRoutesComparison(lgpObjs, erObjs) {
+  if (!lgpObjs || !erObjs) return "";
+  
+  const lgpRoutes = lgpObjs.metrics?.routes_list || [];
+  const erRoutes = erObjs.metrics?.routes_list || [];
+  
+  if (lgpRoutes.length === 0 && erRoutes.length === 0) return "";
+  
+  // Funciones de diff
+  const diffValue = (vL, vE) => {
+    if (typeof vL !== "number" || typeof vE !== "number") return `<span class="text-muted">—</span>`;
+    const diff = vE - vL;
+    if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
+    const sign = diff > 0 ? "+" : "";
+    const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
+  };
+  
+  const diffPct = (vL, vE) => {
+    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return `<span class="text-muted">—</span>`;
+    const p = ((vE - vL) / vL) * 100;
+    const absP = Math.abs(p);
+    if (absP < 0.05) return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
+    const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
+  };
+  
+  // Crear maps
+  const lgpMap = Object.fromEntries(lgpRoutes.map(r => [r.route, r.flow]));
+  const erMap = Object.fromEntries(erRoutes.map(r => [r.route, r.flow]));
+  
+  // Separar rutas X y Y
+  const lgpX = lgpRoutes.filter(r => r.route.startsWith('X['));
+  const lgpY = lgpRoutes.filter(r => r.route.startsWith('Y['));
+  const erX = erRoutes.filter(r => r.route.startsWith('X['));
+  const erY = erRoutes.filter(r => r.route.startsWith('Y['));
+  
+  // Todos los nombres únicos
+  const allXNames = Array.from(new Set([...lgpX.map(r => r.route), ...erX.map(r => r.route)]));
+  const allYNames = Array.from(new Set([...lgpY.map(r => r.route), ...erY.map(r => r.route)]));
+  
+  // Ordenar por flujo total descendente
+  allXNames.sort((a, b) => ((lgpMap[b] || 0) + (erMap[b] || 0)) - ((lgpMap[a] || 0) + (erMap[a] || 0)));
+  allYNames.sort((a, b) => ((lgpMap[b] || 0) + (erMap[b] || 0)) - ((lgpMap[a] || 0) + (erMap[a] || 0)));
+  
+  // Generar filas para rutas X
+  const xRowsHtml = allXNames.map(route => {
+    const lgpFlow = lgpMap[route] || 0;
+    const erFlow = erMap[route] || 0;
+    const lgpHas = lgpFlow > 0.01;
+    const erHas = erFlow > 0.01;
+    const isNewLGP = lgpHas && !erHas;
+    const isNewER = erHas && !lgpHas;
+    const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
+    
+    return `
+      <tr class="${rowClass}">
+        <td class="!text-left font-mono text-xs !px-3 !py-1.5">${route}</td>
+        <td class="!text-center font-mono border-l border-line/50 !px-3 !py-1.5 ${lgpHas ? '' : 'text-muted'}">${lgpHas ? fmt(lgpFlow) : '—'}</td>
+        <td class="!text-center font-mono !px-3 !py-1.5 ${erHas ? '' : 'text-muted'}">${erHas ? fmt(erFlow) : '—'}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffValue(lgpFlow, erFlow)}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffPct(lgpFlow, erFlow)}</td>
+      </tr>
+    `;
+  }).join("");
+  
+  // Generar filas para rutas Y
+  const yRowsHtml = allYNames.map(route => {
+    const lgpFlow = lgpMap[route] || 0;
+    const erFlow = erMap[route] || 0;
+    const lgpHas = lgpFlow > 0.01;
+    const erHas = erFlow > 0.01;
+    const isNewLGP = lgpHas && !erHas;
+    const isNewER = erHas && !lgpHas;
+    const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
+    
+    return `
+      <tr class="${rowClass}">
+        <td class="!text-left font-mono text-xs !px-3 !py-1.5">${route}</td>
+        <td class="!text-center font-mono border-l border-line/50 !px-3 !py-1.5 ${lgpHas ? '' : 'text-muted'}">${lgpHas ? fmt(lgpFlow) : '—'}</td>
+        <td class="!text-center font-mono !px-3 !py-1.5 ${erHas ? '' : 'text-muted'}">${erHas ? fmt(erFlow) : '—'}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffValue(lgpFlow, erFlow)}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffPct(lgpFlow, erFlow)}</td>
+      </tr>
+    `;
+  }).join("");
+  
+  // Totales por tipo
+  const totalXLGP = lgpX.reduce((a, r) => a + r.flow, 0);
+  const totalXER = erX.reduce((a, r) => a + r.flow, 0);
+  const totalYLGP = lgpY.reduce((a, r) => a + r.flow, 0);
+  const totalYER = erY.reduce((a, r) => a + r.flow, 0);
+  
+  // Tabla de Rutas X (P→I)
+  const tableX = allXNames.length > 0 ? `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Rutas Productor → Intermediario (X)</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead class="bg-surface-alt">
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Ruta</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Flujo LGP (kg)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Flujo ER (kg)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${xRowsHtml}
+            <tr class="border-t-2 border-line bg-surface-alt/50">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">TOTAL FLUJO X</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(totalXLGP)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(totalXER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(totalXLGP, totalXER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffPct(totalXLGP, totalXER)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-surface-alt/50 text-[10px] text-muted border-t border-line">
+        <span class="inline-block w-3 h-3 bg-green-500/20 rounded mr-1"></span> Ruta solo en LGP
+        <span class="inline-block w-3 h-3 bg-red-500/20 rounded ml-3 mr-1"></span> Ruta solo en ER
+      </div>
+    </div>
+  ` : '';
+  
+  // Tabla de Rutas Y (I→D)
+  const tableY = allYNames.length > 0 ? `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Rutas Intermediario → Detallista (Y)</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead class="bg-surface-alt">
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Ruta</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Flujo LGP (kg)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Flujo ER (kg)</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${yRowsHtml}
+            <tr class="border-t-2 border-line bg-surface-alt/50">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">TOTAL FLUJO Y</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(totalYLGP)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(totalYER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(totalYLGP, totalYER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffPct(totalYLGP, totalYER)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-surface-alt/50 text-[10px] text-muted border-t border-line">
+        <span class="inline-block w-3 h-3 bg-green-500/20 rounded mr-1"></span> Ruta solo en LGP
+        <span class="inline-block w-3 h-3 bg-red-500/20 rounded ml-3 mr-1"></span> Ruta solo en ER
+      </div>
+    </div>
+  ` : '';
+  
+  return tableX + tableY;
+}
+
+function _renderTripsComparison(lgpObjs, erObjs) {
+  if (!lgpObjs || !erObjs) return "";
+  
+  const lgpTrips = lgpObjs.metrics?.trips_list || [];
+  const erTrips = erObjs.metrics?.trips_list || [];
+  
+  if (lgpTrips.length === 0 && erTrips.length === 0) return "";
+  
+  // Funciones de diff
+  const diffValue = (vL, vE) => {
+    if (typeof vL !== "number" || typeof vE !== "number") return `<span class="text-muted">—</span>`;
+    const diff = vE - vL;
+    if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
+    const sign = diff > 0 ? "+" : "";
+    const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
+  };
+  
+  const diffPct = (vL, vE) => {
+    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return `<span class="text-muted">—</span>`;
+    const p = ((vE - vL) / vL) * 100;
+    const absP = Math.abs(p);
+    if (absP < 0.05) return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
+    const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
+  };
+  
+  // Crear maps
+  const lgpMap = Object.fromEntries(lgpTrips.map(t => [t.trip, t.value]));
+  const erMap = Object.fromEntries(erTrips.map(t => [t.trip, t.value]));
+  
+  // Separar viajes Z y ZZ
+  const lgpZ = lgpTrips.filter(t => t.trip.startsWith('Z['));
+  const lgpZZ = lgpTrips.filter(t => t.trip.startsWith('ZZ['));
+  const erZ = erTrips.filter(t => t.trip.startsWith('Z['));
+  const erZZ = erTrips.filter(t => t.trip.startsWith('ZZ['));
+  
+  // Todos los nombres únicos
+  const allZNames = Array.from(new Set([...lgpZ.map(t => t.trip), ...erZ.map(t => t.trip)]));
+  const allZZNames = Array.from(new Set([...lgpZZ.map(t => t.trip), ...erZZ.map(t => t.trip)]));
+  
+  // Ordenar por valor total descendente
+  allZNames.sort((a, b) => ((lgpMap[b] || 0) + (erMap[b] || 0)) - ((lgpMap[a] || 0) + (erMap[a] || 0)));
+  allZZNames.sort((a, b) => ((lgpMap[b] || 0) + (erMap[b] || 0)) - ((lgpMap[a] || 0) + (erMap[a] || 0)));
+  
+  // Generar filas para viajes Z
+  const zRowsHtml = allZNames.map(trip => {
+    const lgpVal = lgpMap[trip] || 0;
+    const erVal = erMap[trip] || 0;
+    const lgpHas = lgpVal > 0.01;
+    const erHas = erVal > 0.01;
+    const isNewLGP = lgpHas && !erHas;
+    const isNewER = erHas && !lgpHas;
+    const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
+    
+    return `
+      <tr class="${rowClass}">
+        <td class="!text-left font-mono text-xs !px-3 !py-1.5">${trip}</td>
+        <td class="!text-center font-mono border-l border-line/50 !px-3 !py-1.5 ${lgpHas ? '' : 'text-muted'}">${lgpHas ? fmt(lgpVal, 0) : '—'}</td>
+        <td class="!text-center font-mono !px-3 !py-1.5 ${erHas ? '' : 'text-muted'}">${erHas ? fmt(erVal, 0) : '—'}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffValue(lgpVal, erVal)}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffPct(lgpVal, erVal)}</td>
+      </tr>
+    `;
+  }).join("");
+  
+  // Generar filas para viajes ZZ
+  const zzRowsHtml = allZZNames.map(trip => {
+    const lgpVal = lgpMap[trip] || 0;
+    const erVal = erMap[trip] || 0;
+    const lgpHas = lgpVal > 0.01;
+    const erHas = erVal > 0.01;
+    const isNewLGP = lgpHas && !erHas;
+    const isNewER = erHas && !lgpHas;
+    const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
+    
+    return `
+      <tr class="${rowClass}">
+        <td class="!text-left font-mono text-xs !px-3 !py-1.5">${trip}</td>
+        <td class="!text-center font-mono border-l border-line/50 !px-3 !py-1.5 ${lgpHas ? '' : 'text-muted'}">${lgpHas ? fmt(lgpVal, 0) : '—'}</td>
+        <td class="!text-center font-mono !px-3 !py-1.5 ${erHas ? '' : 'text-muted'}">${erHas ? fmt(erVal, 0) : '—'}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffValue(lgpVal, erVal)}</td>
+        <td class="!text-center !px-3 !py-1.5">${diffPct(lgpVal, erVal)}</td>
+      </tr>
+    `;
+  }).join("");
+  
+  // Totales por tipo
+  const totalZLGP = lgpZ.reduce((a, t) => a + t.value, 0);
+  const totalZER = erZ.reduce((a, t) => a + t.value, 0);
+  const totalZZLGP = lgpZZ.reduce((a, t) => a + t.value, 0);
+  const totalZZER = erZZ.reduce((a, t) => a + t.value, 0);
+  
+  // Tabla de Viajes Z (P→I)
+  const tableZ = allZNames.length > 0 ? `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Viajes Productor → Intermediario (Z)</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead class="bg-surface-alt">
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Viaje</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Viajes LGP</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Viajes ER</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${zRowsHtml}
+            <tr class="border-t-2 border-line bg-surface-alt/50">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">TOTAL VIAJES Z</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(totalZLGP, 0)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(totalZER, 0)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(totalZLGP, totalZER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffPct(totalZLGP, totalZER)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-surface-alt/50 text-[10px] text-muted border-t border-line">
+        <span class="inline-block w-3 h-3 bg-green-500/20 rounded mr-1"></span> Viaje solo en LGP
+        <span class="inline-block w-3 h-3 bg-red-500/20 rounded ml-3 mr-1"></span> Viaje solo en ER
+      </div>
+    </div>
+  ` : '';
+  
+  // Tabla de Viajes ZZ (I→D)
+  const tableZZ = allZZNames.length > 0 ? `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Viajes Intermediario → Detallista (ZZ)</h5>
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        </button>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead class="bg-surface-alt">
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Viaje</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Viajes LGP</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Viajes ER</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${zzRowsHtml}
+            <tr class="border-t-2 border-line bg-surface-alt/50">
+              <td class="!text-left font-bold !px-3 !py-2 text-main">TOTAL VIAJES ZZ</td>
+              <td class="!text-center font-mono font-bold border-l border-line/50 !px-3 !py-2 text-main">${fmt(totalZZLGP, 0)}</td>
+              <td class="!text-center font-mono font-bold !px-3 !py-2 text-main">${fmt(totalZZER, 0)}</td>
+              <td class="!text-center !px-3 !py-2">${diffValue(totalZZLGP, totalZZER)}</td>
+              <td class="!text-center !px-3 !py-2">${diffPct(totalZZLGP, totalZZER)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="px-4 py-2 bg-surface-alt/50 text-[10px] text-muted border-t border-line">
+        <span class="inline-block w-3 h-3 bg-green-500/20 rounded mr-1"></span> Viaje solo en LGP
+        <span class="inline-block w-3 h-3 bg-red-500/20 rounded ml-3 mr-1"></span> Viaje solo en ER
+      </div>
+    </div>
+  ` : '';
+  
+  return tableZ + tableZZ;
+}
+
 function _renderOpComparison(lgpObjs, erObjs, tableId) {
   if (!lgpObjs || !erObjs || !lgpObjs.metrics || !erObjs.metrics) return "";
 
@@ -734,8 +1705,20 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
   const diffStr = (vL, vE) => {
     if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return "—";
     const p = ((vE - vL) / vL) * 100;
+    const absP = Math.abs(p);
+    if (absP < 0.05) {
+      return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
+    }
     const cls = Math.abs(p) > 0.001 ? (p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400") : "text-muted";
     return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
+  };
+
+  const diffValue = (vL, vE) => {
+    const diff = vE - vL;
+    if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
+    const sign = diff > 0 ? "+" : "";
+    const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
   };
 
   const fmtO = (v) => typeof v === "number" ? fmt(v) : v;
@@ -745,25 +1728,16 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
       <td class="!text-left font-bold !px-3 !py-2">${name}</td>
       <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmtO(vL)}</td>
       <td class="!text-center font-mono !px-3 !py-2">${fmtO(vE)}</td>
+      <td class="!text-center !px-3 !py-2">${diffValue(vL, vE)}</td>
       <td class="!text-center !px-3 !py-2">${diffStr(vL, vE)}</td>
     </tr>
   `;
 
-  const rowsHtml = [
-    row("Personal Intermediarios", l.pers_int, e.pers_int),
-    row("Personal Detallistas", l.pers_det, e.pers_det),
-    row("Viajes Totales (Rutas)", l.viajes_totales, e.viajes_totales),
-    row("Flujo Productor → Inter. (kg)", l.flujo_pi, e.flujo_pi),
-    row("Flujo Inter. → Detallista (kg)", l.flujo_id, e.flujo_id),
-    row("Top Intermediarios", l.top_intermediarios, e.top_intermediarios),
-    row("Top Rutas Activas", l.top_rutas, e.top_rutas)
-  ].join("");
-
   return `
-    <div class="mt-4 border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
       <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
         <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Decisiones Operativas Clave</h5>
-        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this, '${tableId}')">
+        <button class="text-accent hover:text-main transition-colors flex items-center justify-center p-1 rounded" title="Copiar Tabla" onclick="copyTableToClipboard(this)">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
         </button>
       </div>
@@ -772,12 +1746,15 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
           <thead>
             <tr>
               <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Decisión Operativa</th>
-              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Valor LGP</th>
-              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Valor ER</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">LGP</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">ER</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia</th>
               <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Diferencia (%)</th>
             </tr>
           </thead>
-          <tbody>${rowsHtml}</tbody>
+          <tbody>
+            ${row("Viajes Totales (Rutas)", l.viajes_totales, e.viajes_totales)}
+          </tbody>
         </table>
       </div>
     </div>
@@ -790,44 +1767,115 @@ export function renderCombinedScenariosResult(lgp, er) {
   const paramsEntries = Object.entries(lgp.params_modified || {});
   const base = lgp.base; // Should be same for both
 
-  const gridHtml = `
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-      <!-- Columna LGP -->
-      <div class="scenario-group">
-        <h4 class="text-xs font-bold text-center text-main uppercase tracking-[0.05em] mb-1">Programación por Metas Lexicográfica</h4>
-        ${_renderScenarioCard(`PROPUESTO`, lgp.propuesto, base)}
-        ${_renderScenarioCard(`INVERSO`, lgp.inverso, base)}
-      </div>
+  // Organizar parámetros en filas: 2 de 10 y 1 de 5
+  const chunkSize = 10;
+  const chunks = [];
+  for (let i = 0; i < paramsEntries.length; i += chunkSize) {
+    chunks.push(paramsEntries.slice(i, i + chunkSize));
+  }
+  
+  const renderParam = ([p, pct]) => `
+    <div class="flex items-center bg-surface border border-line rounded-lg shadow-sm overflow-hidden text-xs">
+      <span class="px-2 py-1 font-bold text-main bg-surface-alt border-r border-line">${p}</span>
+      <span class="px-2 py-1 text-muted font-mono font-semibold">${pct >= 0 ? "+" : ""}${fmt(pct)}%</span>
+    </div>
+  `;
 
-      <!-- Columna ER -->
-      <div class="scenario-group">
-        <h4 class="text-xs font-bold text-center text-main uppercase tracking-[0.05em] mb-1">Epsilon-Restricción</h4>
-        ${_renderScenarioCard(`PROPUESTO`, er.propuesto, base)}
-        ${_renderScenarioCard(`INVERSO`, er.inverso, base)}
+  const rowsHtml = chunks.map(chunk => `
+    <div class="flex flex-wrap gap-2 justify-center">${chunk.map(renderParam).join("")}</div>
+  `).join("");
+
+  // Tabla única comparativa de objetivos
+  const diffStr = (vL, vE, reverse = false) => {
+    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return "—";
+    const p = ((vE - vL) / vL) * 100;
+    const absP = Math.abs(p);
+    // Diferencias insignificantes (< 0.05%) = gris neutro
+    if (absP < 0.05) {
+      return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
+    }
+    // Diferencias significativas: verde = mejor, rojo = peor
+    let cls = "text-muted";
+    if (reverse) {
+      // Para empleo: mayor es mejor
+      cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    } else {
+      // Para costo/emisiones: menor es mejor
+      cls = p < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
+    }
+    return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
+  };
+
+  const comparisonTable = `
+    <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
+      <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Comparación de Objetivos: Escenario Propuesto</h5>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="data-table" style="width:100%;">
+          <thead>
+            <tr>
+              <th class="!text-left !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Objetivo</th>
+              <th class="!text-center border-l border-line/50 !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Valor LGP</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Valor ER</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Variación LGP</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">Variación ER</th>
+              <th class="!text-center !px-3 !py-2 font-bold uppercase tracking-widest text-[10px]">LGP vs ER</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="!text-left font-bold !px-3 !py-2">Costo</td>
+              <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmt(lgp.propuesto.cost)}</td>
+              <td class="!text-center font-mono !px-3 !py-2">${fmt(er.propuesto.cost)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.cost, base.cost)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(er.propuesto.cost, base.cost)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.cost, er.propuesto.cost)}</td>
+            </tr>
+            <tr>
+              <td class="!text-left font-bold !px-3 !py-2">Emisiones</td>
+              <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmt(lgp.propuesto.emissions)}</td>
+              <td class="!text-center font-mono !px-3 !py-2">${fmt(er.propuesto.emissions)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.emissions, base.emissions)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(er.propuesto.emissions, base.emissions)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.emissions, er.propuesto.emissions)}</td>
+            </tr>
+            <tr>
+              <td class="!text-left font-bold !px-3 !py-2">Empleo</td>
+              <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmt(lgp.propuesto.employment)}</td>
+              <td class="!text-center font-mono !px-3 !py-2">${fmt(er.propuesto.employment)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.employment, base.employment, true)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(er.propuesto.employment, base.employment, true)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.employment, er.propuesto.employment, true)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
+  `;
+
+  const gridHtml = `
+    ${comparisonTable}
     
-    <div class="mt-8 border-t border-line/50 pt-6">
-      <h3 class="text-xs font-bold text-muted uppercase tracking-[0.1em] mb-2 pl-1"><span class="w-2 h-2 rounded-full bg-accent inline-block mr-2"></span>Comparación Operativa: Escenario Propuesto</h3>
-      ${_renderOpComparison(lgp.propuesto, er.propuesto, 'op-table-prop')}
-      
-      <h3 class="text-xs font-bold text-muted uppercase tracking-[0.1em] mb-2 pl-1 mt-6"><span class="w-2 h-2 rounded-full bg-accent inline-block mr-2"></span>Comparación Operativa: Escenario Inverso</h3>
-      ${_renderOpComparison(lgp.inverso, er.inverso, 'op-table-inv')}
-    </div>
+    ${_renderCostBreakdownComparison(lgp.propuesto, er.propuesto)}
+    
+    ${_renderEmissionsBreakdownComparison(lgp.propuesto, er.propuesto)}
+    
+    ${_renderEmploymentBreakdownComparison(lgp.propuesto, er.propuesto)}
+    
+    ${_renderProducerVariantsComparison(lgp.propuesto, er.propuesto)}
+    
+    ${_renderTripsComparison(lgp.propuesto, er.propuesto)}
+    
+    ${_renderRoutesComparison(lgp.propuesto, er.propuesto)}
   `;
 
   return `
     <div class="bg-surface border border-line rounded-xl p-6 mb-6 shadow-sm">
       <h4 class="text-xs font-bold text-muted uppercase tracking-widest mb-3">Parámetros en el Escenario</h4>
-      <div class="flex flex-wrap gap-2 mb-6">
-        ${paramsEntries.map(([p, pct]) => `
-          <div class="flex items-center bg-surface border border-line rounded-lg shadow-sm overflow-hidden text-xs">
-            <span class="px-2 py-1 font-bold text-main bg-surface-alt border-r border-line">${p}</span>
-            <span class="px-2 py-1 text-muted font-mono font-semibold">${pct >= 0 ? "+" : ""}${fmt(pct)}%</span>
-          </div>
-        `).join("")}
+      <div class="flex flex-col gap-3 mb-6">
+        ${rowsHtml}
       </div>
-      
       ${gridHtml}
     </div>
   `;

@@ -196,7 +196,7 @@
             </div>
             <div class="flex items-center gap-2">
               <span class="text-sm font-semibold text-main">Parada:</span>
-              <input id="oat-max-pct" type="number" value="10" min="1" max="100"
+              <input id="oat-max-pct" type="number" value="20" min="1" max="100"
                 class="w-16 border border-strong rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
               <span class="text-xs text-muted">±%</span>
             </div>
@@ -298,7 +298,7 @@
             <span class="text-sm font-bold text-main">Cargar Escenario Predefinido:</span>
             <select id="scenarios-preset"
               class="flex-1 border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
-              <option value="">— Seleccionar un escenario —</option>
+              <option value="base" selected>Condiciones Base</option>
               <option value="crecimiento">Crecimiento del Mercado</option>
               <option value="expansion">Expansión planificada del sistema</option>
               <option value="restriccion">Restricción operativa</option>
@@ -307,26 +307,6 @@
               <option value="adversas">Condiciones Adversas</option>
               <option value="critica">Interacción crítica del sistema</option>
             </select>
-          </div>
-        </div>
-
-        <div class="bg-page border border-line rounded-xl p-4 mb-5">
-          <div class="flex items-center gap-6">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-bold text-main">Método:</span>
-              <select id="scenarios-method"
-                class="border border-strong rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]">
-                <option value="lgp">LGP (Metas Lexicográficas)</option>
-                <option value="er">ER (Epsilon-Restricción)</option>
-                <option value="both" selected>Comparar LGP vs ER</option>
-              </select>
-            </div>
-            <div id="scenarios-er-steps-wrap" class="flex items-center gap-2 hidden">
-              <span class="text-sm font-semibold text-main">Pasos:</span>
-              <input id="scenarios-er-steps" type="number" value="5" min="2" max="20"
-                class="w-14 border border-strong rounded-lg px-2 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-surface text-main dark:bg-[var(--c-bg-surface-alt)]" />
-            </div>
-
           </div>
         </div>
 

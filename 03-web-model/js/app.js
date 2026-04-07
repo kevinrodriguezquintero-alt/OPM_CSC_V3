@@ -649,14 +649,27 @@ function initScenarios() {
   const container  = document.getElementById("scenarios-result");
   const checkAll   = document.getElementById("scenarios-check-all");
   const uncheckAll = document.getElementById("scenarios-uncheck-all");
-  const method     = document.getElementById("scenarios-method");
   const erWrap     = document.getElementById("scenarios-er-steps-wrap");
-  const erSteps    = document.getElementById("scenarios-er-steps");
+  const erSteps    = document.getElementById("scenarios-er-steps"); // Puede ser null
   const presetSelect = document.getElementById("scenarios-preset");
+
+  // Método fijo: siempre comparar LGP vs ER
+  const method = { value: "both" };
 
   presetSelect.addEventListener("change", () => {
     const val = presetSelect.value;
     uncheckAll.click();
+    
+    // Special case: base comparison - select all params with 0%
+    if (val === "base") {
+      grid.querySelectorAll(".scenarios-param-cb").forEach(cb => {
+        cb.checked = true;
+        const input = grid.querySelector(`.scenarios-param-input[data-param="${cb.value}"]`);
+        if (input) input.value = 0;
+      });
+      return;
+    }
+    
     if (!val || !SCENARIO_PRESETS[val]) return;
 
     const config = SCENARIO_PRESETS[val];
@@ -668,10 +681,11 @@ function initScenarios() {
     });
   });
 
-  method.addEventListener("change", () => {
-    const isEr = method.value === "er";
-    erWrap.classList.toggle("hidden", !isEr);
-  });
+  // Eliminado: event listener del selector de método ya que ahora es fijo (both)
+  // method.addEventListener("change", () => {
+  //   const isEr = method.value === "er";
+  //   erWrap.classList.toggle("hidden", !isEr);
+  // });
 
   grid.innerHTML = SENSITIVITY_PARAMS.map(p => `
     <div class="scenario-item">
@@ -685,6 +699,15 @@ function initScenarios() {
       </div>
     </div>
   `).join("");
+
+  // Initialize with base scenario if selected by default
+  if (presetSelect.value === "base") {
+    grid.querySelectorAll(".scenarios-param-cb").forEach(cb => {
+      cb.checked = true;
+      const input = grid.querySelector(`.scenarios-param-input[data-param="${cb.value}"]`);
+      if (input) input.value = 0;
+    });
+  }
 
   checkAll.addEventListener("click", () => {
     grid.querySelectorAll(".scenarios-param-cb").forEach(cb => cb.checked = true);
@@ -706,7 +729,7 @@ function initScenarios() {
     }
 
     const m = method.value;
-    const s = parseInt(erSteps.value, 10) || 5;
+    const s = erSteps ? parseInt(erSteps.value, 10) || 5 : 5;
     btn.disabled = true;
 
     const stepsTotal = m === "both" ? 2 : 1;
