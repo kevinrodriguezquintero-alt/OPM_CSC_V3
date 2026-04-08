@@ -740,8 +740,8 @@ function _renderCostBreakdownComparison(lgpObjs, erObjs) {
   if (!lgpCost || !erCost) return "";
   
   const diffCost = (vL, vE) => {
-    if (vL === 0) return "—";
-    const p = ((vE - vL) / vL) * 100;
+    if (vE === 0) return "—";
+    const p = ((vL - vE) / vE) * 100;
     const absP = Math.abs(p);
     if (absP < 0.05) {
       return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
@@ -833,8 +833,8 @@ function _renderEmissionsBreakdownComparison(lgpObjs, erObjs) {
   if (!lgpEmissions || !erEmissions) return "";
   
   const diffEmissions = (vL, vE) => {
-    if (vL === 0) return "—";
-    const p = ((vE - vL) / vL) * 100;
+    if (vE === 0) return "—";
+    const p = ((vL - vE) / vE) * 100;
     const absP = Math.abs(p);
     if (absP < 0.05) {
       return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
@@ -914,8 +914,8 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
   
   // Funciones de diff
   const diffEmployment = (vL, vE) => {
-    if (vL === 0) return "—";
-    const p = ((vE - vL) / vL) * 100;
+    if (vE === 0) return "—";
+    const p = ((vL - vE) / vE) * 100;
     const absP = Math.abs(p);
     if (absP < 0.05) {
       return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
@@ -1097,8 +1097,8 @@ function _renderProducerVariantsComparison(lgpObjs, erObjs) {
   };
   
   const diffPct = (vL, vE) => {
-    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return `<span class="text-muted">—</span>`;
-    const p = ((vE - vL) / vL) * 100;
+    if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return `<span class="text-muted">—</span>`;
+    const p = ((vL - vE) / vE) * 100;
     const absP = Math.abs(p);
     if (absP < 0.05) return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
     const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
@@ -1264,8 +1264,8 @@ function _renderIntermediariesComparison(lgpObjs, erObjs) {
   };
   
   const diffPct = (vL, vE) => {
-    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return `<span class="text-muted">—</span>`;
-    const p = ((vE - vL) / vL) * 100;
+    if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return `<span class="text-muted">—</span>`;
+    const p = ((vL - vE) / vE) * 100;
     const absP = Math.abs(p);
     if (absP < 0.05) return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
     const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
@@ -1367,8 +1367,8 @@ function _renderRoutesComparison(lgpObjs, erObjs) {
   };
   
   const diffPct = (vL, vE) => {
-    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return `<span class="text-muted">—</span>`;
-    const p = ((vE - vL) / vL) * 100;
+    if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return `<span class="text-muted">—</span>`;
+    const p = ((vL - vE) / vE) * 100;
     const absP = Math.abs(p);
     if (absP < 0.05) return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
     const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
@@ -1541,8 +1541,8 @@ function _renderTripsComparison(lgpObjs, erObjs) {
   };
   
   const diffPct = (vL, vE) => {
-    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return `<span class="text-muted">—</span>`;
-    const p = ((vE - vL) / vL) * 100;
+    if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return `<span class="text-muted">—</span>`;
+    const p = ((vL - vE) / vE) * 100;
     const absP = Math.abs(p);
     if (absP < 0.05) return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
     const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
@@ -1703,8 +1703,8 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
   const e = erObjs.metrics;
 
   const diffStr = (vL, vE) => {
-    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return "—";
-    const p = ((vE - vL) / vL) * 100;
+    if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return "—";
+    const p = ((vL - vE) / vE) * 100;
     const absP = Math.abs(p);
     if (absP < 0.05) {
       return `<span class="text-muted font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
@@ -1761,8 +1761,48 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
   `;
 }
 
-export function renderCombinedScenariosResult(lgp, er) {
+export function renderCombinedScenariosResult(lgp, er, scenarioName = "Escenario Personalizado") {
   if (!lgp || !er) return `<p class="text-[var(--c-error-text)] text-center py-4">Error al cargar datos comparativos.</p>`;
+  
+  // Verificar si los escenarios son factibles
+  if (!lgp.propuesto || !er.propuesto) {
+    const errorTitle = "Escenario Infactible";
+    const errorMsg = !lgp.propuesto && !er.propuesto 
+      ? "Ambos métodos LGP y ER no pueden resolver el modelo con los parámetros seleccionados."
+      : !lgp.propuesto 
+        ? "El método LGP no puede resolver el modelo con los parámetros seleccionados."
+        : "El método ER no puede resolver el modelo con los parámetros seleccionados.";
+    
+    return `
+      <div class="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-8 mb-6">
+        <div class="flex flex-col items-center text-center">
+          <div class="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <h4 class="font-bold text-red-800 dark:text-red-300 text-sm uppercase tracking-wide">${errorTitle}</h4>
+          <p class="text-red-700 dark:text-red-400 mt-2 text-sm max-w-md">${errorMsg}</p>
+        </div>
+      </div>`;
+  }
+  
+  // Verificar si existe el escenario base
+  if (!lgp.base || !er.base) {
+    return `
+      <div class="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-xl p-8 mb-6">
+        <div class="flex flex-col items-center text-center">
+          <div class="w-12 h-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center mb-4">
+            <svg class="w-6 h-6 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <h4 class="font-bold text-amber-800 dark:text-amber-300 text-sm uppercase tracking-wide">Datos Incompletos</h4>
+          <p class="text-amber-700 dark:text-amber-400 mt-2 text-sm max-w-md">No se encontraron datos del escenario base necesarios para la comparación.</p>
+          <p class="text-muted text-xs mt-3 max-w-sm">Intenta recargar la página o ejecutar el análisis nuevamente.</p>
+        </div>
+      </div>`;
+  }
   
   const paramsEntries = Object.entries(lgp.params_modified || {});
   const base = lgp.base; // Should be same for both
@@ -1787,8 +1827,8 @@ export function renderCombinedScenariosResult(lgp, er) {
 
   // Tabla única comparativa de objetivos
   const diffStr = (vL, vE, reverse = false) => {
-    if (typeof vL !== "number" || typeof vE !== "number" || vL === 0) return "—";
-    const p = ((vE - vL) / vL) * 100;
+    if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return "—";
+    const p = ((vL - vE) / vE) * 100;
     const absP = Math.abs(p);
     // Diferencias insignificantes (< 0.05%) = gris neutro
     if (absP < 0.05) {
@@ -1872,6 +1912,7 @@ export function renderCombinedScenariosResult(lgp, er) {
 
   return `
     <div class="bg-surface border border-line rounded-xl p-6 mb-6 shadow-sm">
+      <p class="text-xs font-bold text-muted uppercase tracking-widest text-center mb-2">${scenarioName}</p>
       <h4 class="text-xs font-bold text-muted uppercase tracking-widest mb-3">Parámetros en el Escenario</h4>
       <div class="flex flex-col gap-3 mb-6">
         ${rowsHtml}

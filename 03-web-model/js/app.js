@@ -632,13 +632,24 @@ function drawOatCharts(data) {
 }
 
 const SCENARIO_PRESETS = {
+  // Eje 1: Contexto Macroeconómico y Demanda
+  boom_demanda: { DI: 14.5, DD: 35 },
   crecimiento: { DI: 15, CA: -10, CB: -10 },
-  expansion:   { DI: 14, CA: 20,  CB: 20  },
-  restriccion: { CA: -20, CB: -20 },
-  presion:     { CV: 20, IT: 20 },
-  regulacion:  { DI: 10, CV: 20, IT: 20 },
-  adversas:    { DI: -14, CV: 20, CA: -20, CB: -20, IT: 10 },
-  critica:     { DI: 20, CV: 20, CA: -10, CB: -10, IT: 10 },
+  
+  // Eje 2: Estrategia Corporativa
+  expansion: { DI: 14, CA: 20, CB: 20 },
+  
+  // Eje 3: Sostenibilidad y Viabilidad Verde
+  transicion_verde: { CI: 15, CT: 15, IT: -30, CV: 25 },
+  regulacion_ambiental: { DI: 10, IT: 20, CV: 20 },
+  
+  // Eje 4: Impacto Social y Automatización
+  super_eficiencia: { CA: 50, CB: 50, CP: 10 },
+  fomento_laboral: { CA: 100, CB: 100 },
+  
+  // Eje 5: Vulnerabilidad y Límites
+  crisis_climatica: { RC: -35, RA: -40, CP: 20 },
+  huelga_transporte: { CV: -40, CT: 50, CTT: 50 },
 };
 
 // ── Scenarios ────────────────────────────────────────────────────────────
@@ -658,7 +669,13 @@ function initScenarios() {
 
   presetSelect.addEventListener("change", () => {
     const val = presetSelect.value;
-    uncheckAll.click();
+    
+    // Si selecciona "Elige un Escenario", no hacer nada
+    if (!val) return;
+    
+    // Limpiar checkboxes e inputs sin resetear el select
+    grid.querySelectorAll(".scenarios-param-cb").forEach(cb => cb.checked = false);
+    grid.querySelectorAll(".scenarios-param-input").forEach(input => input.value = 0);
     
     // Special case: base comparison - select all params with 0%
     if (val === "base") {
@@ -670,7 +687,7 @@ function initScenarios() {
       return;
     }
     
-    if (!val || !SCENARIO_PRESETS[val]) return;
+    if (!SCENARIO_PRESETS[val]) return;
 
     const config = SCENARIO_PRESETS[val];
     Object.entries(config).forEach(([p, pct]) => {
@@ -694,26 +711,22 @@ function initScenarios() {
         <span class="font-mono">${p}</span>
       </label>
       <div class="scenario-input-wrap">
-        <input type="number" value="10" step="0.1" class="scenarios-param-input" data-param="${p}" />
+        <input type="number" value="0" step="0.1" class="scenarios-param-input" data-param="${p}" />
         <span class="scenario-pct-sign">%</span>
       </div>
     </div>
   `).join("");
 
-  // Initialize with base scenario if selected by default
-  if (presetSelect.value === "base") {
-    grid.querySelectorAll(".scenarios-param-cb").forEach(cb => {
-      cb.checked = true;
-      const input = grid.querySelector(`.scenarios-param-input[data-param="${cb.value}"]`);
-      if (input) input.value = 0;
-    });
-  }
+  // Initialize: all parameters unchecked and values at 0 by default
+  // (the select starts with "Elige un Escenario" as placeholder)
 
   checkAll.addEventListener("click", () => {
     grid.querySelectorAll(".scenarios-param-cb").forEach(cb => cb.checked = true);
   });
   uncheckAll.addEventListener("click", () => {
     grid.querySelectorAll(".scenarios-param-cb").forEach(cb => cb.checked = false);
+    grid.querySelectorAll(".scenarios-param-input").forEach(input => input.value = 0);
+    presetSelect.value = ""; // Volver a "Elige un Escenario"
   });
 
   btn.addEventListener("click", async () => {
@@ -746,7 +759,11 @@ function initScenarios() {
         const erData = await api.solveScenarios(params_vals, "er", s, "middle");
         
         update(2, "¡Simulación mutivariables completada!");
-        container.innerHTML = renderCombinedScenariosResult(lgpData, erData);
+        const selectedValue = presetSelect.value;
+        const scenarioName = selectedValue && selectedValue !== ""
+          ? presetSelect.options[presetSelect.selectedIndex].text
+          : "Escenario Propuesto";
+        container.innerHTML = renderCombinedScenariosResult(lgpData, erData, scenarioName);
       } else {
         update(0.5, `Evaluando configuración bajo método ${m.toUpperCase()}...`);
         const data = await api.solveScenarios(params_vals, m, s, "middle");
