@@ -484,12 +484,10 @@ function initRobustness() {
 
   if (!btn || !container) return;
 
-  const DEFAULT_PARAMS = ["CA", "CB", "CN", "RA", "RC", "CV", "DI", "DD", "IT"];
-
   grid.innerHTML = SENSITIVITY_PARAMS.map(p => `
     <div class="scenario-item">
       <label class="scenario-label">
-        <input type="checkbox" class="robustness-param-cb" value="${p}" ${DEFAULT_PARAMS.includes(p) ? "checked" : ""} />
+        <input type="checkbox" class="robustness-param-cb" value="${p}" />
         <span class="font-mono">${p}</span>
       </label>
     </div>`).join("");
