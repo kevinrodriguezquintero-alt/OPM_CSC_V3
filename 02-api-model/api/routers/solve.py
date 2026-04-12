@@ -128,8 +128,9 @@ def _extract_operational_metrics(variables: dict) -> dict:
         return {}
     
     # 1. Personal
-    pers_int = sum(item["value"] for item in variables.get("S", []))
-    pers_det = sum(item["value"] for item in variables.get("SS", []))
+    pers_acopio = sum(item["value"] for item in variables.get("S", []))
+    pers_int = sum(item["value"] for item in variables.get("SS", []))
+    pers_det = sum(item["value"] for item in variables.get("SSS", []))
     
     # 2. Viajes - Z (P→I) y ZZ (I→D) separados, ordenados por valor descendente
     z_list = variables.get("Z", [])
@@ -210,6 +211,7 @@ def _extract_cost_breakdown_from_vars(variables: dict, params, actual_total: flo
     y_list = variables.get("Y", [])
     s_list = variables.get("S", [])
     ss_list = variables.get("SS", [])
+    sss_list = variables.get("SSS", [])
     z_list = variables.get("Z", [])
     zz_list = variables.get("ZZ", [])
     w_list = variables.get("W", [])
@@ -217,8 +219,9 @@ def _extract_cost_breakdown_from_vars(variables: dict, params, actual_total: flo
     # Build lookup dicts
     x_flow = {(item["i"], item["j"]): item["value"] for item in x_list}
     y_flow = {(item["j"], item["k"]): item["value"] for item in y_list}
-    s_dict = {item["j"]: item["value"] for item in s_list}
-    ss_dict = {item["k"]: item["value"] for item in ss_list}
+    s_val = sum(item["value"] for item in s_list)
+    ss_dict = {item["j"]: item["value"] for item in ss_list}
+    sss_dict = {item["k"]: item["value"] for item in sss_list}
     z_dict = {(item["i"], item["j"]): item["value"] for item in z_list}
     zz_dict = {(item["j"], item["k"]): item["value"] for item in zz_list}
     w_dict = {item["i"]: item["value"] for item in w_list}
@@ -238,29 +241,26 @@ def _extract_cost_breakdown_from_vars(variables: dict, params, actual_total: flo
     DID = getattr(params, 'DID', {})
     IT = getattr(params, 'IT', {})
     
-    producers = getattr(params, 'PRODUCERS', [])
-    intermediaries = getattr(params, 'INTERMEDIARIES', [])
-    retailers = getattr(params, 'RETAILERS', [])
-    
-    # Cost calculations - replicating the exact model formula with its "errors"
-    # The model sums over i for S[j] and over j for SS[k]
-    num_producers = len(producers)
-    num_intermediaries = len(intermediaries)
+    producers = getattr(params, 'PRODUCTORES', [])
+    intermediaries = getattr(params, 'INTERMEDIARIOS', [])
+    retailers = getattr(params, 'DETALLISTAS', [])
     
     cost_production = sum(CP.get(i, 0) * x_flow.get((i, j), 0) for i in producers for j in intermediaries)
     cost_intermediation = sum(CI.get(j, 0) * x_flow.get((i, j), 0) for i in producers for j in intermediaries)
-    # Replicate model error: sum over i for S[j]
-    cost_labor_int = sum(CMO.get(j, 0) * s_dict.get(j, 0) for _ in producers for j in intermediaries) if num_producers > 0 else sum(CMO.get(j, 0) * s_dict.get(j, 0) for j in intermediaries)
+    
+    CMP = getattr(params, 'CMP', 0)
+    cost_labor_acopio = CMP * s_val
+    cost_labor_int = sum(CMO.get(j, 0) * ss_dict.get(j, 0) for j in intermediaries)
+    cost_labor_det = sum(CD.get(k, 0) * sss_dict.get(k, 0) for k in retailers)
+    
     cost_transport_pi = sum(CT.get((i, j), 0) * x_flow.get((i, j), 0) for i in producers for j in intermediaries)
     cost_transport_id = sum(CTT.get((j, k), 0) * y_flow.get((j, k), 0) for j in intermediaries for k in retailers)
-    # Replicate model error: sum over j for SS[k]
-    cost_labor_det = sum(CD.get(k, 0) * ss_dict.get(k, 0) for j in intermediaries for k in retailers) if num_intermediaries > 0 else sum(CD.get(k, 0) * ss_dict.get(k, 0) for k in retailers)
     cost_damage_pi = sum(CDA.get((i, j), 0) * P.get((i, j), 0) * x_flow.get((i, j), 0) for i in producers for j in intermediaries)
     cost_damage_id = sum(CDF.get((j, k), 0) * PP.get((j, k), 0) * y_flow.get((j, k), 0) for j in intermediaries for k in retailers)
     
     total_transport = cost_transport_pi + cost_transport_id
     total_damage = cost_damage_pi + cost_damage_id
-    total_labor = cost_labor_int + cost_labor_det
+    total_labor = cost_labor_acopio + cost_labor_int + cost_labor_det
     
     calculated_total = cost_production + cost_intermediation + total_labor + total_transport + total_damage
     
@@ -269,6 +269,7 @@ def _extract_cost_breakdown_from_vars(variables: dict, params, actual_total: flo
         factor = actual_total / calculated_total
         cost_production *= factor
         cost_intermediation *= factor
+        cost_labor_acopio *= factor
         cost_labor_int *= factor
         cost_labor_det *= factor
         cost_transport_pi *= factor
@@ -277,13 +278,17 @@ def _extract_cost_breakdown_from_vars(variables: dict, params, actual_total: flo
         cost_damage_id *= factor
         total_transport = cost_transport_pi + cost_transport_id
         total_damage = cost_damage_pi + cost_damage_id
-        total_labor = cost_labor_int + cost_labor_det
-    
+
+    # En caso de normalizacion (asegura actualizar el labor_total)
+    if calculated_total > 0 and abs(calculated_total - actual_total) > 0.01:
+        total_labor = cost_labor_acopio + cost_labor_int + cost_labor_det
+        
     return {
         "production": round(cost_production, 2),
         "intermediation": round(cost_intermediation, 2),
-        "labor_intermediary": round(cost_labor_int, 2),
-        "labor_retailer": round(cost_labor_det, 2),
+        "labor_acopio": round(cost_labor_acopio, 2),
+        "labor_intermediario": round(cost_labor_int, 2),
+        "labor_detallista": round(cost_labor_det, 2),
         "labor_total": round(total_labor, 2),
         "transport_pi": round(cost_transport_pi, 2),
         "transport_id": round(cost_transport_id, 2),
@@ -312,15 +317,15 @@ def _extract_emissions_breakdown(variables: dict, params) -> dict:
     # Emissions from P→I transport: Z[i,j] * DPI[i,j] * IT[j]
     emissions_pi = sum(
         z_dict.get((i, j), 0) * DPI.get((i, j), 0) * IT.get(j, 0)
-        for i in getattr(params, 'PRODUCERS', [])
-        for j in getattr(params, 'INTERMEDIARIES', [])
+        for i in getattr(params, 'PRODUCTORES', [])
+        for j in getattr(params, 'INTERMEDIARIOS', [])
     )
     
     # Emissions from I→D transport: ZZ[j,k] * DID[j,k] * IT[j]
     emissions_id = sum(
         zz_dict.get((j, k), 0) * DID.get((j, k), 0) * IT.get(j, 0)
-        for j in getattr(params, 'INTERMEDIARIES', [])
-        for k in getattr(params, 'RETAILERS', [])
+        for j in getattr(params, 'INTERMEDIARIOS', [])
+        for k in getattr(params, 'DETALLISTAS', [])
     )
     
     return {
@@ -334,30 +339,33 @@ def _extract_employment_breakdown(variables: dict) -> dict:
     """Extract detailed employment breakdown by type and location."""
     s_list = variables.get("S", [])
     ss_list = variables.get("SS", [])
+    sss_list = variables.get("SSS", [])
     
     # Personal intermediarios - lista detallada por ubicación
     inters_detail = []
-    for item in s_list:
+    for item in ss_list:
         if item["value"] > 0.01:
             inters_detail.append({"location": item["j"], "value": item["value"]})
     inters_detail = sorted(inters_detail, key=lambda x: x["value"], reverse=True)
     
     # Personal detallistas - lista detallada por ubicación
-    retailers_detail = []
-    for item in ss_list:
+    detallistas_detail = []
+    for item in sss_list:
         if item["value"] > 0.01:
-            retailers_detail.append({"location": item["k"], "value": item["value"]})
-    retailers_detail = sorted(retailers_detail, key=lambda x: x["value"], reverse=True)
+            detallistas_detail.append({"location": item["k"], "value": item["value"]})
+    detallistas_detail = sorted(detallistas_detail, key=lambda x: x["value"], reverse=True)
     
-    pers_int = sum(item["value"] for item in s_list)
-    pers_det = sum(item["value"] for item in ss_list)
+    pers_acopio = sum(item["value"] for item in s_list)
+    pers_int = sum(item["value"] for item in ss_list)
+    pers_det = sum(item["value"] for item in sss_list)
     
     return {
-        "intermediaries": round(pers_int, 0),
-        "retailers": round(pers_det, 0),
-        "total": round(pers_int + pers_det, 0),
-        "intermediaries_detail": inters_detail,  # Desglose por ubicación
-        "retailers_detail": retailers_detail     # Desglose por ubicación
+        "acopio": round(pers_acopio, 0),
+        "intermediarios": round(pers_int, 0),
+        "detallistas": round(pers_det, 0),
+        "total": round(pers_acopio + pers_int + pers_det, 0),
+        "intermediarios_detail": inters_detail,  # Desglose por ubicación
+        "detallistas_detail": detallistas_detail     # Desglose por ubicación
     }
 
 

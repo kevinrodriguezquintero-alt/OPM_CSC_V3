@@ -11,19 +11,22 @@ load_dotenv()
 #   kind: "scalar" | "list" | "dict1" | "dict2"
 # ---------------------------------------------------------------------------
 PARAM_SCHEMA: dict[str, tuple] = {
-    "PRODUCERS":         ("list",   None),
-    "INTERMEDIARIES":    ("list",   None),
-    "RETAILERS":         ("list",   None),
-    "PRODUCER_VARIANTS": ("list",   None),
+    "PRODUCTORES":         ("list",   None),
+    "INTERMEDIARIOS":      ("list",   None),
+    "DETALLISTAS":         ("list",   None),
+    "VARIANTES_PRODUCTOR": ("list",   None),
     # scalars
     "RB":  ("scalar", None),
+    "CA":  ("scalar", None),
+    "CMP": ("scalar", None),
+    "M":   ("scalar", None),
     "IT":  ("dict1",  None),
     # single-index dicts
     "RA":  ("dict1", None),
     "RC":  ("dict1", None),
     "RD":  ("dict1", None),
-    "CA":  ("dict1", None),
     "CB":  ("dict1", None),
+    "CC":  ("dict1", None),
     "CP":  ("dict1", None),
     "CI":  ("dict1", None),
     "CD":  ("dict1", None),

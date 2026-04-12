@@ -20,18 +20,20 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
     """
 
     # --- SETS ---
-    model.I = pyo.Set(initialize=p.PRODUCERS)
-    model.J = pyo.Set(initialize=p.INTERMEDIARIES)
-    model.K = pyo.Set(initialize=p.RETAILERS)
-    model.U = pyo.Set(initialize=p.PRODUCER_VARIANTS)
+    model.I = pyo.Set(initialize=p.PRODUCTORES)
+    model.J = pyo.Set(initialize=p.INTERMEDIARIOS)
+    model.K = pyo.Set(initialize=p.DETALLISTAS)
+    model.U = pyo.Set(initialize=p.VARIANTES_PRODUCTOR)
 
     # --- PARAMETERS ---
     model.RA  = pyo.Param(model.U, initialize=p.RA)
     model.RB  = pyo.Param(initialize=p.RB)
     model.RC  = pyo.Param(model.I, initialize=p.RC)
     model.RD  = pyo.Param(model.I, initialize=p.RD)
-    model.CA  = pyo.Param(model.J, initialize=p.CA)
-    model.CB  = pyo.Param(model.K, initialize=p.CB)
+    model.CA  = pyo.Param(initialize=p.CA)
+    model.CB  = pyo.Param(model.J, initialize=p.CB)
+    model.CC  = pyo.Param(model.K, initialize=p.CC)
+    model.CMP = pyo.Param(initialize=p.CMP)
     model.CP  = pyo.Param(model.I, initialize=p.CP)
     model.CI  = pyo.Param(model.J, initialize=p.CI)
     model.CT  = pyo.Param(model.I, model.J, initialize=p.CT)
@@ -55,6 +57,7 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
     model.DPI = pyo.Param(model.I, model.J, initialize=p.DPI)
     model.DID = pyo.Param(model.J, model.K, initialize=p.DID)
     model.IT  = pyo.Param(model.J, initialize=p.IT)
+    model.M   = pyo.Param(initialize=p.M)
 
     # --- VARIABLES ---
     model.X  = pyo.Var(model.I, model.J, within=pyo.NonNegativeReals)
@@ -62,8 +65,9 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
     model.Z  = pyo.Var(model.I, model.J, within=pyo.NonNegativeIntegers)
     model.ZZ = pyo.Var(model.J, model.K, within=pyo.NonNegativeIntegers)
     model.W  = pyo.Var(model.I,          within=pyo.NonNegativeReals)
-    model.S  = pyo.Var(model.J,          within=pyo.NonNegativeIntegers)
-    model.SS = pyo.Var(model.K,          within=pyo.NonNegativeIntegers)
+    model.S  = pyo.Var(within=pyo.NonNegativeIntegers)
+    model.SS = pyo.Var(model.J,          within=pyo.NonNegativeIntegers)
+    model.SSS= pyo.Var(model.K,          within=pyo.NonNegativeIntegers)
     model.B  = pyo.Var(model.U,          within=pyo.Binary)
 
     # --- OBJECTIVE EXPRESSIONS ---
@@ -72,10 +76,11 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
         return (
             sum(m.CP[i]  * m.X[i, j]  for i in m.I for j in m.J) +
             sum(m.CI[j]  * m.X[i, j]  for i in m.I for j in m.J) +
-            sum(m.CMO[j] * m.S[j]     for i in m.I for j in m.J) +
+            m.CMP * m.S +
+            sum(m.CMO[j] * m.SS[j] for j in m.J) +
+            sum(m.CD[k]  * m.SSS[k] for k in m.K) +
             sum(m.CT[i, j]  * m.X[i, j]  for i in m.I for j in m.J) +
             sum(m.CTT[j, k] * m.Y[j, k]  for j in m.J for k in m.K) +
-            sum(m.CD[k]  * m.SS[k]    for j in m.J for k in m.K) +
             sum(m.CDA[i, j] * m.P[i, j]  * m.X[i, j] for i in m.I for j in m.J) +
             sum(m.CDF[j, k] * m.PP[j, k] * m.Y[j, k] for j in m.J for k in m.K)
         )
@@ -89,13 +94,13 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
     model.Obj_Env = pyo.Expression(rule=obj_env_expr)
 
     def obj_social_expr(m):
-        return sum(m.S[j] for j in m.J) + sum(m.SS[k] for k in m.K)
+        return m.S + sum(m.SS[j] for j in m.J) + sum(m.SSS[k] for k in m.K)
     model.Obj_Social = pyo.Expression(rule=obj_social_expr)
 
     # --- CONSTRAINTS ---
 
     def cap_pro_rule(m):
-        return sum(m.RC[i] * m.W[i] for i in m.I) == sum(m.CN[i] for i in m.I)
+        return sum(m.RC[i] * m.W[i] for i in m.I) <= sum(m.CN[i] for i in m.I)
     model.cap_pro = pyo.Constraint(rule=cap_pro_rule)
 
     def cap_desI_rule(m, i):
@@ -110,13 +115,13 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
         return sum(m.Y[j, k] for j in m.J) <= m.CR[k]
     model.cap_rec = pyo.Constraint(model.K, rule=cap_rec_rule)
 
-    def cap_veh_rule(m, j):
-        return sum(m.X[i, j] for i in m.I) <= m.CV[j] * sum(m.Z[i, j] for i in m.I)
-    model.cap_veh = pyo.Constraint(model.J, rule=cap_veh_rule)
+    def cap_veh_rule(m, i, j):
+        return m.X[i, j] <= m.CV[j] * m.Z[i, j]
+    model.cap_veh = pyo.Constraint(model.I, model.J, rule=cap_veh_rule)
 
-    def cap_vehh_rule(m, j):
-        return sum(m.Y[j, k] for k in m.K) <= m.CV[j] * sum(m.ZZ[j, k] for k in m.K)
-    model.cap_vehh = pyo.Constraint(model.J, rule=cap_vehh_rule)
+    def cap_vehh_rule(m, j, k):
+        return m.Y[j, k] <= m.CV[j] * m.ZZ[j, k]
+    model.cap_vehh = pyo.Constraint(model.J, model.K, rule=cap_vehh_rule)
 
     def cap_demI_rule(m, j):
         return sum(m.X[i, j] for i in m.I) >= m.DI[j]
@@ -128,8 +133,9 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
 
     def cap_balce_rule(m, j):
         return (
-            sum(m.X[i, j] * (1 - m.P[i, j]) - m.X[i, j] * m.P[i, j] for i in m.I) ==
-            sum(m.Y[j, k] * (1 - m.PP[j, k]) for k in m.K)
+            sum(m.Y[j, k] for k in m.K) ==
+            sum(m.X[i, j] * (1 - m.P[i, j]) for i in m.I) -
+            sum(m.PP[j, k] * m.Y[j, k] for k in m.K)
         )
     model.cap_balce = pyo.Constraint(model.J, rule=cap_balce_rule)
 
@@ -149,12 +155,16 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
         return sum(m.ZZ[j, k] for k in m.K) <= sum(m.Y[j, k] / m.CV[j] for k in m.K) + 1
     model.cap_opeC = pyo.Constraint(model.J, rule=cap_opeC_rule)
 
-    def cap_perI_rule(m, j):
-        return sum(m.X[i, j] for i in m.I) == m.S[j] * m.CA[j]
-    model.cap_perI = pyo.Constraint(model.J, rule=cap_perI_rule)
+    def cap_perI_rule(m):
+        return sum(m.X[i, j] for i in m.I for j in m.J) == m.S * m.CA
+    model.cap_perI = pyo.Constraint(rule=cap_perI_rule)
+
+    def cap_perJ_rule(m, j):
+        return sum(m.X[i, j] for i in m.I) == m.SS[j] * m.CB[j]
+    model.cap_perJ = pyo.Constraint(model.J, rule=cap_perJ_rule)
 
     def cap_perD_rule(m, k):
-        return sum(m.Y[j, k] for j in m.J) == m.SS[k] * m.CB[k]
+        return sum(m.Y[j, k] for j in m.J) == m.SSS[k] * m.CC[k]
     model.cap_perD = pyo.Constraint(model.K, rule=cap_perD_rule)
 
     def var_bina_rule(m):
@@ -164,6 +174,13 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
     def suma_w_rule(m, i):
         return sum(m.B[u] * m.H[u] for u in m.U) == m.W[i]
     model.suma_w = pyo.Constraint(model.I, rule=suma_w_rule)
+
+    def cap_km_rule(m):
+        return (
+            sum(m.Z[i, j] * m.DPI[i, j] for i in m.I for j in m.J) +
+            sum(m.ZZ[j, k] * m.DID[j, k] for j in m.J for k in m.K)
+        ) <= m.M
+    model.cap_km = pyo.Constraint(rule=cap_km_rule)
 
     return model
 
@@ -184,10 +201,11 @@ def extract_variables(model) -> dict:
         "ZZ": [{"j": j, "k": k, "value": int(round(v(model.ZZ[j, k])))}
                for j in model.J for k in model.K if v(model.ZZ[j, k]) > 0.5],
         "W":  [{"i": i, "value": v(model.W[i])} for i in model.I],
-        "S":  [{"j": j, "value": int(round(v(model.S[j])))}
-               for j in model.J if v(model.S[j]) > 0.5],
-        "SS": [{"k": k, "value": int(round(v(model.SS[k])))}
-               for k in model.K if v(model.SS[k]) > 0.5],
+        "S":  [{"j": 0, "value": int(round(v(model.S)))}] if v(model.S) > 0.5 else [],
+        "SS": [{"j": j, "value": int(round(v(model.SS[j])))}
+               for j in model.J if v(model.SS[j]) > 0.5],
+        "SSS": [{"k": k, "value": int(round(v(model.SSS[k])))}
+                for k in model.K if v(model.SSS[k]) > 0.5],
         "B":  [{"u": u, "value": 1}
                for u in model.U if v(model.B[u]) > 0.5],
     }

@@ -139,12 +139,13 @@ export function renderLgpResult(data) {
       <h3 class="text-xs font-bold text-muted uppercase tracking-widest mb-3 mt-6">Decisiones Operativas</h3>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         ${renderVarTable("X — Flujo productor→intermediario", ["i", "j", "value"], vars.X)}
-        ${renderVarTable("Y — Flujo intermediario→retailer", ["j", "k", "value"], vars.Y)}
+        ${renderVarTable("Y — Flujo intermediario→detallista", ["j", "k", "value"], vars.Y)}
         ${renderVarTable("Z — Viajes productor→intermediario", ["i", "j", "value"], vars.Z)}
-        ${renderVarTable("ZZ — Viajes intermediario→retailer", ["j", "k", "value"], vars.ZZ)}
+        ${renderVarTable("ZZ — Viajes intermediario→detallista", ["j", "k", "value"], vars.ZZ)}
         ${renderVarTable("W — Hectáreas por productor", ["i", "value"], vars.W)}
-        ${renderVarTable("S — Personal intermediario", ["j", "value"], vars.S)}
-        ${renderVarTable("SS — Personal retailer", ["k", "value"], vars.SS)}
+        ${renderVarTable("S — Personal centro de acopio", ["value"], vars.S)}
+        ${renderVarTable("SS — Personal intermediario", ["j", "value"], vars.SS)}
+        ${renderVarTable("SSS — Personal detallista", ["k", "value"], vars.SSS)}
         ${renderVarTable("B — Variantes activas", ["u", "value"], vars.B)}
       </div>`;
   }
@@ -273,12 +274,13 @@ export function renderErResult(data) {
     <h3 class="text-xs font-bold text-muted uppercase tracking-widest mb-3 mt-6">Decisiones Operativas — Última Iteración</h3>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
       ${renderVarTable("X — Flujo productor→intermediario", ["i", "j", "value"], vars.X)}
-      ${renderVarTable("Y — Flujo intermediario→retailer", ["j", "k", "value"], vars.Y)}
+      ${renderVarTable("Y — Flujo intermediario→detallista", ["j", "k", "value"], vars.Y)}
       ${renderVarTable("Z — Viajes productor→intermediario", ["i", "j", "value"], vars.Z)}
-      ${renderVarTable("ZZ — Viajes intermediario→retailer", ["j", "k", "value"], vars.ZZ)}
+      ${renderVarTable("ZZ — Viajes intermediario→detallista", ["j", "k", "value"], vars.ZZ)}
       ${renderVarTable("W — Hectáreas por productor", ["i", "value"], vars.W)}
-      ${renderVarTable("S — Personal intermediario", ["j", "value"], vars.S)}
-      ${renderVarTable("SS — Personal retailer", ["k", "value"], vars.SS)}
+      ${renderVarTable("S — Personal centro de acopio", ["value"], vars.S)}
+      ${renderVarTable("SS — Personal intermediario", ["j", "value"], vars.SS)}
+      ${renderVarTable("SSS — Personal detallista", ["k", "value"], vars.SSS)}
       ${renderVarTable("B — Variantes activas", ["u", "value"], vars.B)}
     </div>` : "";
 
@@ -299,15 +301,16 @@ export function renderErResult(data) {
 // ── Params (editable) ───────────────────────────────────────────────────────
 
 const PARAM_DESCRIPTIONS = {
-  PRODUCERS:         "Conjunto de productores (I)",
-  INTERMEDIARIES:    "Conjunto de intermediarios (J)",
-  RETAILERS:         "Conjunto de detallistas (K)",
-  PRODUCER_VARIANTS: "Variantes de productor (U)",
+  PRODUCTORES:       "Conjunto de productores (I)",
+  INTERMEDIARIOS:    "Conjunto de intermediarios (J)",
+  DETALLISTAS:       "Conjunto de detallistas (K)",
+  VARIANTES_PRODUCTOR: "Variantes de productor (U)",
   RB:  "Rendimiento máximo total (Kg/Ha·semana)",
   RA:  "Rendimiento por variante de productor u (Kg/Ha·semana)",
   RC:  "Rendimiento máximo del cultivo base por productor i (Kg/Ha·semana)",
   RD:  "Rendimiento mínimo del cultivo base por productor i (Kg/Ha·semana)",
-  CA:  "Capacidad productiva por persona en intermediario j (Kg/persona)",
+  CA:  "Capacidad productiva global de persona en centro de acopio (Kg/persona)",
+  M:   "Límite máximo de kilómetros recorridos (km/semana)",
   CB:  "Capacidad productiva por persona en detallista k (Kg/persona)",
   CP:  "Costo de producción en productor i ($/Kg)",
   CI:  "Costo de procesamiento en intermediario j ($/Kg)",
@@ -802,8 +805,9 @@ function _renderCostBreakdownComparison(lgpObjs, erObjs) {
             ${row("Producción", lgpCost.production, erCost.production)}
             ${row("Intermediación", lgpCost.intermediation, erCost.intermediation)}
             ${categoryRow("Mano de Obra Total", lgpCost.labor_total, erCost.labor_total)}
-            ${row("Intermediarios", lgpCost.labor_intermediary, erCost.labor_intermediary, true)}
-            ${row("Detallistas", lgpCost.labor_retailer, erCost.labor_retailer, true)}
+            ${row("Centros de Acopio", lgpCost.labor_acopio, erCost.labor_acopio, true)}
+            ${row("Intermediarios", lgpCost.labor_intermediario, erCost.labor_intermediario, true)}
+            ${row("Detallistas", lgpCost.labor_detallista, erCost.labor_detallista, true)}
             ${categoryRow("Transporte Total", lgpCost.transport_total, erCost.transport_total)}
             ${row("Productor a Intermediario", lgpCost.transport_pi, erCost.transport_pi, true)}
             ${row("Intermediario a Detallista", lgpCost.transport_id, erCost.transport_id, true)}
@@ -907,10 +911,10 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
   if (!lgpEmployment || !erEmployment) return "";
   
   // Obtener detalles por ubicación
-  const lgpIntersDetail = lgpEmployment.intermediaries_detail || [];
-  const erIntersDetail = erEmployment.intermediaries_detail || [];
-  const lgpRetailersDetail = lgpEmployment.retailers_detail || [];
-  const erRetailersDetail = erEmployment.retailers_detail || [];
+  const lgpIntersDetail = lgpEmployment.intermediarios_detail || [];
+  const erIntersDetail = erEmployment.intermediarios_detail || [];
+  const lgpRetailersDetail = lgpEmployment.detallistas_detail || [];
+  const erRetailersDetail = erEmployment.detallistas_detail || [];
   
   // Funciones de diff
   const diffEmployment = (vL, vE) => {
@@ -989,10 +993,10 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
   }).join("");
   
   // Totales
-  const totalIntersLGP = lgpEmployment.intermediaries;
-  const totalIntersER = erEmployment.intermediaries;
-  const totalRetailersLGP = lgpEmployment.retailers;
-  const totalRetailersER = erEmployment.retailers;
+  const totalIntersLGP = lgpEmployment.intermediarios;
+  const totalIntersER = erEmployment.intermediarios;
+  const totalRetailersLGP = lgpEmployment.detallistas;
+  const totalRetailersER = erEmployment.detallistas;
   const totalLGP = lgpEmployment.total;
   const totalER = erEmployment.total;
   
@@ -1849,7 +1853,7 @@ export function renderCombinedScenariosResult(lgp, er, scenarioName = "Escenario
   const comparisonTable = `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
       <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
-        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Comparación de Objetivos: Escenario Propuesto</h5>
+        <h5 class="text-[11px] font-bold text-main uppercase tracking-widest">Comparación de Objetivos</h5>
       </div>
       <div class="overflow-x-auto">
         <table class="data-table" style="width:100%;">

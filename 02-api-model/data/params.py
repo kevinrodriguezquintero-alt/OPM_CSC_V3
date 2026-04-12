@@ -1,8 +1,8 @@
 # Sets
-PRODUCERS = [1]
-INTERMEDIARIES = [1, 2, 3, 4, 5, 6, 7]
-RETAILERS = [1, 2, 3, 4]
-PRODUCER_VARIANTS = list(range(1, 11))
+PRODUCTORES = [1]
+INTERMEDIARIOS = [1, 2, 3, 4, 5, 6, 7]
+DETALLISTAS = [1, 2, 3, 4]
+VARIANTES_PRODUCTOR = list(range(1, 11))
 
 # RB: Rendimiento maximo (Kg/Ha) semana
 RB = 2585.02
@@ -16,14 +16,21 @@ RC = {1: 750}
 # RD: Rendimiento minimo del cultivo base (Kg/Ha) semana
 RD = {1: 100}
 
-# CA: Capacidad productiva de una persona (Kg/persona) en intermediario j
-CA = {1: 20, 2: 25, 3: 23, 4: 18, 5: 17, 6: 20, 7: 30}
+# CA: Capacidad productiva global de una persona (Kg/persona) en centro de acopio
+# Valor promedio ponderado de los intermediarios
+CA = sum([20, 25, 23, 18, 17, 20, 30]) / 7
 
-# CB: Capacidad productiva de una persona (Kg/persona) en detallista k
-CB = {1: 130, 2: 140, 3: 120, 4: 100}
+# CB: Capacidad productiva de una persona (Kg/persona) en intermediario j
+CB = {1: 20, 2: 25, 3: 23, 4: 18, 5: 17, 6: 20, 7: 30}
+
+# CC: Capacidad productiva de una persona (Kg/persona) en detallista k
+CC = {1: 130, 2: 140, 3: 120, 4: 100}
 
 # CP: Costo de producción en el productor i ($/Kg)
 CP = {1: 551}
+
+# CMP: Costo de mano de obra en el centro de acopio ($/semana)
+CMP = 50000
 
 # CI: Costo de procesamiento del intermediario j ($/Kg)
 CI = {1: 100, 2: 80, 3: 70, 4: 120, 5: 170, 6: 200, 7: 90}
@@ -136,3 +143,7 @@ IT = {
     6: 0.4716,  # CV: 1000
     7: 0.4716,  # CV: 1000
 }
+
+# M: Límite máximo de kilómetros recorridos (km/semana)
+# Valor conservador basado en suma de distancias con múltiplo de seguridad
+M = 100000

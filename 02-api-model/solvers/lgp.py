@@ -3,9 +3,6 @@ import pyomo.environ as pyo
 from config import get_solver
 from solvers.build_model import build_model, extract_variables, _solver_status
 
-TOLERANCE = 1e-4
-
-
 import os
 import tempfile
 import contextlib
@@ -100,9 +97,7 @@ def run_lgp(params_obj, solver_name: str, capture_log: bool = True) -> dict:
         return _error_response(solver_name, steps, "infeasible_step1")
 
     val_cost = pyo.value(model.Obj_Cost)
-    model.cons_priority1 = pyo.Constraint(
-        expr=model.Obj_Cost <= val_cost * (1 + TOLERANCE)
-    )
+    model.cons_priority1 = pyo.Constraint(expr=model.Obj_Cost == val_cost)
 
     # ── STEP 2: Minimize Emissions ─────────────────────────────────────────
     model.del_component(model.objective)
@@ -117,9 +112,7 @@ def run_lgp(params_obj, solver_name: str, capture_log: bool = True) -> dict:
         return _error_response(solver_name, steps, "infeasible_step2")
 
     val_env = pyo.value(model.Obj_Env)
-    model.cons_priority2 = pyo.Constraint(
-        expr=model.Obj_Env <= val_env * (1 + TOLERANCE)
-    )
+    model.cons_priority2 = pyo.Constraint(expr=model.Obj_Env == val_env)
 
     # ── STEP 3: Maximize Employment ────────────────────────────────────────
     model.del_component(model.objective)
