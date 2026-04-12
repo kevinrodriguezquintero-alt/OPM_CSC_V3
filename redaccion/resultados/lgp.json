@@ -1,6 +1,6 @@
 {
   "method": "lgp",
-  "solver": "cplex",
+  "solver": "gurobi",
   "status": "optimal",
   "steps": [
     {
@@ -8,38 +8,38 @@
       "priority": "Costo",
       "status": "optimal",
       "objectives": {
-        "cost": 144500820.2034637,
-        "emissions": 1212.473264,
+        "cost": 144496313.4276463,
+        "emissions": 1230.26816,
         "employment": 1777.0
       },
-      "log": "CPLEX 22.1.1.0: \b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
+      "log": "Gurobi 10.0.3: \b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
     },
     {
       "step": 2,
       "priority": "Emisiones",
       "status": "optimal",
       "objectives": {
-        "cost": 144500820.20346373,
-        "emissions": 1212.473264,
+        "cost": 144496313.4276463,
+        "emissions": 1230.26816,
         "employment": 1777.0
       },
-      "log": "CPLEX 22.1.1.0: \b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
+      "log": "Gurobi 10.0.3: \b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
     },
     {
       "step": 3,
       "priority": "Social",
       "status": "optimal",
       "objectives": {
-        "cost": 144500820.2034637,
-        "emissions": 1212.473264,
+        "cost": 144496313.4276463,
+        "emissions": 1230.26816,
         "employment": 1777.0
       },
-      "log": "CPLEX 22.1.1.0: \b\b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
+      "log": "Gurobi 10.0.3: \b\b\b\b\b\b\b\b\b\b\b\b\b\b\b"
     }
   ],
   "objectives": {
-    "cost": 144500820.2034637,
-    "emissions": 1212.473264,
+    "cost": 144496313.4276463,
+    "emissions": 1230.26816,
     "employment": 1777.0
   },
   "variables": {
@@ -83,8 +83,8 @@
     "Y": [
       {
         "j": 1,
-        "k": 2,
-        "value": 1007.4766355140187
+        "k": 1,
+        "value": 998.1481481481455
       },
       {
         "j": 2,
@@ -99,47 +99,42 @@
       {
         "j": 4,
         "k": 4,
-        "value": 3778.6909090909094
+        "value": 3778.69090909118
       },
       {
         "j": 5,
-        "k": 2,
-        "value": 954.3818527487465
+        "k": 3,
+        "value": 929.1957352544191
       },
       {
         "j": 5,
         "k": 4,
-        "value": 1891.6011885445464
+        "value": 1926.206228829673
       },
       {
         "j": 6,
         "k": 1,
-        "value": 2990.0
+        "value": 1991.851851851852
       },
       {
         "j": 6,
         "k": 2,
-        "value": 258.1415117363642
+        "value": 1961.542056074843
       },
       {
         "j": 6,
         "k": 3,
-        "value": 823.9351851860475
+        "value": 150.8042647455809
       },
       {
         "j": 6,
         "k": 4,
-        "value": 977.7349050648141
+        "value": 943.129864779416
       },
       {
         "j": 7,
         "k": 2,
-        "value": 1000.0000000008704
-      },
-      {
-        "j": 7,
-        "k": 3,
-        "value": 256.06481481395235
+        "value": 1258.457943925157
       }
     ],
     "Z": [
@@ -182,7 +177,7 @@
     "ZZ": [
       {
         "j": 1,
-        "k": 2,
+        "k": 1,
         "value": 1
       },
       {
@@ -202,7 +197,7 @@
       },
       {
         "j": 5,
-        "k": 2,
+        "k": 3,
         "value": 1
       },
       {
@@ -213,12 +208,12 @@
       {
         "j": 6,
         "k": 1,
-        "value": 3
+        "value": 2
       },
       {
         "j": 6,
         "k": 2,
-        "value": 1
+        "value": 2
       },
       {
         "j": 6,
@@ -233,18 +228,13 @@
       {
         "j": 7,
         "k": 2,
-        "value": 1
-      },
-      {
-        "j": 7,
-        "k": 3,
-        "value": 1
+        "value": 2
       }
     ],
     "W": [
       {
         "i": 1,
-        "value": 23.2
+        "value": 22.9
       }
     ],
     "S": [
@@ -307,11 +297,19 @@
         "value": 1
       },
       {
-        "u": 3,
+        "u": 4,
         "value": 1
       },
       {
-        "u": 10,
+        "u": 6,
+        "value": 1
+      },
+      {
+        "u": 7,
+        "value": 1
+      },
+      {
+        "u": 8,
         "value": 1
       }
     ]

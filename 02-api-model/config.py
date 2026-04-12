@@ -19,6 +19,7 @@ def _get_highs_solver():
 
 SOLVERS = {
     "cplex":  lambda: pyo.SolverFactory("cplex", solver_io="nl", executable="cplex"),
+    "gurobi": lambda: pyo.SolverFactory("gurobi", solver_io="nl", executable="gurobi"),
     "highs":  lambda: _get_highs_solver(),
     "glpk":   lambda: pyo.SolverFactory("glpk"),
     "cbc":    lambda: pyo.SolverFactory("cbc"),

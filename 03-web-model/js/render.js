@@ -1,18 +1,18 @@
 // ── Helpers ────────────────────────────────────────────────────────────────
-window.copyTableToClipboard = function(btn, tableId) {
+window.copyTableToClipboard = function (btn, tableId) {
   const table = tableId ? document.getElementById(tableId) : btn.closest('div').nextElementSibling;
   if (!table) return;
   const rows = Array.from(table.querySelectorAll('tr'));
-  
+
   // Regex para quitar puntos de miles (ej: 1.234) pero mantener el punto decimal (ej: 1.2345)
   // En es-CO, el punto es de miles, pero si toFixed o similar se usa, puede ser decimal.
   // Solo quitamos puntos que tengan exactamente 3 dígitos detrás y no otro dígito.
   const clean = (s) => {
     if (!s) return "";
     return s.replace(/\u00A0/g, ' ')       // NBSP a espacio
-            .replace(/[\u2212\u2013]/g, '-') // Menos tipográfico y En-dash a guion ASCII
-            .replace(/\.(?=\d{3}(?!\d))/g, '') 
-            .trim();
+      .replace(/[\u2212\u2013]/g, '-') // Menos tipográfico y En-dash a guion ASCII
+      .replace(/\.(?=\d{3}(?!\d))/g, '')
+      .trim();
   };
 
   const tsv = rows.map(r => {
@@ -32,9 +32,9 @@ window.copyTableToClipboard = function(btn, tableId) {
 
 export function fmt(n, minFrac = 0) {
   if (n === null || n === undefined) return "—";
-  return typeof n === "number" ? n.toLocaleString("es-CO", { 
-    minimumFractionDigits: minFrac, 
-    maximumFractionDigits: 4 
+  return typeof n === "number" ? n.toLocaleString("es-CO", {
+    minimumFractionDigits: minFrac,
+    maximumFractionDigits: 4
   }) : String(n);
 }
 
@@ -161,12 +161,14 @@ export function renderLgpResult(data) {
       &nbsp; <strong>Solver:</strong> <code>${data.solver}</code>
     </div>
     ${renderInnerTabs("lgp", [
-      { id: "resultado", label: "Resultado", content: `
+    {
+      id: "resultado", label: "Resultado", content: `
         <h3 class="section-subtitle">Pasos LGP</h3>
         <div class="steps-grid">${stepsHtml}</div>
-        ${varsHtml}` },
-      { id: "logs", label: "Logs", content: renderTerminal(combinedLog) },
-    ])}`;
+        ${varsHtml}`
+    },
+    { id: "logs", label: "Logs", content: renderTerminal(combinedLog) },
+  ])}`;
 }
 
 function renderVarTable(title, cols, rows) {
@@ -290,49 +292,51 @@ export function renderErResult(data) {
       &nbsp; <strong>Steps:</strong> ${data.steps}
     </div>
     ${renderInnerTabs("er", [
-      { id: "resultado", label: "Resultado", content: `
+    {
+      id: "resultado", label: "Resultado", content: `
         ${payoffHtml}
         ${paretoHtml}
-        ${varsHtml}` },
-      { id: "logs", label: "Logs", content: renderTerminal(data.log || "") },
-    ])}`;
+        ${varsHtml}`
+    },
+    { id: "logs", label: "Logs", content: renderTerminal(data.log || "") },
+  ])}`;
 }
 
 // ── Params (editable) ───────────────────────────────────────────────────────
 
 const PARAM_DESCRIPTIONS = {
-  PRODUCTORES:       "Conjunto de productores (I)",
-  INTERMEDIARIOS:    "Conjunto de intermediarios (J)",
-  DETALLISTAS:       "Conjunto de detallistas (K)",
+  PRODUCTORES: "Conjunto de productores (I)",
+  INTERMEDIARIOS: "Conjunto de intermediarios (J)",
+  DETALLISTAS: "Conjunto de detallistas (K)",
   VARIANTES_PRODUCTOR: "Variantes de productor (U)",
-  RB:  "Rendimiento máximo total (Kg/Ha·semana)",
-  RA:  "Rendimiento por variante de productor u (Kg/Ha·semana)",
-  RC:  "Rendimiento máximo del cultivo base por productor i (Kg/Ha·semana)",
-  RD:  "Rendimiento mínimo del cultivo base por productor i (Kg/Ha·semana)",
-  CA:  "Capacidad productiva global de persona en centro de acopio (Kg/persona)",
-  M:   "Límite máximo de kilómetros recorridos (km/semana)",
-  CB:  "Capacidad productiva por persona en detallista k (Kg/persona)",
-  CP:  "Costo de producción en productor i ($/Kg)",
-  CI:  "Costo de procesamiento en intermediario j ($/Kg)",
-  CT:  "Costo de transporte productor i → intermediario j ($/Kg)",
+  RB: "Rendimiento máximo total (Kg/Ha·semana)",
+  RA: "Rendimiento por variante de productor u (Kg/Ha·semana)",
+  RC: "Rendimiento máximo del cultivo base por productor i (Kg/Ha·semana)",
+  RD: "Rendimiento mínimo del cultivo base por productor i (Kg/Ha·semana)",
+  CA: "Capacidad productiva global de persona en centro de acopio (Kg/persona)",
+  M: "Límite máximo de kilómetros recorridos (km/semana)",
+  CB: "Capacidad productiva por persona en detallista k (Kg/persona)",
+  CP: "Costo de producción en productor i ($/Kg)",
+  CI: "Costo de procesamiento en intermediario j ($/Kg)",
+  CT: "Costo de transporte productor i → intermediario j ($/Kg)",
   CTT: "Costo de transporte intermediario j → detallista k ($/Kg)",
-  CD:  "Costo de mano de obra en detallista k ($/semana)",
+  CD: "Costo de mano de obra en detallista k ($/semana)",
   CDA: "Costo por daño en ruta productor i → intermediario j ($/Kg)",
   CDF: "Costo por daño en ruta intermediario j → detallista k ($/Kg)",
-  P:   "Porcentaje de daño productor i → intermediario j (%)",
-  PP:  "Porcentaje de daño intermediario j → detallista k (%)",
-  CN:  "Capacidad de producción en productor i (Kg/día)",
-  CH:  "Capacidad de despacho en productor i (Kg/día)",
+  P: "Porcentaje de daño productor i → intermediario j (%)",
+  PP: "Porcentaje de daño intermediario j → detallista k (%)",
+  CN: "Capacidad de producción en productor i (Kg/día)",
+  CH: "Capacidad de despacho en productor i (Kg/día)",
   CHI: "Capacidad de despacho en intermediario j (Kg/día)",
-  CR:  "Capacidad de recepción en detallista k (Kg/día)",
-  DI:  "Demanda mínima en intermediario j (Kg/día)",
-  DD:  "Demanda mínima en detallista k (Kg/día)",
-  CV:  "Capacidad del vehículo en intermediario j (Kg/viaje)",
+  CR: "Capacidad de recepción en detallista k (Kg/día)",
+  DI: "Demanda mínima en intermediario j (Kg/día)",
+  DD: "Demanda mínima en detallista k (Kg/día)",
+  CV: "Capacidad del vehículo en intermediario j (Kg/viaje)",
   CMO: "Costo de mano de obra en intermediario j ($/semana)",
-  H:   "Número de hectáreas por variante de productor u (Ha·semana)",
+  H: "Número de hectáreas por variante de productor u (Ha·semana)",
   DPI: "Distancia/impacto ambiental ruta productor i → intermediario j (km)",
   DID: "Distancia/impacto ambiental ruta intermediario j → detallista k (km)",
-  IT:  "Factor de impacto de transporte por intermediario j",
+  IT: "Factor de impacto de transporte por intermediario j",
 };
 
 export function renderParams(data) {
@@ -555,8 +559,8 @@ export function renderSensitivityResult(data) {
   }
 
   const topCost = renderTopCard("PARÁMETROS CON ELASTICIDAD — COSTO", data.top_cost, "Costo", "obj_cost", "elas_cost", "table-top-cost");
-  const topEnv  = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMISIONES", data.top_env, "Emisiones", "obj_env", "elas_env", "table-top-env");
-  const topSoc  = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMPLEO", data.top_soc, "Empleo", "obj_soc", "elas_soc", "table-top-soc");
+  const topEnv = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMISIONES", data.top_env, "Emisiones", "obj_env", "elas_env", "table-top-env");
+  const topSoc = renderTopCard("PARÁMETROS CON ELASTICIDAD — EMPLEO", data.top_soc, "Empleo", "obj_soc", "elas_soc", "table-top-soc");
   const globalRankings = renderGlobalRankings(data.top_global_elas, data.top_global_freq);
 
   function pctCell(newVal, baseVal) {
@@ -586,10 +590,10 @@ export function renderSensitivityResult(data) {
       <td><strong>${r.param}</strong></td>
       <td>${r.change}</td>
       ${pctCell(r.obj_cost, bo.cost)}
-      ${pctCell(r.obj_env,  bo.emissions)}
-      ${pctCell(r.obj_soc,  bo.employment)}
+      ${pctCell(r.obj_env, bo.emissions)}
+      ${pctCell(r.obj_soc, bo.employment)}
       <td class="${cc}">${r.elas_cost !== null && r.elas_cost !== undefined ? fmt(r.elas_cost, 4) : "—"}</td>
-      <td class="${ec}">${r.elas_env  !== null && r.elas_env  !== undefined ? fmt(r.elas_env, 4)  : "—"}</td>
+      <td class="${ec}">${r.elas_env !== null && r.elas_env !== undefined ? fmt(r.elas_env, 4) : "—"}</td>
       <td>${r.elas_soc !== null && r.elas_soc !== undefined ? fmt(r.elas_soc, 4) : "—"}</td>
     </tr>`;
   }).join("");
@@ -638,9 +642,10 @@ export function renderSolverConfig(data, badgeEl, selectEl) {
     badgeEl.textContent = data.active || data.solver || "—";
     badgeEl.className = "solver-badge";
   }
-  if (selectEl && data.available) {
+  const solverList = data.available || data.options || [];
+  if (selectEl && solverList.length) {
     const current = selectEl.value || data.active;
-    selectEl.innerHTML = data.available
+    selectEl.innerHTML = solverList
       .map(s => `<option value="${s}" ${s === current ? "selected" : ""}>${s}</option>`)
       .join("");
   }
@@ -656,19 +661,19 @@ function _renderScenarioCard(title, objs, base, hint) {
          <p class="text-xs mt-2 text-[var(--c-error-text)] leading-relaxed">${hint || "Las restricciones del modelo no se cumplen para esta configuración."}</p>
       </div>
     </div>`;
-  
+
   const diff = (val, baseVal, reverse = false) => {
-     if (baseVal === undefined || baseVal === null || baseVal === 0) return "";
-     const p = ((val - baseVal) / baseVal) * 100;
-     let cls = "sens-delta-neutral";
-     if (Math.abs(p) > 0.001) {
-       if (reverse) {
-         cls = p > 0 ? "sens-delta-good" : "sens-delta-bad";
-       } else {
-         cls = p < 0 ? "sens-delta-good" : "sens-delta-bad";
-       }
-     }
-     return `<div class="sens-delta ${cls}">${p >= 0 ? "+" : ""}${fmt(p, 2)}%</div>`;
+    if (baseVal === undefined || baseVal === null || baseVal === 0) return "";
+    const p = ((val - baseVal) / baseVal) * 100;
+    let cls = "sens-delta-neutral";
+    if (Math.abs(p) > 0.001) {
+      if (reverse) {
+        cls = p > 0 ? "sens-delta-good" : "sens-delta-bad";
+      } else {
+        cls = p < 0 ? "sens-delta-good" : "sens-delta-bad";
+      }
+    }
+    return `<div class="sens-delta ${cls}">${p >= 0 ? "+" : ""}${fmt(p, 2)}%</div>`;
   };
 
   return `
@@ -699,7 +704,7 @@ function _renderScenarioCard(title, objs, base, hint) {
 
 export function renderScenariosResult(data) {
   if (!data) return `<p class="text-[var(--c-error-text)] text-center py-4">Sin datos de escenario.</p>`;
-  
+
   const { base, propuesto, params_modified } = data;
 
   const cardsHtml = `
@@ -736,12 +741,12 @@ export function renderScenariosResult(data) {
 
 function _renderCostBreakdownComparison(lgpObjs, erObjs) {
   if (!lgpObjs || !erObjs) return "";
-  
+
   const lgpCost = lgpObjs.cost_breakdown;
   const erCost = erObjs.cost_breakdown;
-  
+
   if (!lgpCost || !erCost) return "";
-  
+
   const diffCost = (vL, vE) => {
     if (vE === 0) return "—";
     const p = ((vL - vE) / vE) * 100;
@@ -753,7 +758,7 @@ function _renderCostBreakdownComparison(lgpObjs, erObjs) {
     const cls = p < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
   };
-  
+
   const diffValue = (vL, vE) => {
     const diff = vE - vL;
     if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
@@ -761,7 +766,7 @@ function _renderCostBreakdownComparison(lgpObjs, erObjs) {
     const cls = diff < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
   };
-  
+
   const row = (label, lgpVal, erVal, indent = false) => `
     <tr>
       <td class="!text-left ${indent ? 'pl-6' : ''} !px-3 !py-2 ${indent ? 'text-muted' : 'font-bold'}">${label}</td>
@@ -771,7 +776,7 @@ function _renderCostBreakdownComparison(lgpObjs, erObjs) {
       <td class="!text-center !px-3 !py-2">${diffCost(lgpVal, erVal)}</td>
     </tr>
   `;
-  
+
   const categoryRow = (label, lgpVal, erVal) => `
     <tr class="bg-surface-alt/50">
       <td class="!text-left font-bold !px-3 !py-2">${label}</td>
@@ -781,7 +786,7 @@ function _renderCostBreakdownComparison(lgpObjs, erObjs) {
       <td class="!text-center !px-3 !py-2">${diffCost(lgpVal, erVal)}</td>
     </tr>
   `;
-  
+
   return `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
       <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
@@ -830,12 +835,12 @@ function _renderCostBreakdownComparison(lgpObjs, erObjs) {
 
 function _renderEmissionsBreakdownComparison(lgpObjs, erObjs) {
   if (!lgpObjs || !erObjs) return "";
-  
+
   const lgpEmissions = lgpObjs.emissions_breakdown;
   const erEmissions = erObjs.emissions_breakdown;
-  
+
   if (!lgpEmissions || !erEmissions) return "";
-  
+
   const diffEmissions = (vL, vE) => {
     if (vE === 0) return "—";
     const p = ((vL - vE) / vE) * 100;
@@ -847,7 +852,7 @@ function _renderEmissionsBreakdownComparison(lgpObjs, erObjs) {
     const cls = p < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
   };
-  
+
   const diffValue = (vL, vE) => {
     const diff = vE - vL;
     if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
@@ -855,7 +860,7 @@ function _renderEmissionsBreakdownComparison(lgpObjs, erObjs) {
     const cls = diff < 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
   };
-  
+
   const row = (label, lgpVal, erVal, indent = false) => `
     <tr>
       <td class="!text-left ${indent ? 'pl-6' : ''} !px-3 !py-2 ${indent ? 'text-muted' : 'font-bold'}">${indent ? '└─ ' : ''}${label}</td>
@@ -865,7 +870,7 @@ function _renderEmissionsBreakdownComparison(lgpObjs, erObjs) {
       <td class="!text-center !px-3 !py-2">${diffEmissions(lgpVal, erVal)}</td>
     </tr>
   `;
-  
+
   return `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
       <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
@@ -904,18 +909,18 @@ function _renderEmissionsBreakdownComparison(lgpObjs, erObjs) {
 
 function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
   if (!lgpObjs || !erObjs) return "";
-  
+
   const lgpEmployment = lgpObjs.employment_breakdown;
   const erEmployment = erObjs.employment_breakdown;
-  
+
   if (!lgpEmployment || !erEmployment) return "";
-  
+
   // Obtener detalles por ubicación
   const lgpIntersDetail = lgpEmployment.intermediarios_detail || [];
   const erIntersDetail = erEmployment.intermediarios_detail || [];
   const lgpRetailersDetail = lgpEmployment.detallistas_detail || [];
   const erRetailersDetail = erEmployment.detallistas_detail || [];
-  
+
   // Funciones de diff
   const diffEmployment = (vL, vE) => {
     if (vE === 0) return "—";
@@ -927,7 +932,7 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
     const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 2)}%</span>`;
   };
-  
+
   const diffValue = (vL, vE) => {
     const diff = vE - vL;
     if (Math.abs(diff) < 0.01) return `<span class="text-muted">—</span>`;
@@ -935,21 +940,21 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
     const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
   };
-  
+
   // Crear maps para empleo por ubicación
   const lgpIntersMap = Object.fromEntries(lgpIntersDetail.map(i => [i.location, i.value]));
   const erIntersMap = Object.fromEntries(erIntersDetail.map(i => [i.location, i.value]));
   const lgpRetailersMap = Object.fromEntries(lgpRetailersDetail.map(r => [r.location, r.value]));
   const erRetailersMap = Object.fromEntries(erRetailersDetail.map(r => [r.location, r.value]));
-  
+
   // Todos los IDs únicos
   const allIntersIds = Array.from(new Set([...lgpIntersDetail.map(i => i.location), ...erIntersDetail.map(i => i.location)]));
   const allRetailersIds = Array.from(new Set([...lgpRetailersDetail.map(r => r.location), ...erRetailersDetail.map(r => r.location)]));
-  
+
   // Ordenar por empleo total descendente
   allIntersIds.sort((a, b) => ((lgpIntersMap[b] || 0) + (erIntersMap[b] || 0)) - ((lgpIntersMap[a] || 0) + (erIntersMap[a] || 0)));
   allRetailersIds.sort((a, b) => ((lgpRetailersMap[b] || 0) + (erRetailersMap[b] || 0)) - ((lgpRetailersMap[a] || 0) + (erRetailersMap[a] || 0)));
-  
+
   // Generar filas para intermediarios
   const intersRowsHtml = allIntersIds.map(loc => {
     const lgpVal = lgpIntersMap[loc] || 0;
@@ -959,7 +964,7 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
     const isNewLGP = lgpHas && !erHas;
     const isNewER = erHas && !lgpHas;
     const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
-    
+
     return `
       <tr class="${rowClass}">
         <td class="!text-left font-mono text-xs !px-3 !py-1.5">${loc}</td>
@@ -970,7 +975,7 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
       </tr>
     `;
   }).join("");
-  
+
   // Generar filas para detallistas
   const retailersRowsHtml = allRetailersIds.map(loc => {
     const lgpVal = lgpRetailersMap[loc] || 0;
@@ -980,7 +985,7 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
     const isNewLGP = lgpHas && !erHas;
     const isNewER = erHas && !lgpHas;
     const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
-    
+
     return `
       <tr class="${rowClass}">
         <td class="!text-left font-mono text-xs !px-3 !py-1.5">${loc}</td>
@@ -991,7 +996,7 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
       </tr>
     `;
   }).join("");
-  
+
   // Totales
   const totalIntersLGP = lgpEmployment.intermediarios;
   const totalIntersER = erEmployment.intermediarios;
@@ -999,7 +1004,7 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
   const totalRetailersER = erEmployment.detallistas;
   const totalLGP = lgpEmployment.total;
   const totalER = erEmployment.total;
-  
+
   // Tabla de Empleo en Intermediarios
   const tableInters = allIntersIds.length > 0 ? `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
@@ -1038,7 +1043,7 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
       </div>
     </div>
   ` : '';
-  
+
   // Tabla de Empleo en Detallistas
   const tableRetailers = allRetailersIds.length > 0 ? `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
@@ -1077,20 +1082,20 @@ function _renderEmploymentBreakdownComparison(lgpObjs, erObjs) {
       </div>
     </div>
   ` : '';
-  
+
   // Tabla de Resumen Total - ELIMINADA
-  
+
   return tableInters + tableRetailers;
 }
 
 function _renderProducerVariantsComparison(lgpObjs, erObjs) {
   if (!lgpObjs || !erObjs) return "";
-  
+
   const lgpVariants = lgpObjs.producer_variants;
   const erVariants = erObjs.producer_variants;
-  
+
   if (!lgpVariants || !erVariants) return "";
-  
+
   // Funciones de diff
   const diffValue = (vL, vE) => {
     const diff = vE - vL;
@@ -1099,7 +1104,7 @@ function _renderProducerVariantsComparison(lgpObjs, erObjs) {
     const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 1)}</span>`;
   };
-  
+
   const diffPct = (vL, vE) => {
     if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return `<span class="text-muted">—</span>`;
     const p = ((vL - vE) / vE) * 100;
@@ -1108,23 +1113,23 @@ function _renderProducerVariantsComparison(lgpObjs, erObjs) {
     const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
   };
-  
+
   // Obtener desglose de hectáreas
   const lgpBreakdown = lgpVariants.hectares_breakdown || [];
   const erBreakdown = erVariants.hectares_breakdown || [];
-  
+
   // Crear maps de variantes
   const lgpHaMap = Object.fromEntries(lgpBreakdown.map(v => [v.variant, v.hectares]));
   const erHaMap = Object.fromEntries(erBreakdown.map(v => [v.variant, v.hectares]));
   const lgpYieldMap = Object.fromEntries(lgpBreakdown.map(v => [v.variant, v.yield_kg_ha]));
   const erYieldMap = Object.fromEntries(erBreakdown.map(v => [v.variant, v.yield_kg_ha]));
-  
+
   // Todos los IDs de variantes únicos
   const allVariantIds = Array.from(new Set([...lgpBreakdown.map(v => v.variant), ...erBreakdown.map(v => v.variant)]));
-  
+
   // Ordenar por hectáreas totales descendente
   allVariantIds.sort((a, b) => ((lgpHaMap[b] || 0) + (erHaMap[b] || 0)) - ((lgpHaMap[a] || 0) + (erHaMap[a] || 0)));
-  
+
   // Generar filas para cada variante - Tabla de Hectáreas
   const haRowsHtml = allVariantIds.map(variant => {
     const lgpHa = lgpHaMap[variant] || 0;
@@ -1134,7 +1139,7 @@ function _renderProducerVariantsComparison(lgpObjs, erObjs) {
     const isNewLGP = lgpHas && !erHas;
     const isNewER = erHas && !lgpHas;
     const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
-    
+
     return `
       <tr class="${rowClass}">
         <td class="!text-left font-mono text-xs !px-3 !py-1.5">Variante ${variant}</td>
@@ -1144,7 +1149,7 @@ function _renderProducerVariantsComparison(lgpObjs, erObjs) {
       </tr>
     `;
   }).join("");
-  
+
   // Generar filas para cada variante - Tabla de Rendimientos
   const yieldRowsHtml = allVariantIds.map(variant => {
     const lgpYield = lgpYieldMap[variant] || 0;
@@ -1156,7 +1161,7 @@ function _renderProducerVariantsComparison(lgpObjs, erObjs) {
     const isNewLGP = lgpHas && !erHas;
     const isNewER = erHas && !lgpHas;
     const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
-    
+
     return `
       <tr class="${rowClass}">
         <td class="!text-left font-mono text-xs !px-3 !py-1.5">Variante ${variant}</td>
@@ -1166,13 +1171,13 @@ function _renderProducerVariantsComparison(lgpObjs, erObjs) {
       </tr>
     `;
   }).join("");
-  
+
   // Totales
   const totalHaLGP = lgpVariants.total_hectares || 0;
   const totalHaER = erVariants.total_hectares || 0;
   const totalVariantsLGP = lgpVariants.total_variants || 0;
   const totalVariantsER = erVariants.total_variants || 0;
-  
+
   // Tabla 1: Hectáreas
   const tableHa = allVariantIds.length > 0 ? `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
@@ -1209,7 +1214,7 @@ function _renderProducerVariantsComparison(lgpObjs, erObjs) {
       </div>
     </div>
   ` : '';
-  
+
   // Tabla 2: Rendimientos
   const tableYield = allVariantIds.length > 0 ? `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
@@ -1240,23 +1245,23 @@ function _renderProducerVariantsComparison(lgpObjs, erObjs) {
       </div>
     </div>
   ` : '';
-  
+
   return tableHa + tableYield;
 }
 
 function _renderIntermediariesComparison(lgpObjs, erObjs) {
   if (!lgpObjs || !erObjs) return "";
-  
+
   const lgpInters = lgpObjs.metrics?.inters_list || [];
   const erInters = erObjs.metrics?.inters_list || [];
-  
+
   if (lgpInters.length === 0 && erInters.length === 0) return "";
-  
+
   // Crear mapa de todos los intermediarios únicos
   const allInterIds = new Set();
   lgpInters.forEach(i => allInterIds.add(i.id));
   erInters.forEach(i => allInterIds.add(i.id));
-  
+
   // Funciones de diff
   const diffValue = (vL, vE) => {
     if (typeof vL !== "number" || typeof vE !== "number") return `<span class="text-muted">—</span>`;
@@ -1266,7 +1271,7 @@ function _renderIntermediariesComparison(lgpObjs, erObjs) {
     const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
   };
-  
+
   const diffPct = (vL, vE) => {
     if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return `<span class="text-muted">—</span>`;
     const p = ((vL - vE) / vE) * 100;
@@ -1275,29 +1280,29 @@ function _renderIntermediariesComparison(lgpObjs, erObjs) {
     const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
   };
-  
+
   // Crear filas para cada intermediario
   const lgpMap = Object.fromEntries(lgpInters.map(i => [i.id, i.flow]));
   const erMap = Object.fromEntries(erInters.map(i => [i.id, i.flow]));
-  
+
   const sortedInters = Array.from(allInterIds).sort((a, b) => {
     // Ordenar por flujo total (suma de ambos métodos) descendente
     const flowA = (lgpMap[a] || 0) + (erMap[a] || 0);
     const flowB = (lgpMap[b] || 0) + (erMap[b] || 0);
     return flowB - flowA;
   });
-  
+
   const rowsHtml = sortedInters.map(interId => {
     const lgpFlow = lgpMap[interId] || 0;
     const erFlow = erMap[interId] || 0;
     const lgpHas = lgpFlow > 0.01;
     const erHas = erFlow > 0.01;
-    
+
     // Clase especial si el intermediario solo existe en uno de los métodos
     const isNewLGP = lgpHas && !erHas;
     const isNewER = erHas && !lgpHas;
     const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
-    
+
     return `
       <tr class="${rowClass}">
         <td class="!text-left font-mono text-xs !px-3 !py-1.5">${interId}</td>
@@ -1308,11 +1313,11 @@ function _renderIntermediariesComparison(lgpObjs, erObjs) {
       </tr>
     `;
   }).join("");
-  
+
   // Calcular totales
   const totalLGP = Object.values(lgpMap).reduce((a, b) => a + b, 0);
   const totalER = Object.values(erMap).reduce((a, b) => a + b, 0);
-  
+
   return `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
       <div class="bg-surface-alt px-4 py-2 border-b border-line flex justify-between items-center">
@@ -1354,12 +1359,12 @@ function _renderIntermediariesComparison(lgpObjs, erObjs) {
 
 function _renderRoutesComparison(lgpObjs, erObjs) {
   if (!lgpObjs || !erObjs) return "";
-  
+
   const lgpRoutes = lgpObjs.metrics?.routes_list || [];
   const erRoutes = erObjs.metrics?.routes_list || [];
-  
+
   if (lgpRoutes.length === 0 && erRoutes.length === 0) return "";
-  
+
   // Funciones de diff
   const diffValue = (vL, vE) => {
     if (typeof vL !== "number" || typeof vE !== "number") return `<span class="text-muted">—</span>`;
@@ -1369,7 +1374,7 @@ function _renderRoutesComparison(lgpObjs, erObjs) {
     const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
   };
-  
+
   const diffPct = (vL, vE) => {
     if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return `<span class="text-muted">—</span>`;
     const p = ((vL - vE) / vE) * 100;
@@ -1378,25 +1383,25 @@ function _renderRoutesComparison(lgpObjs, erObjs) {
     const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
   };
-  
+
   // Crear maps
   const lgpMap = Object.fromEntries(lgpRoutes.map(r => [r.route, r.flow]));
   const erMap = Object.fromEntries(erRoutes.map(r => [r.route, r.flow]));
-  
+
   // Separar rutas X y Y
   const lgpX = lgpRoutes.filter(r => r.route.startsWith('X['));
   const lgpY = lgpRoutes.filter(r => r.route.startsWith('Y['));
   const erX = erRoutes.filter(r => r.route.startsWith('X['));
   const erY = erRoutes.filter(r => r.route.startsWith('Y['));
-  
+
   // Todos los nombres únicos
   const allXNames = Array.from(new Set([...lgpX.map(r => r.route), ...erX.map(r => r.route)]));
   const allYNames = Array.from(new Set([...lgpY.map(r => r.route), ...erY.map(r => r.route)]));
-  
+
   // Ordenar por flujo total descendente
   allXNames.sort((a, b) => ((lgpMap[b] || 0) + (erMap[b] || 0)) - ((lgpMap[a] || 0) + (erMap[a] || 0)));
   allYNames.sort((a, b) => ((lgpMap[b] || 0) + (erMap[b] || 0)) - ((lgpMap[a] || 0) + (erMap[a] || 0)));
-  
+
   // Generar filas para rutas X
   const xRowsHtml = allXNames.map(route => {
     const lgpFlow = lgpMap[route] || 0;
@@ -1406,7 +1411,7 @@ function _renderRoutesComparison(lgpObjs, erObjs) {
     const isNewLGP = lgpHas && !erHas;
     const isNewER = erHas && !lgpHas;
     const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
-    
+
     return `
       <tr class="${rowClass}">
         <td class="!text-left font-mono text-xs !px-3 !py-1.5">${route}</td>
@@ -1417,7 +1422,7 @@ function _renderRoutesComparison(lgpObjs, erObjs) {
       </tr>
     `;
   }).join("");
-  
+
   // Generar filas para rutas Y
   const yRowsHtml = allYNames.map(route => {
     const lgpFlow = lgpMap[route] || 0;
@@ -1427,7 +1432,7 @@ function _renderRoutesComparison(lgpObjs, erObjs) {
     const isNewLGP = lgpHas && !erHas;
     const isNewER = erHas && !lgpHas;
     const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
-    
+
     return `
       <tr class="${rowClass}">
         <td class="!text-left font-mono text-xs !px-3 !py-1.5">${route}</td>
@@ -1438,13 +1443,13 @@ function _renderRoutesComparison(lgpObjs, erObjs) {
       </tr>
     `;
   }).join("");
-  
+
   // Totales por tipo
   const totalXLGP = lgpX.reduce((a, r) => a + r.flow, 0);
   const totalXER = erX.reduce((a, r) => a + r.flow, 0);
   const totalYLGP = lgpY.reduce((a, r) => a + r.flow, 0);
   const totalYER = erY.reduce((a, r) => a + r.flow, 0);
-  
+
   // Tabla de Rutas X (P→I)
   const tableX = allXNames.length > 0 ? `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
@@ -1483,7 +1488,7 @@ function _renderRoutesComparison(lgpObjs, erObjs) {
       </div>
     </div>
   ` : '';
-  
+
   // Tabla de Rutas Y (I→D)
   const tableY = allYNames.length > 0 ? `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
@@ -1522,18 +1527,18 @@ function _renderRoutesComparison(lgpObjs, erObjs) {
       </div>
     </div>
   ` : '';
-  
+
   return tableX + tableY;
 }
 
 function _renderTripsComparison(lgpObjs, erObjs) {
   if (!lgpObjs || !erObjs) return "";
-  
+
   const lgpTrips = lgpObjs.metrics?.trips_list || [];
   const erTrips = erObjs.metrics?.trips_list || [];
-  
+
   if (lgpTrips.length === 0 && erTrips.length === 0) return "";
-  
+
   // Funciones de diff
   const diffValue = (vL, vE) => {
     if (typeof vL !== "number" || typeof vE !== "number") return `<span class="text-muted">—</span>`;
@@ -1543,7 +1548,7 @@ function _renderTripsComparison(lgpObjs, erObjs) {
     const cls = diff > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-mono text-xs">${sign}${fmt(diff, 0)}</span>`;
   };
-  
+
   const diffPct = (vL, vE) => {
     if (typeof vL !== "number" || typeof vE !== "number" || vE === 0) return `<span class="text-muted">—</span>`;
     const p = ((vL - vE) / vE) * 100;
@@ -1552,25 +1557,25 @@ function _renderTripsComparison(lgpObjs, erObjs) {
     const cls = p > 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
     return `<span class="${cls} font-bold font-mono">${p > 0 ? "+" : ""}${fmt(p, 1)}%</span>`;
   };
-  
+
   // Crear maps
   const lgpMap = Object.fromEntries(lgpTrips.map(t => [t.trip, t.value]));
   const erMap = Object.fromEntries(erTrips.map(t => [t.trip, t.value]));
-  
+
   // Separar viajes Z y ZZ
   const lgpZ = lgpTrips.filter(t => t.trip.startsWith('Z['));
   const lgpZZ = lgpTrips.filter(t => t.trip.startsWith('ZZ['));
   const erZ = erTrips.filter(t => t.trip.startsWith('Z['));
   const erZZ = erTrips.filter(t => t.trip.startsWith('ZZ['));
-  
+
   // Todos los nombres únicos
   const allZNames = Array.from(new Set([...lgpZ.map(t => t.trip), ...erZ.map(t => t.trip)]));
   const allZZNames = Array.from(new Set([...lgpZZ.map(t => t.trip), ...erZZ.map(t => t.trip)]));
-  
+
   // Ordenar por valor total descendente
   allZNames.sort((a, b) => ((lgpMap[b] || 0) + (erMap[b] || 0)) - ((lgpMap[a] || 0) + (erMap[a] || 0)));
   allZZNames.sort((a, b) => ((lgpMap[b] || 0) + (erMap[b] || 0)) - ((lgpMap[a] || 0) + (erMap[a] || 0)));
-  
+
   // Generar filas para viajes Z
   const zRowsHtml = allZNames.map(trip => {
     const lgpVal = lgpMap[trip] || 0;
@@ -1580,7 +1585,7 @@ function _renderTripsComparison(lgpObjs, erObjs) {
     const isNewLGP = lgpHas && !erHas;
     const isNewER = erHas && !lgpHas;
     const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
-    
+
     return `
       <tr class="${rowClass}">
         <td class="!text-left font-mono text-xs !px-3 !py-1.5">${trip}</td>
@@ -1591,7 +1596,7 @@ function _renderTripsComparison(lgpObjs, erObjs) {
       </tr>
     `;
   }).join("");
-  
+
   // Generar filas para viajes ZZ
   const zzRowsHtml = allZZNames.map(trip => {
     const lgpVal = lgpMap[trip] || 0;
@@ -1601,7 +1606,7 @@ function _renderTripsComparison(lgpObjs, erObjs) {
     const isNewLGP = lgpHas && !erHas;
     const isNewER = erHas && !lgpHas;
     const rowClass = isNewLGP ? "bg-green-500/10" : isNewER ? "bg-red-500/10" : "";
-    
+
     return `
       <tr class="${rowClass}">
         <td class="!text-left font-mono text-xs !px-3 !py-1.5">${trip}</td>
@@ -1612,13 +1617,13 @@ function _renderTripsComparison(lgpObjs, erObjs) {
       </tr>
     `;
   }).join("");
-  
+
   // Totales por tipo
   const totalZLGP = lgpZ.reduce((a, t) => a + t.value, 0);
   const totalZER = erZ.reduce((a, t) => a + t.value, 0);
   const totalZZLGP = lgpZZ.reduce((a, t) => a + t.value, 0);
   const totalZZER = erZZ.reduce((a, t) => a + t.value, 0);
-  
+
   // Tabla de Viajes Z (P→I)
   const tableZ = allZNames.length > 0 ? `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-4 bg-surface">
@@ -1657,7 +1662,7 @@ function _renderTripsComparison(lgpObjs, erObjs) {
       </div>
     </div>
   ` : '';
-  
+
   // Tabla de Viajes ZZ (I→D)
   const tableZZ = allZZNames.length > 0 ? `
     <div class="border border-line rounded-lg overflow-hidden relative shadow-sm mb-6 bg-surface">
@@ -1696,7 +1701,7 @@ function _renderTripsComparison(lgpObjs, erObjs) {
       </div>
     </div>
   ` : '';
-  
+
   return tableZ + tableZZ;
 }
 
@@ -1767,16 +1772,16 @@ function _renderOpComparison(lgpObjs, erObjs, tableId) {
 
 export function renderCombinedScenariosResult(lgp, er, scenarioName = "Escenario Personalizado") {
   if (!lgp || !er) return `<p class="text-[var(--c-error-text)] text-center py-4">Error al cargar datos comparativos.</p>`;
-  
+
   // Verificar si los escenarios son factibles
   if (!lgp.propuesto || !er.propuesto) {
     const errorTitle = "Escenario Infactible";
-    const errorMsg = !lgp.propuesto && !er.propuesto 
+    const errorMsg = !lgp.propuesto && !er.propuesto
       ? "Ambos métodos LGP y ER no pueden resolver el modelo con los parámetros seleccionados."
-      : !lgp.propuesto 
+      : !lgp.propuesto
         ? "El método LGP no puede resolver el modelo con los parámetros seleccionados."
         : "El método ER no puede resolver el modelo con los parámetros seleccionados.";
-    
+
     return `
       <div class="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-xl p-8 mb-6">
         <div class="flex flex-col items-center text-center">
@@ -1790,7 +1795,7 @@ export function renderCombinedScenariosResult(lgp, er, scenarioName = "Escenario
         </div>
       </div>`;
   }
-  
+
   // Verificar si existe el escenario base
   if (!lgp.base || !er.base) {
     return `
@@ -1807,7 +1812,7 @@ export function renderCombinedScenariosResult(lgp, er, scenarioName = "Escenario
         </div>
       </div>`;
   }
-  
+
   const paramsEntries = Object.entries(lgp.params_modified || {});
   const base = lgp.base; // Should be same for both
 
@@ -1817,7 +1822,7 @@ export function renderCombinedScenariosResult(lgp, er, scenarioName = "Escenario
   for (let i = 0; i < paramsEntries.length; i += chunkSize) {
     chunks.push(paramsEntries.slice(i, i + chunkSize));
   }
-  
+
   const renderParam = ([p, pct]) => `
     <div class="flex items-center bg-surface border border-line rounded-lg shadow-sm overflow-hidden text-xs">
       <span class="px-2 py-1 font-bold text-main bg-surface-alt border-r border-line">${p}</span>
@@ -2013,12 +2018,12 @@ export function renderRangesComparison(data) {
     CN: "kg/día", CH: "kg/día", CHI: "kg/día", CR: "kg/día",
     DI: "kg/día", DD: "kg/día", CV: "kg/viaje",
     // Rendimientos y Tierra
-    RA: "kg/Ha·se semana", RB: "kg/Ha·se semana", 
+    RA: "kg/Ha·se semana", RB: "kg/Ha·se semana",
     RC: "kg/Ha·se semana", RD: "kg/Ha·se semana",
     H: "Ha/semana",
     // Costos y Mano de Obra
-    CP: "$/kg", CI: "$/kg", CT: "$/kg", CTT: "$/kg", 
-    CDA: "$/kg", CDF: "$/kg", 
+    CP: "$/kg", CI: "$/kg", CT: "$/kg", CTT: "$/kg",
+    CDA: "$/kg", CDF: "$/kg",
     CMO: "$/semana", CD: "$/detallista",
     CA: "kg/persona", CB: "kg/persona",
     // Otros

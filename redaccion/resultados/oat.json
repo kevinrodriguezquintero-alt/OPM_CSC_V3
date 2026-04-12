@@ -1,5 +1,5 @@
 {
-  "lgp_base": {
+  "base_objectives": {
     "cost": 144496313.4276463,
     "emissions": 1230.26816,
     "employment": 1777.0,
@@ -306,10 +306,14 @@
       "total_hectares": 22.9
     }
   },
-  "er_base": {
-    "cost": 144500820.2034637,
-    "emissions": 1212.473264,
-    "employment": 1777.0
-  },
-  "ranges": []
+  "results": [
+    {
+      "param": "CA",
+      "change": "-3.0%",
+      "error": "La reducción de capacidad laboral del intermediario deja oferta insuficiente para cubrir la demanda"
+    }
+  ],
+  "top_cost": [],
+  "top_env": [],
+  "top_soc": []
 }
