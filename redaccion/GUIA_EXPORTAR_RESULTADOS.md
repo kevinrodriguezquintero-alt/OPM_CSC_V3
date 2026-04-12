@@ -139,21 +139,18 @@ python update_results.py --restore ../backups/backup_20250412_143022
 cat redaccion/tools/update_log.txt
 ```
 
-### Re-ejecutar solo un análisis
-Si necesitas solo actualizar parte de los resultados, edita `export_results.py` y comenta las líneas que no necesites (líneas ~250-270).
-
 ---
 
 ## Estructura de Archivos Relevantes
 
 ```
 02-api-model/
-├── export_results.py      # [LEGADO] Script de exportación via API
-├── api/routers/solve.py   # Endpoints de análisis (ahora guardan automáticamente)
+├── api/routers/solve.py   # Endpoints de análisis (guardan automáticamente)
+├── config.py              # Configuración de solvers (HiGHS optimizado)
 └── ...
 
 redaccion/
-├── resultados/            # NUEVO: Archivos generados automáticamente
+├── resultados/            # Archivos generados automáticamente desde web
 │   ├── lgp.json
 │   ├── er.json
 │   ├── oat.json
@@ -168,25 +165,23 @@ redaccion/
 │   └── obj3_fase5_comparativo.md
 ├── backups/               # Auto-generado
 └── tools/
-    ├── consolidar_resultados.py  # NUEVO: Script de consolidación
-    ├── update_results.py         # [LEGADO] Para JSON único
+    ├── consolidar_resultados.py  # Script principal para actualizar plantillas
     └── update_log.txt
 ```
 
-**Nota:** `export_results.py` y `update_results.py` siguen disponibles pero el flujo recomendado es usar la interfaz web + `consolidar_resultados.py`.
-
 ---
 
-## Cuándo usar cada modo
+## Cuándo usar cada análisis
 
-| Situación | Modo | Tiempo estimado |
-|-----------|------|-----------------|
-| Prueba rápida | `--quick` | ~30s |
-| Borrador tesis | `--quick` | ~30s |
-| Entrega final | Completo (sin flag) | ~5-10min |
-| Cambio de parámetros | Según necesidad | Variable |
-| Solo LGP vs ER | `--quick` | ~30s |
-| Análisis de sensibilidad | Completo | ~5-10min |
+| Análisis | Descripción | Tiempo estimado |
+|----------|-------------|-----------------|
+| **LGP** | Resultados principales para plantillas | ~1-3 min |
+| **ER** | Frontera de Pareto (costo vs emisiones) | ~2-5 min |
+| **OAT** | Sensibilidad One-At-A-Time | ~3-5 min |
+| **Rangos** | Shadow prices y límites de parámetros | ~2-3 min |
+| **Escenarios** | Análisis de escenarios individuales | ~1-2 min cada uno |
+
+**Nota:** Puedes ejecutar solo los análisis que necesites. No es necesario correr todos.
 
 ---
 

@@ -2,6 +2,8 @@ import copy
 import sys
 import io
 from typing import List
+import json
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -10,6 +12,9 @@ from solvers.lgp import run_lgp
 from solvers.er import run_er
 
 router = APIRouter(prefix="/solve", tags=["solve"])
+
+# Directorio para guardar resultados automáticamente (relativo a 02-api-model, sube a raíz del proyecto)
+RESULTADOS_DIR = Path("../redaccion/resultados")
 
 
 def _ensure_stdout_safety():
@@ -89,12 +94,6 @@ def _infeasibility_hint(param: str, pct: float) -> str:
     article = "La" if pct < 0 else "El"
     return f"{article} {direction} de {label} genera un escenario sin solución factible"
 
-
-import json
-from pathlib import Path
-
-# Directorio para guardar resultados automáticamente
-RESULTADOS_DIR = Path("redaccion/resultados")
 
 @router.post("/lgp")
 def solve_lgp():
@@ -593,6 +592,7 @@ class ScenariosRequest(BaseModel):
     method: str = "lgp"
     steps: int = Field(default=5, ge=2, le=20)
     er_pilar: str = "middle"
+    escenario_id: str | None = None  # ID opcional para nombre de archivo (ej: "esc1_boom")
 
 
 def _perturb_in_place(data: dict, param_name: str, percentage: float):
@@ -670,13 +670,17 @@ def solve_scenarios(body: ScenariosRequest):
     finally:
         app_state.params = base_data
     
-    # Guardar automáticamente (escenarios tienen nombres dinámicos)
+    # Guardar automáticamente (escenarios tienen nombres dinámicos o ID personalizado)
     try:
         RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
-        # Crear nombre de archivo basado en parámetros modificados
-        esc_key = "_".join([f"{k}_{v}" for k, v in body.params_to_test.items()])
-        esc_key = esc_key.replace(".", "_")[:50]  # Limitar longitud
-        filename = f"esc_{esc_key}.json"
+        # Usar escenario_id si se proporciona, sino generar desde parámetros
+        if body.escenario_id:
+            filename = f"esc_{body.escenario_id}.json"
+        else:
+            # Crear nombre de archivo basado en parámetros modificados
+            esc_key = "_".join([f"{k}_{v}" for k, v in body.params_to_test.items()])
+            esc_key = esc_key.replace(".", "_")[:50]  # Limitar longitud
+            filename = f"esc_{esc_key}.json"
         with open(RESULTADOS_DIR / "escenarios" / filename, 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False, default=str)
     except Exception:

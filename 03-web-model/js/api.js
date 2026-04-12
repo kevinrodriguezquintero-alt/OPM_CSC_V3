@@ -36,11 +36,11 @@ export const api = {
     return r.json();
   },
 
-  async solveScenarios(params_to_test, method = "lgp", steps = 5, er_pilar = "middle") {
+  async solveScenarios(params_to_test, method = "lgp", steps = 5, er_pilar = "middle", escenario_id = null) {
     const r = await fetch(`${BASE}/solve/scenarios`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ params_to_test, method, steps, er_pilar }),
+      body: JSON.stringify({ params_to_test, method, steps, er_pilar, escenario_id }),
     });
     if (!r.ok) throw new Error(await r.text());
     return r.json();

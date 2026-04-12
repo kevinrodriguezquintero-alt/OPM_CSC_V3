@@ -749,12 +749,15 @@ function initScenarios() {
     try {
       const { renderScenariosResult, renderCombinedScenariosResult } = await import("./render.js");
 
+      // Obtener ID del escenario seleccionado para guardar con nombre descriptivo
+      const escenarioId = presetSelect.value || "custom";
+      
       if (m === "both") {
         update(0, "Fase 1/2: Resolviendo Metas Lexicográficas (LGP)...");
-        const lgpData = await api.solveScenarios(params_vals, "lgp", s, "middle");
+        const lgpData = await api.solveScenarios(params_vals, "lgp", s, "middle", escenarioId);
         
         update(1, "Fase 2/2: Resolviendo Epsilon-Restricción (ER)...");
-        const erData = await api.solveScenarios(params_vals, "er", s, "middle");
+        const erData = await api.solveScenarios(params_vals, "er", s, "middle", escenarioId);
         
         update(2, "¡Simulación mutivariables completada!");
         const selectedValue = presetSelect.value;
@@ -764,7 +767,7 @@ function initScenarios() {
         container.innerHTML = renderCombinedScenariosResult(lgpData, erData, scenarioName);
       } else {
         update(0.5, `Evaluando configuración bajo método ${m.toUpperCase()}...`);
-        const data = await api.solveScenarios(params_vals, m, s, "middle");
+        const data = await api.solveScenarios(params_vals, m, s, "middle", escenarioId);
         update(1, "Listo.");
         container.innerHTML = renderScenariosResult(data);
       }
