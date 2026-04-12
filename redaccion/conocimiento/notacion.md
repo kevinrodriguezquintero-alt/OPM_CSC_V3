@@ -61,8 +61,10 @@
 | CI_j | `m.CI[j]` | dict(J) | Costo procesamiento intermediario j | $/Kg |
 | CMO_j | `m.CMO[j]` | dict(J) | Costo mano de obra intermediario j | $/semana |
 | CD_k | `m.CD[k]` | dict(K) | Costo mano de obra detallista k | $/semana |
-| CT_{ij} | `m.CT[i,j]` | dict(I×J) | Costo transporte productor i → intermediario j | $/Kg |
-| CTT_{jk} | `m.CTT[j,k]` | dict(J×K) | Costo transporte intermediario j → detallista k | $/Kg |
+| CT_{ij} | `m.CT[i,j]` | dict(I×J) | Costo transporte productor i → intermediario j (flujo 1) | **$/km/viaje** |
+| CTT_{jk} | `m.CTT[j,k]` | dict(J×K) | Costo transporte intermediario j → detallista k (flujo 2) | **$/km/viaje** |
+
+> **Nota de divergencia con el paper**: Arenas & Salazar (2018) usan el mismo parámetro CT para ambos flujos. En nuestra implementación se mantienen separados como CT (flujo 1) y CTT (flujo 2) porque representan estructuras de costo diferentes que no pueden unificarse en un valor único (diferentes distancias, vehículos, y condiciones logísticas por etapa).
 | CDA_{ij} | `m.CDA[i,j]` | dict(I×J) | Costo por daño producto en flujo 1 | $/Kg |
 | CDF_{jk} | `m.CDF[j,k]` | dict(J×K) | Costo por daño producto en flujo 2 | $/Kg |
 
@@ -81,7 +83,7 @@
 |---------|--------|------|-------------|----------|
 | CN_i | `m.CN[i]` | dict(I) | Capacidad de producción productor i | Kg |
 | CH_i | `m.CH[i]` | dict(I) | Capacidad de despacho productor i | Kg |
-| CHI_j | `m.CHI[j]` | dict(J) | Capacidad de despacho intermediario j | Kg |
+| **CRI_j** | `m.CRI[j]` | dict(J) | **Capacidad de recepción/despacho intermediario j** | Kg |
 | CR_k | `m.CR[k]` | dict(K) | Capacidad de recepción detallista k | Kg |
 | CV_j | `m.CV[j]` | dict(J) | Capacidad del vehículo en intermediario j | Kg/viaje |
 
@@ -100,36 +102,37 @@
 
 | Nombre | Símbolo | Prioridad LGP | Expresión |
 |--------|---------|---------------|-----------|
-| Económica | α | P1 | Min α = ΣΣ CP·X_{ij} + ΣΣ CI_j·X_{ij} + CMP·S + Σ CMO_j·SS_j + Σ CD_k·SSS_k + ΣΣ CT_{ij}·X_{ij} + ΣΣ CTT_{jk}·Y_{jk} + ΣΣ CDA_{ij}·P_{ij}·X_{ij} + ΣΣ CDF_{jk}·PP_{jk}·Y_{jk} |
+| Económica | α | P1 | Min α = ΣΣ CP·X_{ij} + ΣΣ CI_j·X_{ij} + CMP·S + Σ CMO_j·SS_j + Σ CD_k·SSS_k + **ΣΣ CT_{ij}·Z_{ij}·DPI_{ij}** + **ΣΣ CTT_{jk}·ZZ_{jk}·DID_{jk}** + ΣΣ CDA_{ij}·P_{ij}·X_{ij} + ΣΣ CDF_{jk}·PP_{jk}·Y_{jk} |
 | Ambiental | γ | P2 | Min γ = ΣΣ Z_{ij}·DPI_{ij}·IT_j + ΣΣ ZZ_{jk}·DID_{jk}·IT_j |
 | Social | β | P3 | Max β = S + Σ SS_j + Σ SSS_k |
 
-> **NOTA PENDIENTE**: La expresión de transporte en α usa `CT·X` en el código actual.
-> Verificar contra el paper si debe ser `CT·Z·DPI` (costo por viaje×distancia).
-> Esto afecta la ecuación (1) y la coherencia con la función ambiental γ.
+> **✅ CORREGIDO**: La expresión de transporte en α ahora usa `CT·Z·DPI` y `CTT·ZZ·DID` (costo por km/viaje × viajes × distancia), coherente con el paper Arenas & Salazar (2018) y dimensionalmente consistente con la función ambiental γ.
 
 ---
 
 ## 5. Restricciones (Resumen)
 
-| # | Nombre | Código | Categoría |
-|---|--------|--------|-----------|
-| 4 | Rendimientos | `var_bina` | Producción |
-| 5 | Balance hectáreas | `suma_w` | Producción |
-| 6 | Cap. producción | `cap_pro` | Producción |
-| 7 | Despacho productor | `cap_desI` | Capacidad |
-| 8 | Despacho intermediario | `cap_desJ` | Capacidad |
-| 9 | Recepción detallista | `cap_rec` | Capacidad |
-| 10 | Cap. vehículo flujo 1 | `cap_veh` | Transporte |
-| 11 | Cap. vehículo flujo 2 | `cap_vehh` | Transporte |
-| 12 | Demanda intermediario | `cap_demI` | Demanda |
-| 13 | Demanda detallista | `cap_demD` | Demanda |
-| 14 | Balance de masa | `cap_balce` | Balance |
-| 15 | Límite max transporte | `cap_opemax` | Cantidades |
-| 16 | Límite min transporte | `cap_opemin` | Cantidades |
-| 17 | Viajes flujo 1 | `cap_opeB` | Viajes |
-| 18 | Viajes flujo 2 | `cap_opeC` | Viajes |
-| 19 | Personal acopio | `cap_perI` | Personal |
-| 20 | Personal intermediario | `cap_perJ` | Personal |
-| 21 | Personal detallista | `cap_perD` | Personal |
-| 22 | Kilometraje máximo | `cap_km` | Ambiental |
+| # | Nombre | Código | Categoría | Expresión |
+|---|--------|--------|-----------|-----------|
+| 4 | Rendimientos | `var_bina` | Producción | Σ RA_u·B_u ≤ RB |
+| 5 | Balance hectáreas | `suma_w` | Producción | Σ B_u·H_u = W_i |
+| 6 | Cap. producción | `cap_pro` | Producción | RC_i·W_i ≤ CN_i |
+| 7 | Despacho productor | `cap_desI` | Capacidad | Σ X_{ij} ≤ CH_i |
+| 8 | **Recepción intermediario** | `cap_desJ` | Capacidad | Σ Y_{jk} ≤ **CRI_j** |
+| 9 | Recepción detallista | `cap_rec` | Capacidad | Σ Y_{jk} ≤ CR_k |
+| 10 | Cap. vehículo flujo 1 | `cap_veh` | Transporte | X_{ij} ≤ CV_j·Z_{ij} |
+| 11 | Cap. vehículo flujo 2 | `cap_vehh` | Transporte | Y_{jk} ≤ CV_j·ZZ_{jk} |
+| 12 | Demanda intermediario | `cap_demI` | Demanda | Σ X_{ij} ≥ DI_j |
+| 13 | Demanda detallista | `cap_demD` | Demanda | Σ Y_{jk} ≥ DD_k |
+| 14 | Balance de masa | `cap_balce` | Balance | Σ Y_{jk} = Σ X_{ij}·(1-P_{ij}) - Σ PP_{jk}·Y_{jk} |
+| 15 | Límite max cantidad | `cap_opemax` | Cantidades | Σ X_{ij} ≤ RC_i·W_i |
+| 16 | Límite min cantidad | `cap_opemin` | Cantidades | Σ X_{ij} ≥ RD_i·W_i |
+| 17 | Viajes flujo 1 | `cap_opeB` | Viajes | Σ Z_{ij} ≤ Σ (X_{ij}/CV_j) + 1 |
+| 18 | Viajes flujo 2 | `cap_opeC` | Viajes | Σ ZZ_{jk} ≤ Σ (Y_{jk}/CV_j) + 1 |
+| 19 | Personal acopio | `cap_perI` | Personal | ΣΣ X_{ij} = S·CA |
+| 20 | Personal intermediario | `cap_perJ` | Personal | Σ X_{ij} = SS_j·CB_j |
+| 21 | Personal detallista | `cap_perD` | Personal | Σ Y_{jk} = SSS_k·CC_k |
+| 22 | Kilometraje máximo | `cap_km` | Ambiental | Σ Z_{ij}·DPI_{ij} + Σ ZZ_{jk}·DID_{jk} ≤ M |
+| **23** | **Naturaleza variables** | — | Declaración | X_{ij}, Y_{jk}, W_i ∈ ℝ⁺ |
+| **24** | **Naturaleza enteras** | — | Declaración | Z_{ij}, ZZ_{jk}, S, SS_j, SSS_k ∈ ℤ⁺ |
+| **25** | **Naturaleza binaria** | — | Declaración | B_u ∈ {0, 1} |

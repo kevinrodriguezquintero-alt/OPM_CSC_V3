@@ -46,7 +46,12 @@ Las siguientes referencias son citadas en el diseño metodológico como parte de
 | Sotelo (2017) | Sotelo Cortés, A. (2017). [Título pendiente]. | Revisión bibliográfica — cadenas agroalimentarias |
 | Moreno (2018) | Moreno, J. (2018). [Título pendiente]. | Revisión bibliográfica — metodología |
 
-> **PENDIENTE**: Completar títulos completos y detalles bibliográficos de Mármol & Díaz (2024), Sotelo (2017), y Moreno (2018) citados en el diseño metodológico.
+> **📌 NOTA**: Las siguientes referencias serán completadas por el usuario mediante Zotero al generar el documento final:
+> - Mármol & Díaz (2024): Título y datos completos pendientes
+> - Sotelo (2017): Título y datos completos pendientes  
+> - Moreno (2018): Título y datos completos pendientes
+> 
+> El esquema modular mantiene los identificadores temporales para facilitar la búsqueda en Zotero.
 
 ---
 

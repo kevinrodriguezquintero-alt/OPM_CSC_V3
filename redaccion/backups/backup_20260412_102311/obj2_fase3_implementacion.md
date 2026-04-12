@@ -95,12 +95,12 @@ La segunda etapa ejecuta en paralelo el modelo LGP (propuesto) y el modelo ER (r
 
 | Métrica | Valor |
 |---------|-------|
-| Costo total (α) | 144496313.4276466 |
-| Emisiones (γ) | 1230.2681599995801 |
-| Empleo (β) | 1777.0 |
-| d₁⁺ (desviación costo) | 0 |
-| d₂⁺ (desviación emisiones) | 0 |
-| d₃⁻ (desviación empleo) | 0 |
+| Costo total (α) | {{DATO:lgp_costo}} |
+| Emisiones (γ) | {{DATO:lgp_emisiones}} |
+| Empleo (β) | {{DATO:lgp_empleo}} |
+| d₁⁺ (desviación costo) | {{DATO:lgp_d1_plus}} |
+| d₂⁺ (desviación emisiones) | {{DATO:lgp_d2_plus}} |
+| d₃⁻ (desviación empleo) | {{DATO:lgp_d3_minus}} |
 
 #### Resultados del modelo ER
 

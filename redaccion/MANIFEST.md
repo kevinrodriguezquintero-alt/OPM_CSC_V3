@@ -37,12 +37,12 @@
 
 | Documento | Contenido | Estado |
 |-----------|-----------|--------|
-| `notacion.md` | Nomenclatura matemática del modelo (conjuntos, variables, parámetros) | pre-llenado |
+| `notacion.md` | Nomenclatura matemática del modelo — **Corregido:** CT/CTT en $/km/viaje, CRI_j, 25 restricciones | completo |
 | `Diseno_Metodologico.md` | Diseño metodológico oficial (3 objetivos, 5 fases, actividades) | completo |
 | `paper_referencia.md` | Formulaciones del paper de Arenas & Salazar (2018) | completo |
 | `borrador_referencia.md` | **Guía de distribución de contenidos** — Caps 1-4 + Tabla de contenido completa | referencia |
-| `normativas.md` | Normativas y fuentes secundarias (UPME, DANE, referencias metodológicas) | parcial |
-| `guia_estilo.md` | Normas de redacción académica, formato, citas | parcial |
+| `normativas.md` | Normativas y fuentes secundarias — 3 referencias pendientes de completar con Zotero | parcial (usuario) |
+| `guia_estilo.md` | Normas APA 7ma edición, tono académico, convenciones matemáticas | completo |
 
 **Estados posibles:** `pendiente` → `parcial` → `completo`
 
@@ -85,8 +85,41 @@ En las plantillas se usan estos marcadores:
 
 ---
 
-## 6. Historial de Cambios
+## 6. Herramientas de Actualización
 
-| Fecha | Plantilla | Cambio |
-|-------|-----------|--------|
-| 2026-04-12 | — | Creación del esquema modular |
+### Script `redaccion/tools/update_results.py`
+
+Script manual para actualizar placeholders `{{DATO:...}}` con resultados reales del solver.
+
+**Características de seguridad:**
+- ✅ **Backup automático** antes de modificar cualquier archivo
+- ✅ **Validación** de que el solver convergió (estado "optimal")
+- ✅ **Modo simulación** (`--dry-run`) para revisar cambios sin aplicar
+- ✅ **Log detallado** de todas las modificaciones
+- ✅ **Restauración** desde backup si algo sale mal
+
+**Uso:**
+```bash
+# 1. Simular cambios (recomendado primero)
+python redaccion/tools/update_results.py resultados.json --dry-run
+
+# 2. Aplicar cambios (cuando estés seguro)
+python redaccion/tools/update_results.py resultados.json --execute
+
+# 3. Restaurar si necesitas revertir
+python redaccion/tools/update_results.py --restore redaccion/backups/backup_20250412_143022
+```
+
+**Flujo de trabajo:**
+1. Ejecutas `lgp.py` o `er.py` → generas `resultados.json`
+2. Corres `--dry-run` → revisas qué cambiaría
+3. Si todo bien, corres `--execute` → actualiza plantillas con backup automático
+
+---
+
+## 7. Historial de Cambios
+
+| Fecha | Plantilla/Herramienta | Cambio |
+|-------|----------------------|--------|
+| 2026-04-12 | Esquema completo | Creación del sistema modular |
+| 2026-04-12 | `update_results.py` | Script de actualización manual con protecciones |

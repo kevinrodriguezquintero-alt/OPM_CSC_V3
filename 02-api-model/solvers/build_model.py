@@ -45,7 +45,7 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
     model.PP  = pyo.Param(model.J, model.K, initialize=p.PP)
     model.CN  = pyo.Param(model.I, initialize=p.CN)
     model.CH  = pyo.Param(model.I, initialize=p.CH)
-    model.CHI = pyo.Param(model.J, initialize=p.CHI)
+    model.CRI = pyo.Param(model.J, initialize=p.CRI)  # Cambiado de CHI a CRI según paper
     model.CR  = pyo.Param(model.K, initialize=p.CR)
     model.DI  = pyo.Param(model.J, initialize=p.DI)
     model.DD  = pyo.Param(model.K, initialize=p.DD)
@@ -73,14 +73,17 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
     # --- OBJECTIVE EXPRESSIONS ---
 
     def obj_cost_expr(m):
+        # CORREGIDO: Términos de transporte ahora usan CT·Z·DPI y CTT·ZZ·DID (como en paper)
+        # Antes: CT·X (costo por kg) - dimensionalmente inconsistente
+        # Ahora: CT·Z·DPI (costo por km/viaje × viajes × distancia)
         return (
             sum(m.CP[i]  * m.X[i, j]  for i in m.I for j in m.J) +
             sum(m.CI[j]  * m.X[i, j]  for i in m.I for j in m.J) +
             m.CMP * m.S +
             sum(m.CMO[j] * m.SS[j] for j in m.J) +
             sum(m.CD[k]  * m.SSS[k] for k in m.K) +
-            sum(m.CT[i, j]  * m.X[i, j]  for i in m.I for j in m.J) +
-            sum(m.CTT[j, k] * m.Y[j, k]  for j in m.J for k in m.K) +
+            sum(m.CT[i, j]  * m.Z[i, j]  * m.DPI[i, j] for i in m.I for j in m.J) +
+            sum(m.CTT[j, k] * m.ZZ[j, k] * m.DID[j, k] for j in m.J for k in m.K) +
             sum(m.CDA[i, j] * m.P[i, j]  * m.X[i, j] for i in m.I for j in m.J) +
             sum(m.CDF[j, k] * m.PP[j, k] * m.Y[j, k] for j in m.J for k in m.K)
         )
@@ -108,7 +111,8 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
     model.cap_desI = pyo.Constraint(model.I, rule=cap_desI_rule)
 
     def cap_desJ_rule(m, j):
-        return sum(m.Y[j, k] for k in m.K) <= m.CHI[j]
+        # CORREGIDO: CHI → CRI según notación del paper Arenas & Salazar (2018)
+        return sum(m.Y[j, k] for k in m.K) <= m.CRI[j]
     model.cap_desJ = pyo.Constraint(model.J, rule=cap_desJ_rule)
 
     def cap_rec_rule(m, k):

@@ -46,3 +46,20 @@ curl -X POST http://localhost:8000/solve/er \
   -H "Content-Type: application/json" \
   -d '{"steps": 5}'
 ```
+
+---
+
+## Exportar resultados para plantillas
+
+```bash
+# Modo rápido: solo LGP + ER (~30 segundos)
+python export_results.py --quick --output ../redaccion/results.json
+
+# Export completo: LGP + ER + OAT + Rangos + 12 Escenarios (~5-10 minutos)
+python export_results.py --output ../redaccion/results.json
+
+# Luego actualizar plantillas
+cd ../redaccion/tools
+python update_results.py ../results.json --dry-run  # Revisar
+python update_results.py ../results.json --execute  # Aplicar
+```

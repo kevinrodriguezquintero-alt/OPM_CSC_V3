@@ -35,18 +35,21 @@ CMP = 50000
 # CI: Costo de procesamiento del intermediario j ($/Kg)
 CI = {1: 100, 2: 80, 3: 70, 4: 120, 5: 170, 6: 200, 7: 90}
 
-# CT: Costo de transporte productor i -> intermediario j ($/Kg)
-CT = {(1, 1): 29.73, (1, 2): 39.71, (1, 3): 4.43, (1, 4): 4.43, (1, 5): 17.5, (1, 6): 20, (1, 7): 40}
+# CT: Costo de transporte productor i -> intermediario j ($/km/viaje)
+# Recalculado: costo por km * distancia DPI / (para luego usar CT * Z * DPI en el modelo)
+# Valores base de costo por km desde el paper/contexto del caso de estudio
+CT = {(1, 1): 0.278, (1, 2): 0.386, (1, 3): 0.130, (1, 4): 0.042, (1, 5): 0.175, (1, 6): 0.413, (1, 7): 3.846}
 
-# CTT: Costo de transporte intermediario j -> detallista k ($/Kg)
+# CTT: Costo de transporte intermediario j -> detallista k ($/km/viaje)
+# Recalculado: costo por km * distancia DID / (para luego usar CTT * ZZ * DID en el modelo)
 CTT = {
-    (1, 1): 69.3,  (1, 2): 87.03, (1, 3): 12,  (1, 4): 22,
-    (2, 1): 0,     (2, 2): 45,    (2, 3): 90,  (2, 4): 50,
-    (3, 1): 33.77, (3, 2): 53.17, (3, 3): 100, (3, 4): 10,
-    (4, 1): 33.77, (4, 2): 53.17, (4, 3): 60,  (4, 4): 90,
-    (5, 1): 21,    (5, 2): 80,    (5, 3): 37,  (5, 4): 38,
-    (6, 1): 40,    (6, 2): 25,    (6, 3): 20,  (6, 4): 70,
-    (7, 1): 100,   (7, 2): 30,    (7, 3): 180, (7, 4): 27,
+    (1, 1): 3.894,  (1, 2): 334.731, (1, 3): 2.000,  (1, 4): 3.929,
+    (2, 1): 0.000,  (2, 2): 17.308,  (2, 3): 19.565, (2, 4): 6.757,
+    (3, 1): 0.466,  (3, 2): 0.754,   (3, 3): 1.528,  (3, 4): 0.138,
+    (4, 1): 0.910,  (4, 2): 106.340, (4, 3): 9.231,  (4, 4): 17.308,
+    (5, 1): 1.141,  (5, 2): 16.000,  (5, 3): 23.125, (5, 4): 3.551,
+    (6, 1): 0.260,  (6, 2): 0.163,   (6, 3): 0.135,  (6, 4): 0.452,
+    (7, 1): 1.020,  (7, 2): 0.312,   (7, 3): 1.976,  (7, 4): 0.275,
 }
 
 # CD: Costo de mano de obra en detallista k
@@ -86,8 +89,9 @@ CN = {1: 38025}
 # CH: Capacidad de despacho en el productor i (Kg/día)
 CH = {1: 38025}
 
-# CHI: Capacidad de despacho en el intermediario j (Kg/día)
-CHI = {1: 5000, 2: 2000, 3: 800, 4: 7000, 5: 6000, 6: 9000, 7: 3000}
+# CRI: Capacidad de recepción/despacho en el intermediario j (Kg/día)
+# Según paper Arenas & Salazar (2018): CRI_j
+CRI = {1: 5000, 2: 2000, 3: 800, 4: 7000, 5: 6000, 6: 9000, 7: 3000}
 
 # CR: Capacidad de recepción en el detallista k (Kg/día)
 CR = {1: 3000, 2: 10000, 3: 2000, 4: 11100}

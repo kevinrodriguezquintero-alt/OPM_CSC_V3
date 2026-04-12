@@ -1,0 +1,18 @@
+
+============================================================
+Actualización: 2026-04-12 10:23:11
+Backup en: redaccion\backups\backup_20260412_102311
+obj2_fase3_implementacion.md:
+  {{DATO:lgp_costo}} → 144496313.4276466
+  {{DATO:lgp_emisiones}} → 1230.2681599995801
+  {{DATO:lgp_empleo}} → 1777.0
+  {{DATO:lgp_d1_plus}} → 0
+  {{DATO:lgp_d2_plus}} → 0
+  {{DATO:lgp_d3_minus}} → 0
+obj3_fase5_comparativo.md:
+  {{DATO:lgp_costo}} → 144496313.4276466
+  {{DATO:lgp_emisiones}} → 1230.2681599995801
+  {{DATO:lgp_empleo}} → 1777.0
+  {{DATO:lgp_d1_plus}} → 0
+  {{DATO:lgp_d2_plus}} → 0
+  {{DATO:lgp_d3_minus}} → 0

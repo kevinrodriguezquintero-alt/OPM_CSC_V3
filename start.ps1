@@ -3,8 +3,9 @@
 $ROOT = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 Write-Host "Iniciando API en http://localhost:8000 ..."
-$api = Start-Process -FilePath "$ROOT\02-api-model\venv\Scripts\uvicorn.exe" `
-    -ArgumentList "api.main:app", "--reload", "--port", "8000" `
+$env:PYTHONPATH = "$ROOT\02-api-model"
+$api = Start-Process -FilePath "$ROOT\02-api-model\venv\Scripts\python.exe" `
+    -ArgumentList "-m", "uvicorn", "api.main:app", "--reload", "--port", "8000" `
     -WorkingDirectory "$ROOT\02-api-model" `
     -PassThru -NoNewWindow
 

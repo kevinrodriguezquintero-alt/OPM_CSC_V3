@@ -1,6 +1,6 @@
 # Guía de Estilo para Redacción Académica
 
-> **Estado**: parcial — definiciones estándar aplicadas, normas universitarias pendientes de confirmar con el usuario
+> **Estado**: completo — APA 7ma edición definida, normas universitarias: estándar APA
 > Este documento inyecta reglas de estilo en toda redacción que genere el agente.
 
 ---
@@ -9,7 +9,7 @@
 
 | Aspecto | Norma |
 |---------|-------|
-| Estilo de citas | {{PLACEHOLDER: Definir — APA 7ma / Vancouver / IEEE / otro}} |
+| Estilo de citas | **APA 7ma edición** |
 | Idioma | Español |
 | Formato ecuaciones | LaTeX (inline `$...$`, bloque `$$...$$`) |
 | Numeración ecuaciones | Continua por sección (1), (2), (3)... |
@@ -67,17 +67,40 @@
 
 ## 6. Normas Específicas de la Universidad
 
-> **PENDIENTE**: Agregar normas específicas de la Universidad del Valle o del programa.
-> Ejemplos: extensión máxima por capítulo, formato de portada, márgenes, interlineado, fuente, tamaño de letra.
-
-{{PLACEHOLDER: normas institucionales específicas}}
+> **Nota**: La Universidad del Valle no especifica normas adicionales al formato APA 7ma edición para este trabajo.
+> El formateo final (márgenes, interlineado, portada) se gestiona manualmente al compilar el documento.
+> Las convenciones tipográficas siguen el estándar APA.
 
 ---
 
-## 7. Referencias Bibliográficas
+## 7. Referencias Bibliográficas (APA 7ma Edición)
 
-> **PENDIENTE**: Definir formato exacto de citas según el estilo seleccionado (APA 7ma, etc.)
+### Formato de cita en texto
+- **Formato parentético**: (Autor, Año) — preferido
+- **Formato narrativo**: Autor (Año)
+- **Ejemplo**: (Arenas Ruiz & Salazar Aguirre, 2018) o Arenas Ruiz y Salazar Aguirre (2018)
 
-**Formato de cita en texto**: {{PLACEHOLDER: (Autor, Año) o Autor (Año)}}
+### Formato de referencia bibliográfica
 
-**Formato de referencia bibliográfica**: {{PLACEHOLDER: plantilla según estilo seleccionado}}
+**Libro**:
+> Apellido, N. (Año). *Título del libro en cursiva*. Editorial.
+
+**Capítulo de libro**:
+> Apellido, N. (Año). Título del capítulo. En N. Editor (Ed.), *Título del libro* (pp. xx-xx). Editorial.
+
+**Artículo de revista**:
+> Apellido, N. (Año). Título del artículo. *Nombre de la Revista en Cursiva*, volumen(número), pp-pp. https://doi.org/xx.xxx/xxxx
+
+**Documento web / Informe**:
+> Organización. (Año). *Título del documento*. URL
+
+**Tesis no publicada**:
+> Apellido, N. (Año). *Título de la tesis* [Tesis de maestría/doctorado, no publicada]. Universidad.
+
+### Ejemplos aplicados
+
+| Tipo | Referencia completa |
+|------|---------------------|
+| Paper referencia | Arenas Ruiz, M. A., & Salazar Aguirre, L. T. (2018). *Diseño de una cadena de abastecimiento frutícola con un enfoque de sostenibilidad* [Tesis de maestría, Universidad del Valle]. |
+| Fuente web | Unidad de Planeación Minero Energética. (s.f.). *Factores de emisión de combustibles colombianos (FECOC)*. https://docs.upme.gov.co/... |
+| Libro | Salcedo, S., & Guzmán, L. (2014). *Agricultura familiar en América Latina y el Caribe: Recomendaciones de política*. FAO. |

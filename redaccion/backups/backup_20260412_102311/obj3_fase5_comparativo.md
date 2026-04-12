@@ -16,9 +16,9 @@ La comparación entre el modelo propuesto (LGP) y el modelo de referencia migrad
 
 | Objetivo | Aspiración (óptimo individual) | LGP (valor alcanzado) | ER (valor alcanzado) | Desviación LGP | Desviación ER |
 |----------|-------------------------------|----------------------|---------------------|---------------|--------------|
-| α (Costo) | g₁ = α* = {{DATO:aspiracion_costo}} | 144496313.4276466 | {{DATO:er_costo}} | 0 | {{PLACEHOLDER}} |
-| γ (Emisiones) | g₂ = γ* = {{DATO:aspiracion_emisiones}} | 1230.2681599995801 | {{DATO:er_emisiones}} | 0 | {{PLACEHOLDER}} |
-| β (Empleo) | g₃ = β* = {{DATO:aspiracion_empleo}} | 1777.0 | {{DATO:er_empleo}} | 0 | {{PLACEHOLDER}} |
+| α (Costo) | g₁ = α* = {{DATO:aspiracion_costo}} | {{DATO:lgp_costo}} | {{DATO:er_costo}} | {{DATO:lgp_d1_plus}} | {{PLACEHOLDER}} |
+| γ (Emisiones) | g₂ = γ* = {{DATO:aspiracion_emisiones}} | {{DATO:lgp_emisiones}} | {{DATO:er_emisiones}} | {{DATO:lgp_d2_plus}} | {{PLACEHOLDER}} |
+| β (Empleo) | g₃ = β* = {{DATO:aspiracion_empleo}} | {{DATO:lgp_empleo}} | {{DATO:er_empleo}} | {{DATO:lgp_d3_minus}} | {{PLACEHOLDER}} |
 
 Nota. Elaboración propia.
 
@@ -37,7 +37,7 @@ Nota. Elaboración propia.
 | Transporte flujo 2 | {{DATO:lgp_costo_transp2}} | {{DATO:er_costo_transp2}} | {{PLACEHOLDER}} |
 | Daño flujo 1 | {{DATO:lgp_costo_dano1}} | {{DATO:er_costo_dano1}} | {{PLACEHOLDER}} |
 | Daño flujo 2 | {{DATO:lgp_costo_dano2}} | {{DATO:er_costo_dano2}} | {{PLACEHOLDER}} |
-| **Total** | 144496313.4276466 | {{DATO:er_costo}} | {{PLACEHOLDER}} |
+| **Total** | {{DATO:lgp_costo}} | {{DATO:er_costo}} | {{PLACEHOLDER}} |
 
 Nota. Elaboración propia.
 
@@ -49,7 +49,7 @@ Nota. Elaboración propia.
 |-------|-----|----|----|
 | Flujo 1 (I→J) | {{DATO:lgp_emisiones_f1}} | {{DATO:er_emisiones_f1}} | {{PLACEHOLDER}} |
 | Flujo 2 (J→K) | {{DATO:lgp_emisiones_f2}} | {{DATO:er_emisiones_f2}} | {{PLACEHOLDER}} |
-| **Total** | 1230.2681599995801 | {{DATO:er_emisiones}} | {{PLACEHOLDER}} |
+| **Total** | {{DATO:lgp_emisiones}} | {{DATO:er_emisiones}} | {{PLACEHOLDER}} |
 
 Nota. Elaboración propia.
 
@@ -62,7 +62,7 @@ Nota. Elaboración propia.
 | Centro de acopio (S) | {{DATO:lgp_empleo_acopio}} | {{DATO:er_empleo_acopio}} | {{PLACEHOLDER}} |
 | Intermediarios (Σ SS_j) | {{DATO:lgp_empleo_inter}} | {{DATO:er_empleo_inter}} | {{PLACEHOLDER}} |
 | Detallistas (Σ SSS_k) | {{DATO:lgp_empleo_detall}} | {{DATO:er_empleo_detall}} | {{PLACEHOLDER}} |
-| **Total** | 1777.0 | {{DATO:er_empleo}} | {{PLACEHOLDER}} |
+| **Total** | {{DATO:lgp_empleo}} | {{DATO:er_empleo}} | {{PLACEHOLDER}} |
 
 Nota. Elaboración propia.
 
@@ -76,9 +76,9 @@ Esta migración a Python + Pyomo implementa los tres pilares completos según la
 
 | Métrica | Paper (ER original) | ER (Python) | LGP (Python) |
 |---------|-------------------|------------|-------------|
-| Costo total | {{DATO:paper_costo}} | {{DATO:er_costo}} | 144496313.4276466 |
-| Emisiones | {{DATO:paper_emisiones}} | {{DATO:er_emisiones}} | 1230.2681599995801 |
-| Empleo | {{DATO:paper_empleo}} | {{DATO:er_empleo}} | 1777.0 |
+| Costo total | {{DATO:paper_costo}} | {{DATO:er_costo}} | {{DATO:lgp_costo}} |
+| Emisiones | {{DATO:paper_emisiones}} | {{DATO:er_emisiones}} | {{DATO:lgp_emisiones}} |
+| Empleo | {{DATO:paper_empleo}} | {{DATO:er_empleo}} | {{DATO:lgp_empleo}} |
 
 ### Análisis de Decisiones Operativas
 

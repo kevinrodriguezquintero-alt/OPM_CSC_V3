@@ -32,7 +32,7 @@ PARAM_SCHEMA: dict[str, tuple] = {
     "CD":  ("dict1", None),
     "CN":  ("dict1", None),
     "CH":  ("dict1", None),
-    "CHI": ("dict1", None),
+    "CRI": ("dict1", None),  # Cambiado de CHI a CRI según paper Arenas & Salazar (2018)
     "CR":  ("dict1", None),
     "DI":  ("dict1", None),
     "DD":  ("dict1", None),

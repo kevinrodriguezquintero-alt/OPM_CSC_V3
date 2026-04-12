@@ -3,6 +3,7 @@
 > **Fuente**: Arenas Ruiz, M. A., & Salazar Aguirre, L. T. (2018). *Diseño de una cadena de abastecimiento frutícola con un enfoque de sostenibilidad*. Universidad del Valle.
 > **Rol**: Modelo de referencia contra el cual se compara el modelo propuesto (LGP).
 > **Estado**: completado con formulaciones extraídas del PDF
+> **⚠️ Nota sobre datos**: El paper reporta resultados numéricos ($32.496.116,50; 524,8 kg CO₂/semana; 179 personas/semana) pero la base de datos completa no estuvo disponible. Los parámetros de la implementación Python fueron completados con literatura secundaria (UPME, DANE, Santos et al., 2019), por lo que los resultados numéricos no son directamente comparables, aunque la estructura matemática sí lo es.
 
 ---
 
@@ -41,11 +42,13 @@ $$
 | D | $\sum_{j=1}^{7} CMO_j \cdot SS_j$ | Costo de mano de obra en el intermediario |
 | E | $\sum_{k=1}^{4} CD_k \cdot SSS_k$ | Costo de mano de obra en el detallista |
 | F | $\sum_{i=1}^{1}\sum_{j=1}^{7} CT \cdot Z_{ij} \cdot DPI_{ij}$ | Costo de transporte en el flujo 1 |
-| G | $\sum_{j=1}^{7}\sum_{k=1}^{4} CTT \cdot ZZ_{jk} \cdot DID_{jk}$ | Costo de transporte en el flujo 2 |
+| G | $\sum_{j=1}^{7}\sum_{k=1}^{4} CT \cdot ZZ_{jk} \cdot DID_{jk}$ | Costo de transporte en el flujo 2 |
 | H | $\sum_{i=1}^{1}\sum_{j=1}^{7} CDA_{ij} \cdot P_{ij} \cdot X_{ij}$ | Costo por daño del producto en el flujo 1 |
 | I | $\sum_{j=1}^{7}\sum_{k=1}^{4} CDF_{jk} \cdot PP_{jk} \cdot Y_{jk}$ | Costo por daño del producto en el flujo 2 |
 
-> **OBSERVACIÓN CRÍTICA**: El paper usa `CT·Z·DPI` (costo × viajes × distancia) para transporte, NO `CT·X` (costo × kg). El código actual usa `CT·X` lo cual es dimensionalmente incorrecto según el paper.
+> **OBSERVACIÓN CRÍTICA**: El paper usa `CT·Z·DPI` (costo × viajes × distancia) para transporte, NO `CT·X` (costo × kg). ~~El código actual usa `CT·X` lo cual es dimensionalmente incorrecto según el paper.~~ **✅ CORREGIDO**: El código ahora usa `CT·Z·DPI` y `CTT·ZZ·DID` consistente con el paper.
+
+> **DIVERGENCIA DOCUMENTADA**: El paper usa el **mismo parámetro CT** para ambos flujos (F y G). Sin embargo, en nuestra implementación se mantienen separados como **CT** (flujo 1: acopio→intermediario) y **CTT** (flujo 2: intermediario→detallista) porque representan estructuras de costo diferentes que no pueden unificarse en un valor único (diferentes distancias, vehículos, y condiciones logísticas por etapa). Esto es una extensión válida del modelo base.
 
 ---
 

@@ -48,7 +48,7 @@ def _calculate_elasticity(base_obj, new_obj, pct):
 
 _PARAM_LABEL = {
     "CH":  "capacidad de despacho del productor",
-    "CHI": "capacidad de despacho del intermediario",
+    "CRI": "capacidad de recepción/despacho del intermediario",  # CRI según paper
     "CN":  "capacidad de producción del productor",
     "CR":  "capacidad de recepción del detallista",
     "CA":  "capacidad laboral del intermediario",
@@ -78,7 +78,7 @@ def _infeasibility_hint(param: str, pct: float) -> str:
     label = _PARAM_LABEL.get(param, param)
     direction = "reducción" if pct < 0 else "aumento"
     # Supply/capacity params reduced → demand can't be met
-    if param in ("CH", "CHI", "CN", "CR", "CA", "CB", "CV", "RB", "RA", "RC", "H") and pct < 0:
+    if param in ("CH", "CRI", "CN", "CR", "CA", "CB", "CV", "RB", "RA", "RC", "H") and pct < 0:  # CHI→CRI
         return f"La {direction} de {label} deja oferta insuficiente para cubrir la demanda"
     # Demand increased → supply can't cover
     if param in ("DI", "DD") and pct > 0:
@@ -90,6 +90,12 @@ def _infeasibility_hint(param: str, pct: float) -> str:
     return f"{article} {direction} de {label} genera un escenario sin solución factible"
 
 
+import json
+from pathlib import Path
+
+# Directorio para guardar resultados automáticamente
+RESULTADOS_DIR = Path("redaccion/resultados")
+
 @router.post("/lgp")
 def solve_lgp():
     """Run Lexicographic Goal Programming and return structured JSON results."""
@@ -99,6 +105,13 @@ def solve_lgp():
             params_obj=app_state.get_params_object(),
             solver_name=app_state.solver_name,
         )
+        # Guardar automáticamente en archivo
+        try:
+            RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
+            with open(RESULTADOS_DIR / "lgp.json", 'w', encoding='utf-8') as f:
+                json.dump(result, f, indent=2, ensure_ascii=False, default=str)
+        except Exception:
+            pass  # No fallar si no se puede guardar archivo
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return result
@@ -118,6 +131,13 @@ def solve_er(body: ERRequest = ERRequest()):
             solver_name=app_state.solver_name,
             steps=body.steps,
         )
+        # Guardar automáticamente en archivo
+        try:
+            RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
+            with open(RESULTADOS_DIR / "er.json", 'w', encoding='utf-8') as f:
+                json.dump(result, f, indent=2, ensure_ascii=False, default=str)
+        except Exception:
+            pass
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return result
@@ -551,13 +571,21 @@ def solve_sensitivity(body: SensitivityRequest):
     top_env  = sorted(valid_env,  key=lambda x: abs(x["elas_env"]),  reverse=True)
     top_soc  = sorted(valid_soc,  key=lambda x: abs(x["elas_soc"]),  reverse=True)
 
-    return {
+    result = {
         "base_objectives": base_objs,
         "results": results,
         "top_cost": top_cost,
         "top_env": top_env,
         "top_soc": top_soc,
     }
+    # Guardar automáticamente
+    try:
+        RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
+        with open(RESULTADOS_DIR / "oat.json", 'w', encoding='utf-8') as f:
+            json.dump(result, f, indent=2, ensure_ascii=False, default=str)
+    except Exception:
+        pass
+    return result
 
 
 class ScenariosRequest(BaseModel):
@@ -634,13 +662,26 @@ def solve_scenarios(body: ScenariosRequest):
             if res is None:
                 raise HTTPException(status_code=422, detail="Model could not be solved")
             
-            return {
+            result = {
                 "method": body.method,
                 **res,
                 "params_modified": body.params_to_test
             }
     finally:
         app_state.params = base_data
+    
+    # Guardar automáticamente (escenarios tienen nombres dinámicos)
+    try:
+        RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
+        # Crear nombre de archivo basado en parámetros modificados
+        esc_key = "_".join([f"{k}_{v}" for k, v in body.params_to_test.items()])
+        esc_key = esc_key.replace(".", "_")[:50]  # Limitar longitud
+        filename = f"esc_{esc_key}.json"
+        with open(RESULTADOS_DIR / "escenarios" / filename, 'w', encoding='utf-8') as f:
+            json.dump(result, f, indent=2, ensure_ascii=False, default=str)
+    except Exception:
+        pass
+    return result
 
 
 
@@ -753,7 +794,7 @@ def _find_max_feasible(base_data, param, direction, solver_name, epsilon=None):
 def _param_summary_value(params, name):
     """Representative value for display. SUM for additive metrics, MEAN for intensive ones."""
     val = params[name]
-    additive_params = ["CN", "CH", "CHI", "CR", "DI", "DD", "H", "CMO", "CD"]
+    additive_params = ["CN", "CH", "CRI", "CR", "DI", "DD", "H", "CMO", "CD"]  # CHI→CRI
     
     def _extract_nums(v):
         if isinstance(v, (int, float)): return [v]
@@ -843,6 +884,16 @@ def solve_sensitivity_ranges(body: RangesRequest = RangesRequest()):
 
             rows.append(entry)
 
-        return {"lgp_base": lgp_base, "er_base": er_base, "ranges": rows}
+        result = {"lgp_base": lgp_base, "er_base": er_base, "ranges": rows}
+        
+        # Guardar automáticamente
+        try:
+            RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
+            with open(RESULTADOS_DIR / "rangos.json", 'w', encoding='utf-8') as f:
+                json.dump(result, f, indent=2, ensure_ascii=False, default=str)
+        except Exception:
+            pass
+        
+        return result
     finally:
         app_state.params = base_data
