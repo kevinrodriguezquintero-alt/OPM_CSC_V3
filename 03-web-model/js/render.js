@@ -30,6 +30,18 @@ window.copyTableToClipboard = function (btn, tableId) {
   setTimeout(() => btn.innerHTML = old, 1500);
 };
 
+window.exportChart = function (canvasId, filename) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const url = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+};
+
 export function fmt(n, minFrac = 0) {
   if (n === null || n === undefined) return "—";
   return typeof n === "number" ? n.toLocaleString("es-CO", {

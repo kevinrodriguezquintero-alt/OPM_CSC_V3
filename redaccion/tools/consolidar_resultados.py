@@ -235,13 +235,12 @@ def cargar_rangos() -> dict:
 
 
 def cargar_escenarios() -> dict:
-    """Cargar todos los escenarios del directorio escenarios/."""
-    esc_dir = RESULTADOS_DIR / "escenarios"
-    if not esc_dir.exists():
+    """Cargar todos los escenarios del directorio resultados/."""
+    if not RESULTADOS_DIR.exists():
         return {}
     
     escenarios = {}
-    for esc_file in sorted(esc_dir.glob("esc_*.json")):
+    for esc_file in sorted(RESULTADOS_DIR.glob("esc_*.json")):
         try:
             with open(esc_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
@@ -336,9 +335,8 @@ def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True,
     
     if incluir_escenarios:
         print("    -> Actualizando Maestros de Escenarios individuales...")
-        esc_dir = RESULTADOS_DIR / "escenarios"
-        if esc_dir.exists():
-            for esc_file in sorted(esc_dir.glob("esc_*.json")):
+        if RESULTADOS_DIR.exists():
+            for esc_file in sorted(RESULTADOS_DIR.glob("esc_*.json")):
                 esc_id = esc_file.stem  # esc_base, esc_mejorado, etc.
                 try:
                     with open(esc_file, 'r', encoding='utf-8') as f:

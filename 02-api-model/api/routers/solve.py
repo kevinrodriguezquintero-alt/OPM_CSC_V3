@@ -687,9 +687,8 @@ def solve_scenarios(body: ScenariosRequest):
     
     # Guardar automáticamente (escenarios tienen nombres dinámicos o ID personalizado)
     try:
-        # Crear directorio escenarios si no existe
-        esc_dir = RESULTADOS_DIR / "escenarios"
-        esc_dir.mkdir(parents=True, exist_ok=True)
+        # Asegurar que existe el directorio de resultados
+        RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
         
         # Usar escenario_id si se proporciona, sino generar desde parámetros
         if body.escenario_id:
@@ -700,7 +699,7 @@ def solve_scenarios(body: ScenariosRequest):
             esc_key = esc_key.replace(".", "_")[:50]  # Limitar longitud
             filename = f"esc_{esc_key}.json"
         
-        filepath = esc_dir / filename
+        filepath = RESULTADOS_DIR / filename
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False, default=str)
     except Exception as e:

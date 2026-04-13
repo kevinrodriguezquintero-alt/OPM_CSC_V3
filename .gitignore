@@ -35,15 +35,6 @@ desktop.ini
 # ============================================
 redaccion/backups/backup_*/
 
-# ============================================
-# RESULTADOS TEMPORALES (no consolidados)
-# ============================================
-# NOTA: Los archivos en resultados/ son TEMPORALES y se regeneran en cada ejecución.
-# Los archivos consolidados en maestros/ SÍ se versionan.
-redaccion/resultados/*.json
-!redaccion/resultados/.gitkeep
-redaccion/resultados/escenarios/*.json
-!redaccion/resultados/escenarios/.gitkeep
 
 # ============================================
 # LOGS Y ARCHIVOS DE GESTION LOCAL
