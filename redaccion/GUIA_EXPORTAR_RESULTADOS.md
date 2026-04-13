@@ -108,8 +108,6 @@ python consolidar_resultados.py --execute
 
 Escribe `yes` cuando lo solicite.
 
-**Backup automático:** Se crea una copia de seguridad de las plantillas en `redaccion/backups/backup_YYYYMMDD_HHMMSS/` antes de cualquier modificación.
-
 ### 4c. Seleccionar qué resultados consolidar (opcional)
 
 Si solo quieres actualizar ciertos análisis:
@@ -220,7 +218,6 @@ redaccion/
 │   ├── obj2_fase4_sensibilidad.md
 │   └── obj3_fase5_comparativo.md
 │
-├── backups/               # Backups auto-generados
 └── tools/
     ├── consolidar_resultados.py  # Script principal
     └── update_log.txt
@@ -279,59 +276,8 @@ curl -X POST http://localhost:8000/params/reset
 
 ---
 
-## Problemas Conocidos y Soluciones (Prueba 2025-04-12)
-
-### 1. Error de codificación Unicode en Windows
-**Síntoma:** `UnicodeEncodeError: 'charmap' codec can't encode character...`
-
-**Causa:** Emojis (✅ ❌ ⚠️ 📊) no compatibles con consola Windows CP1252.
-
-**Solución aplicada:** Reemplazados por notación ASCII:
-- `[OK]` en lugar de ✅
-- `[X]` en lugar de ❌
-- `[!]` en lugar de ⚠️
-- `[*]` en lugar de 📊
-- `[F]` en lugar de 📝
-- `[-]` en lugar de ⚪
-- `[>]` en lugar de 🔍
-
-### 2. ER (Epsilon-Constraint) timeout
-**Síntoma:** `Read timed out. (read timeout=120)`
-
-**Causa:** 5 pasos de Pareto frontier toman más de 120 segundos.
-
-**Soluciones:**
-- Usar `--quick` para omitir ER (solo LGP)
-- Reducir pasos: `--er-steps 3`
-- Aumentar timeout editando `export_results.py` (línea 83: `timeout=120` → `timeout=300`)
-
-### 3. Rutas relativas en comandos
-**Síntoma:** `can't open file ... No such file or directory`
-
-**Causa:** Ejecutar comandos desde directorio incorrecto.
-
-**Solución:** Siempre usar rutas absolutas o ejecutar desde raíz del proyecto:
-```bash
-cd c:\Users\kevin\OneDrive\Escritorio\V3
-python 02-api-model/venv/Scripts/python.exe redaccion/tools/consolidar_resultados.py --dry-run
-```
-
-### 4. Plantillas sin cambios detectados
-**Síntoma:** `Sin cambios (no se encontraron placeholders)`
-
-**Causa:** El placeholder en la plantilla no coincide con el nombre en `MAPEO_PLACEHOLDERS`.
-
-**Ejemplo encontrado:**
-- Plantilla espera: `{{DATO:resultado_individual_economico_α}}`
-- JSON tiene: `min_cost_alpha` (falta mapeo o el placeholder usa formato diferente)
-
-**Solución:** Verificar que `MAPEO_PLACEHOLDERS` en `consolidar_resultados.py` incluya todas las claves necesarias.
-
----
-
 ## Notas
 
-- **Backup automático:** Siempre se crea antes de modificar plantillas
 - **Modo dry-run:** Úsalo siempre primero para revisar qué cambiaría
 - **Idempotencia:** Puedes ejecutar el flujo múltiples veces; siempre reemplazará con los últimos valores
 - **Persistencia automática:** Los resultados se guardan automáticamente al ejecutar desde la web

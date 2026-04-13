@@ -41,7 +41,6 @@ COMPORTAMIENTO CLAVE:
 
 import argparse
 import json
-import shutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -49,7 +48,6 @@ from pathlib import Path
 # Configuración (rutas relativas desde redaccion/tools/)
 RESULTADOS_DIR = Path("../resultados")        # Archivos temporales individuales (cambian con cada ejecución)
 PLANTILLAS_DIR = Path("../plantillas")
-BACKUP_DIR = Path("../backups")
 LOG_FILE = Path("update_log.txt")
 
 # Archivos MAESTROS individuales (actualizables independientemente)
@@ -413,43 +411,6 @@ def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True,
     return resultado
 
 
-def _limpiar_backups_antiguos(max_backups: int = 3):
-    """Eliminar backups antiguos, mantener solo los mas recientes."""
-    if not BACKUP_DIR.exists():
-        return
-    
-    backups = sorted(BACKUP_DIR.glob("backup_*"))
-    if len(backups) <= max_backups:
-        return
-    
-    # Eliminar los mas antiguos (primeros en la lista ordenada)
-    backups_a_eliminar = backups[:-max_backups]
-    for backup in backups_a_eliminar:
-        try:
-            shutil.rmtree(backup)
-            print(f"    [-] Backup antiguo eliminado: {backup.name}")
-        except Exception as e:
-            print(f"    [!] No se pudo eliminar {backup}: {e}")
-
-
-def crear_backup():
-    """Crear backup de todas las plantillas antes de modificar."""
-    # Limpiar backups antiguos primero
-    _limpiar_backups_antiguos(max_backups=3)
-    
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_subdir = BACKUP_DIR / f"backup_{timestamp}"
-    backup_subdir.mkdir(parents=True, exist_ok=True)
-    
-    for plantilla in PLANTILLAS_AFECTADAS:
-        src = PLANTILLAS_DIR / plantilla
-        if src.exists():
-            shutil.copy2(src, backup_subdir / plantilla)
-    
-    print(f"[OK] Backup creado en: {backup_subdir}")
-    return backup_subdir
-
-
 def reemplazar_placeholders(contenido: str, datos: dict) -> tuple[str, list[str]]:
     """Reemplazar placeholders en el contenido."""
     cambios = []
@@ -525,7 +486,7 @@ EJEMPLOS:
     parser.add_argument('--dry-run', action='store_true',
                         help='Simular cambios sin modificar archivos')
     parser.add_argument('--execute', action='store_true',
-                        help='APLICAR cambios (crea backup primero)')
+                        help='APLICAR cambios')
     
     # Filtros de selección
     parser.add_argument('--lgp', action='store_true', help='Incluir resultados LGP')
@@ -592,15 +553,11 @@ EJEMPLOS:
             print("[X] Cancelado por el usuario.")
             sys.exit(0)
         
-        # Crear backup
-        backup_dir = crear_backup()
-        
         # Aplicar cambios
         log = actualizar_plantillas(data, dry_run=False)
         
         print("\n" + "="*60)
         print(f"[OK] Actualizacion completa.")
-        print(f"    Backup guardado en: {backup_dir}")
 
 
 if __name__ == "__main__":

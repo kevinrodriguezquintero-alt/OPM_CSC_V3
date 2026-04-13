@@ -92,7 +92,6 @@ En las plantillas se usan estos marcadores:
 Script para consolidar resultados de múltiples fuentes (LGP, ER, OAT, Rangos) y actualizar placeholders `{{DATO:...}}` en las plantillas.
 
 **Características de seguridad:**
-- ✅ **Backup automático** en `redaccion/backups/` antes de modificar archivos
 - ✅ **Validación de Convergencia** (solo procesa si el estado es "optimal")
 - ✅ **Modo simulación** (`--dry-run`) para previsualizar cambios
 - ✅ **Consolidación Modular**: Une datos de `redaccion/resultados/` en un solo flujo
