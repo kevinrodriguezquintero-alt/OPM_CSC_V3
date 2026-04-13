@@ -611,15 +611,22 @@ export function renderSensitivityResult(data) {
       <tbody>${allRows}</tbody>
     </table>`;
 
+  const exportBtn = (id, name) => `<button class="chart-export-btn" onclick="exportChart('${id}', '${name}')" title="Descargar PNG" style="position:absolute; top:0.5rem; right:0.5rem; z-index:10; background:none; border:none; padding:0.25rem; cursor:pointer; color:var(--c-text-main); opacity:0.7;">
+    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+  </button>`;
+
   const chartsSection = `
     <div class="sens-charts-grid" style="display:flex; flex-direction:column; gap:1.5rem;">
       <div class="sens-chart-wrap" style="height:400px; background:var(--c-bg-surface); border:1px solid var(--c-border); border-radius:0.5rem; padding:1rem; position:relative;">
+        ${exportBtn('sens-combined-cost', 'costo_vs_perturbacion')}
         <canvas id="sens-combined-cost"></canvas>
       </div>
       <div class="sens-chart-wrap" style="height:400px; background:var(--c-bg-surface); border:1px solid var(--c-border); border-radius:0.5rem; padding:1rem; position:relative;">
+        ${exportBtn('sens-combined-env', 'emisiones_vs_perturbacion')}
         <canvas id="sens-combined-env"></canvas>
       </div>
       <div class="sens-chart-wrap" style="height:400px; background:var(--c-bg-surface); border:1px solid var(--c-border); border-radius:0.5rem; padding:1rem; position:relative;">
+        ${exportBtn('sens-combined-soc', 'empleo_vs_perturbacion')}
         <canvas id="sens-combined-soc"></canvas>
       </div>
     </div>`;

@@ -1,4 +1,4 @@
-import { api } from "./api.js";
+import { api, BASE } from "./api.js";
 import { renderLgpResult, renderErResult, renderParams, renderSolverConfig, renderSensitivityResult, fmt } from "./render.js";
 // ── Theme Toggle ───────────────────────────────────────────────────────────
 
@@ -464,7 +464,7 @@ function initOat() {
 
       // Guardar resultado consolidado OAT (backend ya no lo hace por cada petición)
       try {
-        await fetch(`${BASE}/save-oat-result`, {
+        await fetch(`${BASE}/solve/save-oat-result`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ method, data: finalData }),
