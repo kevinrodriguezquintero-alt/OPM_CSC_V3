@@ -48,7 +48,6 @@ from pathlib import Path
 # Configuración (rutas relativas desde redaccion/tools/)
 RESULTADOS_DIR = Path("../resultados")        # Archivos temporales individuales (cambian con cada ejecución)
 PLANTILLAS_DIR = Path("../plantillas")
-LOG_FILE = Path("update_log.txt")
 
 # Archivos MAESTROS individuales (actualizables independientemente)
 MAESTROS_DIR = Path("../maestros")
