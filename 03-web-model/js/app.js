@@ -462,6 +462,17 @@ function initOat() {
       finalData.top_global_elas = [...globalList].sort((a,b) => b.maxElasticity - a.maxElasticity);
       finalData.top_global_freq = [...globalList].sort((a,b) => b.pillarCount - a.pillarCount || b.maxElasticity - a.maxElasticity);
 
+      // Guardar resultado consolidado OAT (backend ya no lo hace por cada petición)
+      try {
+        await fetch(`${BASE}/save-oat-result`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ method, data: finalData }),
+        });
+      } catch (e) {
+        console.warn("No se pudo guardar OAT en servidor:", e);
+      }
+
       update(totalSteps, "Analizando rankings de impacto...");
       container.innerHTML = renderSensitivityResult(finalData);
       drawOatCharts(finalData);

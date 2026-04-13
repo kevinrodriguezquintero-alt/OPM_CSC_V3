@@ -413,8 +413,30 @@ def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True,
     return resultado
 
 
+def _limpiar_backups_antiguos(max_backups: int = 3):
+    """Eliminar backups antiguos, mantener solo los mas recientes."""
+    if not BACKUP_DIR.exists():
+        return
+    
+    backups = sorted(BACKUP_DIR.glob("backup_*"))
+    if len(backups) <= max_backups:
+        return
+    
+    # Eliminar los mas antiguos (primeros en la lista ordenada)
+    backups_a_eliminar = backups[:-max_backups]
+    for backup in backups_a_eliminar:
+        try:
+            shutil.rmtree(backup)
+            print(f"    [-] Backup antiguo eliminado: {backup.name}")
+        except Exception as e:
+            print(f"    [!] No se pudo eliminar {backup}: {e}")
+
+
 def crear_backup():
     """Crear backup de todas las plantillas antes de modificar."""
+    # Limpiar backups antiguos primero
+    _limpiar_backups_antiguos(max_backups=3)
+    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     backup_subdir = BACKUP_DIR / f"backup_{timestamp}"
     backup_subdir.mkdir(parents=True, exist_ok=True)

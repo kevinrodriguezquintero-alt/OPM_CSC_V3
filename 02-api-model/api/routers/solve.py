@@ -579,15 +579,27 @@ def solve_sensitivity(body: SensitivityRequest):
         "top_env": top_env,
         "top_soc": top_soc,
     }
-    # Guardar automáticamente (archivos separados para LGP y ER)
+    # NOTA: El guardado del archivo se maneja desde el frontend para evitar
+    # sobrescritas en análisis OAT con múltiples peticiones individuales
+    return result
+
+
+class SaveOatRequest(BaseModel):
+    method: str
+    data: dict
+
+
+@router.post("/save-oat-result")
+def save_oat_result(body: SaveOatRequest):
+    """Guardar resultado consolidado de análisis OAT (llamado desde frontend después de completar todas las simulaciones)."""
     try:
         RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
         filename = f"oat_{body.method}.json"  # oat_lgp.json o oat_er.json
         with open(RESULTADOS_DIR / filename, 'w', encoding='utf-8') as f:
-            json.dump(result, f, indent=2, ensure_ascii=False, default=str)
+            json.dump(body.data, f, indent=2, ensure_ascii=False, default=str)
+        return {"status": "ok", "filename": filename}
     except Exception as e:
-        logging.warning(f"No se pudo guardar OAT: {e}")
-    return result
+        raise HTTPException(status_code=500, detail=f"Error guardando OAT: {e}")
 
 
 class ScenariosRequest(BaseModel):

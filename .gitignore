@@ -1,23 +1,71 @@
-# OS
+# ============================================
+# SISTEMA OPERATIVO
+# ============================================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# IDE
+# ============================================
+# IDEs Y EDITORES
+# ============================================
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
-# Python (01-console-model)
-01-console-model/venv/
-01-console-model/__pycache__/
-01-console-model/*.py[cod]
-01-console-model/.env
+# ============================================
+# PYTHON - 02-api-model (API)
+# ============================================
+02-api-model/venv/
+02-api-model/__pycache__/
+02-api-model/api/__pycache__/
+02-api-model/api/routers/__pycache__/
+02-api-model/solvers/__pycache__/
+02-api-model/*.py[cod]
+02-api-model.*.so
+02-api-model/.env
+02-api-model/.env.local
 
-# Docs / outputs generados
+# NOTA: redaccion/maestros/ se SUBE al repositorio
+# (son los archivos maestros consolidados)
+
+# ============================================
+# BACKUPS AUTO-GENERADOS
+# ============================================
+redaccion/backups/backup_*/
+
+# ============================================
+# LOGS Y ARCHIVOS DE GESTION LOCAL
+# ============================================
+redaccion/tools/update_log.txt
+export_log.txt
+PENDIENTES.md
+*.log
+
+# ============================================
+# DOCS / OUTPUTS GENERADOS
+# ============================================
 docs/*.json
 docs/*.csv
+docs/*.xlsx
 
-# Evitar duplicado accidental del proyecto dentro de sí mismo
+# ============================================
+# ARCHIVOS COMPRIMIDOS
+# ============================================
+*.zip
+*.tar.gz
+*.rar
+
+# ============================================
+# EVITAR DUPLICACION ACCIDENTAL
+# ============================================
 /V3/
 
-kevin-tesis.zip
+# ============================================
+# NODE MODULES (si se agrega frontend con npm)
+# ============================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
