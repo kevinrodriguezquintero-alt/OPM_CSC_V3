@@ -97,9 +97,9 @@ python consolidar_resultados.py --dry-run
 ```
 
 Este script:
-1. Lee todos los archivos JSON individuales
-2. Consolida en `results_consolidado.json`
-3. Muestra qué cambios aplicaría
+1. Lee todos los archivos JSON individuales de la carpeta `resultados/`.
+2. Consolida la información en memoria.
+3. Muestra qué cambios aplicaría a las plantillas `{{DATO:...}}`.
 
 ### 4b. Aplicar cambios reales
 ```bash
@@ -108,7 +108,59 @@ python consolidar_resultados.py --execute
 
 Escribe `yes` cuando lo solicite.
 
-**Backup automático:** Se crea en `redaccion/backups/backup_YYYYMMDD_HHMMSS/`
+**Backup automático:** Se crea una copia de seguridad de las plantillas en `redaccion/backups/backup_YYYYMMDD_HHMMSS/` antes de cualquier modificación.
+
+### 4c. Seleccionar qué resultados consolidar (opcional)
+
+Si solo quieres actualizar ciertos análisis:
+
+```bash
+# Solo actualizar LGP (ER, Rangos, etc. se preservan)
+python consolidar_resultados.py --execute --lgp
+
+# Solo actualizar ER (LGP, Rangos, etc. se preservan)
+python consolidar_resultados.py --execute --er
+
+# Solo actualizar OAT-LGP
+python consolidar_resultados.py --execute --oat-lg
+
+# Solo actualizar OAT-ER
+python consolidar_resultados.py --execute --oat-er
+
+# Actualizar OAT de ambos modelos
+python consolidar_resultados.py --execute --oat
+
+# Solo actualizar Rangos
+python consolidar_resultados.py --execute --rangos
+
+# Solo actualizar Escenarios
+python consolidar_resultados.py --execute --escenarios
+
+# Actualizar LGP y ER (Rangos, OAT, etc. se preservan)
+python consolidar_resultados.py --execute --lgp --er
+
+# Actualizar todo desde cero (reemplaza todos los maestros)
+python consolidar_resultados.py --execute
+```
+
+**Comportamiento con Maestros Individuales:**
+- Solo se actualizan los maestros que **seleccionas explícitamente**
+- Los maestros **NO seleccionados se preservan** (no se borran)
+- El consolidado `resultados_finales.json` se regenera combinando **todos** los maestros existentes
+- Esto permite actualizar LGP sin perder ER, Rangos, OAT, etc.
+
+**Ejemplo práctico:**
+```bash
+# 1. Primera vez: consolidar todo
+python consolidar_resultados.py --execute
+# → Crea maestros: lgp.json, er.json, rangos.json, oat_lgp.json, etc.
+
+# 2. Más tarde: solo actualizar LGP con nuevos datos
+python consolidar_resultados.py --execute --lgp
+# → Actualiza solo maestro/lgp.json
+# → Preserva: maestros/er.json, maestros/rangos.json, etc.
+# → Regenera resultados_finales.json combinando todos
+```
 
 ---
 
@@ -126,14 +178,6 @@ Los placeholders `{{DATO:xxx}}` deben haber sido reemplazados por valores.
 
 ---
 
-## Comandos de Emergencia
-
-### Restaurar desde backup
-```bash
-cd redaccion/tools
-python update_results.py --restore ../backups/backup_20250412_143022
-```
-
 ### Ver logs de cambios
 ```bash
 cat redaccion/tools/update_log.txt
@@ -146,28 +190,49 @@ cat redaccion/tools/update_log.txt
 ```
 02-api-model/
 ├── api/routers/solve.py   # Endpoints de análisis (guardan automáticamente)
-├── config.py              # Configuración de solvers (HiGHS optimizado)
+├── config.py              # Configuración de solvers
 └── ...
 
 redaccion/
-├── resultados/            # Archivos generados automáticamente desde web
-│   ├── lgp.json
-│   ├── er.json
-│   ├── oat.json
-│   ├── rangos.json
-│   └── escenarios/
+├── resultados/            # [TEMPORAL] Archivos individuales (se sobrescriben)
+│   ├── lgp.json           #    → Resultado LGP (temporal)
+│   ├── er.json            #    → Resultado ER (temporal)
+│   ├── oat_lgp.json       #    → OAT LGP (temporal)
+│   ├── oat_er.json        #    → OAT ER (temporal)
+│   ├── rangos.json        #    → Rangos (temporal)
+│   └── escenarios/        #    → Escenarios (temporal)
 │       └── esc_*.json
-├── results_consolidado.json  # Generado por consolidar_resultados.py
-├── plantillas/
+│
+├── maestros/              # [PROTEGIDO] Archivos maestros individuales
+│   ├── lgp.json           #    ← Maestro LGP (actualizable individualmente)
+│   ├── er.json            #    ← Maestro ER (actualizable individualmente)
+│   ├── oat_lgp.json       #    ← Maestro OAT-LGP (actualizable individualmente)
+│   ├── oat_er.json        #    ← Maestro OAT-ER (actualizable individualmente)
+│   ├── rangos.json        #    ← Maestro Rangos (actualizable individualmente)
+│   ├── esc_base.json      #    ← Maestro Escenario Base (actualizable individualmente)
+│   ├── esc_mejorado.json  #    ← Maestro Escenario Mejorado (actualizable individualmente)
+│   ├── esc_*.json         #    ← Maestros de otros escenarios (individualmente)
+│   └── resultados_finales.json  # ← Consolidado de TODOS los maestros (regenerado automáticamente)
+│
+├── plantillas/            # Documentos de la tesis
 │   ├── obj2_fase2_formulacion.md
 │   ├── obj2_fase3_implementacion.md
 │   ├── obj2_fase4_sensibilidad.md
 │   └── obj3_fase5_comparativo.md
-├── backups/               # Auto-generado
+│
+├── backups/               # Backups auto-generados
 └── tools/
-    ├── consolidar_resultados.py  # Script principal para actualizar plantillas
+    ├── consolidar_resultados.py  # Script principal
     └── update_log.txt
 ```
+
+**Sistema de Maestros Individuales:**
+- Cada tipo de resultado tiene su **propio archivo maestro** independiente
+- Los maestros se **actualizan individualmente** según lo que selecciones
+- Los maestros **NO seleccionados se preservan** (no se borran)
+- El archivo `resultados_finales.json` es un **consolidado regenerado** de todos los maestros existentes
+- Para consultar/analizar un resultado específico, usa su maestro individual (ej: `maestros/lgp.json`)
+- Para análisis global, usa `maestros/resultados_finales.json`
 
 ---
 
@@ -205,12 +270,12 @@ curl -X POST http://localhost:8000/params/reset
 
 ### "Faltan campos en el JSON"
 - Algunos análisis pueden fallar por infeasibilidad
-- Revisar `results.json` manualmente
+- Revisar los logs detallados en `redaccion/tools/update_log.txt`
 - Ver logs en consola durante exportación
 
 ### Placeholders no reemplazados
-- Verificar que el nombre del placeholder coincide con el mapeo en `update_results.py`
-- Revisar líneas del archivo `MAPEO_PLACEHOLDERS` en `update_results.py`
+- Verificar que el nombre del placeholder coincide con el mapeo en `consolidar_resultados.py`
+- Revisar el diccionario `MAPEO_PLACEHOLDERS` en `consolidar_resultados.py`
 
 ---
 
@@ -248,7 +313,7 @@ curl -X POST http://localhost:8000/params/reset
 **Solución:** Siempre usar rutas absolutas o ejecutar desde raíz del proyecto:
 ```bash
 cd c:\Users\kevin\OneDrive\Escritorio\V3
-python 02-api-model/venv/Scripts/python.exe redaccion/tools/update_results.py redaccion/results.json --dry-run
+python 02-api-model/venv/Scripts/python.exe redaccion/tools/consolidar_resultados.py --dry-run
 ```
 
 ### 4. Plantillas sin cambios detectados
@@ -260,7 +325,7 @@ python 02-api-model/venv/Scripts/python.exe redaccion/tools/update_results.py re
 - Plantilla espera: `{{DATO:resultado_individual_economico_α}}`
 - JSON tiene: `min_cost_alpha` (falta mapeo o el placeholder usa formato diferente)
 
-**Solución:** Verificar que `MAPEO_PLACEHOLDERS` en `update_results.py` incluya todas las claves necesarias.
+**Solución:** Verificar que `MAPEO_PLACEHOLDERS` en `consolidar_resultados.py` incluya todas las claves necesarias.
 
 ---
 
@@ -307,3 +372,4 @@ Verificar que el servidor tenga permisos de escritura en esa ruta.
 
 *Última actualización: 2025-04-12*
 *Flujo web implementado: 2025-04-12*
+*Sistema de maestros individuales: 2025-04-13*

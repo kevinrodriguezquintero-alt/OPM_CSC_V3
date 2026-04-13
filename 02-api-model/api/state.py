@@ -111,7 +111,7 @@ class AppState:
     def initialize(self) -> None:
         if self._initialized:
             return
-        self.solver_name: str = os.getenv("SOLVER", "highs").lower()
+        self.solver_name: str = os.getenv("SOLVER", "gurobi").lower()
         self.params: dict = _load_params_dict()
         self._initialized = True
 

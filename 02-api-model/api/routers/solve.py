@@ -1,6 +1,7 @@
 import copy
 import sys
 import io
+import logging
 from typing import List
 import json
 from pathlib import Path
@@ -56,8 +57,9 @@ _PARAM_LABEL = {
     "CRI": "capacidad de recepción/despacho del intermediario",  # CRI según paper
     "CN":  "capacidad de producción del productor",
     "CR":  "capacidad de recepción del detallista",
-    "CA":  "capacidad laboral del intermediario",
-    "CB":  "capacidad laboral del detallista",
+    "CA":  "capacidad laboral del centro de acopio",
+    "CB":  "capacidad laboral del intermediario",
+    "CC":  "capacidad laboral del detallista",
     "CV":  "capacidad del vehículo",
     "DI":  "demanda mínima del intermediario",
     "DD":  "demanda mínima del detallista",
@@ -83,7 +85,7 @@ def _infeasibility_hint(param: str, pct: float) -> str:
     label = _PARAM_LABEL.get(param, param)
     direction = "reducción" if pct < 0 else "aumento"
     # Supply/capacity params reduced → demand can't be met
-    if param in ("CH", "CRI", "CN", "CR", "CA", "CB", "CV", "RB", "RA", "RC", "H") and pct < 0:  # CHI→CRI
+    if param in ("CH", "CRI", "CN", "CR", "CA", "CB", "CC", "CV", "RB", "RA", "RC", "H") and pct < 0:  # CHI→CRI
         return f"La {direction} de {label} deja oferta insuficiente para cubrir la demanda"
     # Demand increased → supply can't cover
     if param in ("DI", "DD") and pct > 0:
@@ -109,8 +111,8 @@ def solve_lgp():
             RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
             with open(RESULTADOS_DIR / "lgp.json", 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2, ensure_ascii=False, default=str)
-        except Exception:
-            pass  # No fallar si no se puede guardar archivo
+        except Exception as e:
+            logging.warning(f"No se pudo guardar LGP: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return result
@@ -135,8 +137,8 @@ def solve_er(body: ERRequest = ERRequest()):
             RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
             with open(RESULTADOS_DIR / "er.json", 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2, ensure_ascii=False, default=str)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.warning(f"No se pudo guardar ER: {e}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     return result
@@ -577,13 +579,14 @@ def solve_sensitivity(body: SensitivityRequest):
         "top_env": top_env,
         "top_soc": top_soc,
     }
-    # Guardar automáticamente
+    # Guardar automáticamente (archivos separados para LGP y ER)
     try:
         RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
-        with open(RESULTADOS_DIR / "oat.json", 'w', encoding='utf-8') as f:
+        filename = f"oat_{body.method}.json"  # oat_lgp.json o oat_er.json
+        with open(RESULTADOS_DIR / filename, 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False, default=str)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.warning(f"No se pudo guardar OAT: {e}")
     return result
 
 
@@ -672,7 +675,10 @@ def solve_scenarios(body: ScenariosRequest):
     
     # Guardar automáticamente (escenarios tienen nombres dinámicos o ID personalizado)
     try:
-        RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
+        # Crear directorio escenarios si no existe
+        esc_dir = RESULTADOS_DIR / "escenarios"
+        esc_dir.mkdir(parents=True, exist_ok=True)
+        
         # Usar escenario_id si se proporciona, sino generar desde parámetros
         if body.escenario_id:
             filename = f"esc_{body.escenario_id}.json"
@@ -681,17 +687,19 @@ def solve_scenarios(body: ScenariosRequest):
             esc_key = "_".join([f"{k}_{v}" for k, v in body.params_to_test.items()])
             esc_key = esc_key.replace(".", "_")[:50]  # Limitar longitud
             filename = f"esc_{esc_key}.json"
-        with open(RESULTADOS_DIR / "escenarios" / filename, 'w', encoding='utf-8') as f:
+        
+        filepath = esc_dir / filename
+        with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(result, f, indent=2, ensure_ascii=False, default=str)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.warning(f"No se pudo guardar escenario: {e}")
     return result
 
 
 
 # ── Sensitivity Ranges (Shadow Prices + Allowable Ranges) ────────────────
 
-RANGE_PARAMS_DEFAULT = ["CA", "CB", "CN", "RA", "RC", "CV", "DI", "DD", "IT"]
+RANGE_PARAMS_DEFAULT = ["CA", "CB", "CC", "CN", "RA", "RC", "CV", "DI", "DD", "IT"]
 
 
 def _quick_feasible(solver_name: str, epsilon: float = None) -> dict | None:
@@ -798,7 +806,7 @@ def _find_max_feasible(base_data, param, direction, solver_name, epsilon=None):
 def _param_summary_value(params, name):
     """Representative value for display. SUM for additive metrics, MEAN for intensive ones."""
     val = params[name]
-    additive_params = ["CN", "CH", "CRI", "CR", "DI", "DD", "H", "CMO", "CD"]  # CHI→CRI
+    additive_params = ["CN", "CH", "CRI", "CR", "DI", "DD", "H", "CMO", "CD", "CMP"]  # CHI→CRI, CMP agregado
     
     def _extract_nums(v):
         if isinstance(v, (int, float)): return [v]
@@ -895,8 +903,8 @@ def solve_sensitivity_ranges(body: RangesRequest = RangesRequest()):
             RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
             with open(RESULTADOS_DIR / "rangos.json", 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2, ensure_ascii=False, default=str)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.warning(f"No se pudo guardar Rangos: {e}")
         
         return result
     finally:

@@ -16,9 +16,10 @@ RC = {1: 750}
 # RD: Rendimiento minimo del cultivo base (Kg/Ha) semana
 RD = {1: 100}
 
-# CA: Capacidad productiva global de una persona (Kg/persona) en centro de acopio
-# Valor promedio ponderado de los intermediarios
-CA = sum([20, 25, 23, 18, 17, 20, 30]) / 7
+# CA: Capacidad productiva de una persona (Kg/persona) en centro de acopio
+# Valor basado en actividades típicas: recepción, pesaje, selección básica, carga
+# Referencia: menor que procesamiento en intermediarios (17-30), mayor que recepción en detallistas (100-140)
+CA = 40
 
 # CB: Capacidad productiva de una persona (Kg/persona) en intermediario j
 CB = {1: 20, 2: 25, 3: 23, 4: 18, 5: 17, 6: 20, 7: 30}

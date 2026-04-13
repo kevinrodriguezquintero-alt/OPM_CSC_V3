@@ -205,7 +205,7 @@ def extract_variables(model) -> dict:
         "ZZ": [{"j": j, "k": k, "value": int(round(v(model.ZZ[j, k])))}
                for j in model.J for k in model.K if v(model.ZZ[j, k]) > 0.5],
         "W":  [{"i": i, "value": v(model.W[i])} for i in model.I],
-        "S":  [{"j": 0, "value": int(round(v(model.S)))}] if v(model.S) > 0.5 else [],
+        "S":  [{"value": int(round(v(model.S)))}] if v(model.S) > 0.5 else [],
         "SS": [{"j": j, "value": int(round(v(model.SS[j])))}
                for j in model.J if v(model.SS[j]) > 0.5],
         "SSS": [{"k": k, "value": int(round(v(model.SSS[k])))}

@@ -264,10 +264,10 @@ function initEr() {
 
 const SENSITIVITY_PARAMS = [
   "DI", "DD",
-  "CP", "CI", "CT", "CTT", "CDA", "CDF", "CMO", "CD",
+  "CP", "CI", "CT", "CTT", "CDA", "CDF", "CMO", "CD", "CMP",
   "IT", "P", "PP",
   "RB", "RA", "RC", "RD",
-  "CA", "CB", "CN", "CH", "CHI", "CR", "CV", "H",
+  "CA", "CB", "CC", "CN", "CH", "CRI", "CR", "CV", "H",
 ];
 
 function initOat() {
@@ -642,8 +642,8 @@ const SCENARIO_PRESETS = {
   regulacion_ambiental: { DI: 10, IT: 20, CV: 20 },
   
   // Eje 4: Impacto Social y Automatización
-  super_eficiencia: { CA: 50, CB: 50, CP: 10 },
-  fomento_laboral: { CA: 100, CB: 100 },
+  super_eficiencia: { CA: 50, CB: 50, CC: 50, CP: 10 },
+  fomento_laboral: { CA: 100, CB: 100, CC: 100 },
   
   // Eje 5: Vulnerabilidad y Límites
   crisis_climatica: { RC: -35, RA: -40, CP: 20 },

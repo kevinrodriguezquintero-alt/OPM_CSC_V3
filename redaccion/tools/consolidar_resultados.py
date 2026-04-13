@@ -1,22 +1,42 @@
 #!/usr/bin/env python3
 """
-Consolida resultados de archivos individuales (LGP, ER, OAT, Rangos, Escenarios)
-y genera JSON unificado para update_results.py.
+Sistema de archivos MAESTROS INDIVIDUALES para resultados de optimización.
+
+Cada tipo de resultado (LGP, ER, OAT, Rangos, Escenarios) tiene su propio
+archivo maestro que se actualiza INDEPENDIENTEMENTE. El consolidado final
+se genera combinando todos los maestros existentes.
 
 USO:
     python consolidar_resultados.py --help
     python consolidar_resultados.py --dry-run
-    python consolidar_resultados.py --execute
+    python consolidar_resultados.py --execute              # Actualiza todos los maestros
+    python consolidar_resultados.py --execute --lgp        # Solo LGP
+    python consolidar_resultados.py --execute --er         # Solo ER
+    python consolidar_resultados.py --execute --oat-lg     # Solo OAT-LGP
+    python consolidar_resultados.py --execute --escenarios  # Todos los escenarios
 
-ARCHIVOS FUENTE (en redaccion/resultados/):
-    - lgp.json           -> Resultados LGP
-    - er.json            -> Resultados Epsilon-Constraint
-    - oat.json           -> Análisis OAT de sensibilidad
-    - rangos.json        -> Rangos y precios sombra
-    - escenarios/*.json  -> Resultados de escenarios individuales
+ARCHIVOS FUENTE (temporales, en redaccion/resultados/):
+    - lgp.json           -> Resultados LGP (temporal, se sobrescribe)
+    - er.json            -> Resultados ER (temporal, se sobrescribe)
+    - oat_lgp.json       -> Análisis OAT LGP (temporal, se sobrescribe)
+    - oat_er.json        -> Análisis OAT ER (temporal, se sobrescribe)
+    - rangos.json        -> Rangos y precios sombra (temporal, se sobrescribe)
+    - escenarios/*.json  -> Escenarios individuales (temporales, se sobrescriben)
 
-SALIDA:
-    - redaccion/results_consolidado.json (para update_results.py)
+ARCHIVOS MAESTROS (protegidos, en redaccion/maestros/):
+    - lgp.json           -> Maestro LGP (actualizable individualmente)
+    - er.json            -> Maestro ER (actualizable individualmente)
+    - oat_lgp.json       -> Maestro OAT-LGP (actualizable individualmente)
+    - oat_er.json        -> Maestro OAT-ER (actualizable individualmente)
+    - rangos.json        -> Maestro Rangos (actualizable individualmente)
+    - esc_*.json         -> Maestros de escenarios individuales (actualizables individualmente)
+    - resultados_finales.json -> Consolidado de TODOS los maestros (regenerado automáticamente)
+
+COMPORTAMIENTO CLAVE:
+    - Cada maestro se actualiza SOLO si se selecciona explícitamente
+    - Los maestros NO seleccionados se PRESERVAN (no se borran)
+    - El consolidado final regenera combinando todos los maestros existentes
+    - Esto permite actualizar LGP sin perder ER, Rangos, OAT, Escenarios
 """
 
 import argparse
@@ -26,12 +46,23 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Configuración
-RESULTADOS_DIR = Path("redaccion/resultados")
-PLANTILLAS_DIR = Path("redaccion/plantillas")
-BACKUP_DIR = Path("redaccion/backups")
-LOG_FILE = Path("redaccion/tools/update_log.txt")
-OUTPUT_JSON = Path("redaccion/results_consolidado.json")
+# Configuración (rutas relativas desde redaccion/tools/)
+RESULTADOS_DIR = Path("../resultados")        # Archivos temporales individuales (cambian con cada ejecución)
+PLANTILLAS_DIR = Path("../plantillas")
+BACKUP_DIR = Path("../backups")
+LOG_FILE = Path("update_log.txt")
+
+# Archivos MAESTROS individuales (actualizables independientemente)
+MAESTROS_DIR = Path("../maestros")
+MAESTRO_LGP = MAESTROS_DIR / "lgp.json"
+MAESTRO_ER = MAESTROS_DIR / "er.json"
+MAESTRO_OAT_LGP = MAESTROS_DIR / "oat_lgp.json"
+MAESTRO_OAT_ER = MAESTROS_DIR / "oat_er.json"
+MAESTRO_RANGOS = MAESTROS_DIR / "rangos.json"
+# Nota: Los escenarios tienen maestros individuales: esc_*.json
+
+# Archivo consolidado (solo lectura para análisis, se regenera de maestros)
+RESULTADO_FINAL = MAESTROS_DIR / "resultados_finales.json"
 
 # Mapeo: qué campo del JSON reemplaza qué placeholder
 MAPEO_PLACEHOLDERS = {
@@ -74,7 +105,7 @@ PLANTILLAS_AFECTADAS = [
 
 
 def cargar_lgp() -> dict:
-    """Cargar resultados LGP."""
+    """Cargar resultados LGP completos."""
     ruta = RESULTADOS_DIR / "lgp.json"
     if not ruta.exists():
         print(f"[!]  No se encontró {ruta}")
@@ -84,18 +115,22 @@ def cargar_lgp() -> dict:
         data = json.load(f)
     
     objs = data.get("objectives", {})
-    return {
+    lgp_data = {
+        # Placeholders para plantillas
         "lgp_costo": objs.get("cost"),
         "lgp_emisiones": objs.get("emissions"),
         "lgp_empleo": objs.get("employment"),
-        "lgp_d1_plus": 0,  # LGP no calcula desviaciones explícitamente
+        "lgp_d1_plus": 0,
         "lgp_d2_plus": 0,
         "lgp_d3_minus": 0,
+        # Datos completos para consulta/análisis
+        "lgp_completo": data,  # TODO el JSON de LGP
     }
+    return lgp_data
 
 
 def cargar_er() -> dict:
-    """Cargar resultados ER (Epsilon-Constraint)."""
+    """Cargar resultados ER (Epsilon-Constraint) completos del punto medio."""
     ruta = RESULTADOS_DIR / "er.json"
     if not ruta.exists():
         print(f"[!]  No se encontró {ruta}")
@@ -118,6 +153,7 @@ def cargar_er() -> dict:
     pt = data.get("payoff_table", {})
     
     return {
+        # Placeholders para plantillas
         "er_costo": objs.get("cost"),
         "er_emisiones": objs.get("emissions"),
         "er_empleo": objs.get("employment"),
@@ -135,12 +171,16 @@ def cargar_er() -> dict:
         "aspiracion_costo": pt.get("min_cost", {}).get("cost"),
         "aspiracion_emisiones": pt.get("min_emissions", {}).get("emissions"),
         "aspiracion_empleo": pt.get("max_social", {}).get("employment"),
+        # Datos completos del punto medio para consulta/análisis
+        "er_punto_medio_completo": mid,  # TODO: objectives + variables (X, Y, Z, ZZ, etc.)
+        "er_frontera_completa": data.get("pareto_frontier", []),  # Toda la frontera por si se necesita
+        "er_payoff_table": pt,  # Payoff table completa
     }
 
 
-def cargar_oat() -> dict:
-    """Cargar resultados OAT (One-At-A-Time sensitivity)."""
-    ruta = RESULTADOS_DIR / "oat.json"
+def _cargar_oat_file(filename: str, prefix: str) -> dict:
+    """Cargar un archivo OAT específico con prefijo dado."""
+    ruta = RESULTADOS_DIR / filename
     if not ruta.exists():
         return {}
     
@@ -150,29 +190,51 @@ def cargar_oat() -> dict:
     results = data.get("results", [])
     oat_data = {}
     
+    # 1. Extraer elasticidades para placeholders (solo +10%)
     for r in results:
         param = r.get("param", "")
         change = r.get("change", "")
         
-        # Solo tomar +10% para simplificar
         if change == "+10.0%":
-            oat_data[f"oat_sens_{param}_alpha"] = r.get("elas_cost")
-            oat_data[f"oat_sens_{param}_gamma"] = r.get("elas_env")
-            oat_data[f"oat_sens_{param}_beta"] = r.get("elas_soc")
+            oat_data[f"oat_{prefix}_sens_{param}_alpha"] = r.get("elas_cost")
+            oat_data[f"oat_{prefix}_sens_{param}_gamma"] = r.get("elas_env")
+            oat_data[f"oat_{prefix}_sens_{param}_beta"] = r.get("elas_soc")
+    
+    # 2. Guardar datos completos de OAT para consulta/análisis
+    oat_data[f"oat_{prefix}_tabla_completa"] = results  # Todos los parámetros, todos los %
+    oat_data[f"oat_{prefix}_base_objectives"] = data.get("base_objectives", {})
     
     return oat_data
 
 
-def cargar_rangos() -> list:
-    """Cargar resultados de rangos (shadow prices)."""
+def cargar_oat() -> dict:
+    """Cargar resultados OAT (One-At-A-Time sensitivity) de LGP y ER."""
+    oat_data = {}
+    
+    # Cargar OAT-LGP
+    oat_data.update(_cargar_oat_file("oat_lgp.json", "lgp"))
+    
+    # Cargar OAT-ER
+    oat_data.update(_cargar_oat_file("oat_er.json", "er"))
+    
+    return oat_data
+
+
+def cargar_rangos() -> dict:
+    """Cargar resultados de rangos (shadow prices) completos."""
     ruta = RESULTADOS_DIR / "rangos.json"
     if not ruta.exists():
-        return []
+        return {}
     
     with open(ruta, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
-    return data.get("ranges", [])
+    return {
+        # Tabla de rangos para placeholders
+        "rangos_tabla": data.get("ranges", []),
+        # Datos completos para consulta/análisis
+        "rangos_completo": data,  # TODO: lgp_base, er_base, ranges
+    }
 
 
 def cargar_escenarios() -> dict:
@@ -187,72 +249,166 @@ def cargar_escenarios() -> dict:
             with open(esc_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            # Extraer número de escenario del nombre del archivo
-            esc_id = esc_file.stem.replace("esc_", "")[:20]  # Limitar longitud
+            # Extraer ID del escenario del nombre del archivo
+            esc_id = esc_file.stem.replace("esc_", "")[:20]
             
-            lgp = data.get("lgp", {})
-            er = data.get("er", {})
+            # El JSON tiene: method, base, propuesto
+            base = data.get("base", {})
+            propuesto = data.get("propuesto", {})
             
-            lgp_base = lgp.get("base", {}) if isinstance(lgp, dict) else {}
-            lgp_prop = lgp.get("propuesto", {}) if isinstance(lgp, dict) else {}
-            er_base = er.get("base", {}) if isinstance(er, dict) else {}
-            er_prop = er.get("propuesto", {}) if isinstance(er, dict) else {}
-            
+            # Placeholders para plantillas
             escenarios.update({
-                f"{esc_id}_lgp_a": lgp_base.get("cost"),
-                f"{esc_id}_lgp_g": lgp_base.get("emissions"),
-                f"{esc_id}_lgp_b": lgp_base.get("employment"),
-                f"{esc_id}_lgp_a_prop": lgp_prop.get("cost") if lgp_prop else None,
-                f"{esc_id}_lgp_g_prop": lgp_prop.get("emissions") if lgp_prop else None,
-                f"{esc_id}_lgp_b_prop": lgp_prop.get("employment") if lgp_prop else None,
-                f"{esc_id}_er_a": er_base.get("cost"),
-                f"{esc_id}_er_g": er_base.get("emissions"),
-                f"{esc_id}_er_b": er_base.get("employment"),
-                f"{esc_id}_er_a_prop": er_prop.get("cost") if er_prop else None,
-                f"{esc_id}_er_g_prop": er_prop.get("emissions") if er_prop else None,
-                f"{esc_id}_er_b_prop": er_prop.get("employment") if er_prop else None,
-                f"{esc_id}_factible": "Si" if (lgp_prop and er_prop) else "No",
+                f"{esc_id}_lgp_a": base.get("cost"),
+                f"{esc_id}_lgp_g": base.get("emissions"),
+                f"{esc_id}_lgp_b": base.get("employment"),
+                f"{esc_id}_lgp_a_prop": propuesto.get("cost") if propuesto else None,
+                f"{esc_id}_lgp_g_prop": propuesto.get("emissions") if propuesto else None,
+                f"{esc_id}_lgp_b_prop": propuesto.get("employment") if propuesto else None,
+                f"{esc_id}_factible": "Si" if propuesto else "No",
             })
+            
+            # Guardar JSON completo del escenario para consulta/análisis
+            escenarios[f"{esc_id}_completo"] = data
+            
         except Exception as e:
             print(f"[!]  Error cargando {esc_file}: {e}")
     
     return escenarios
 
 
-def consolidar_todos() -> dict:
-    """Consolidar todos los resultados en un solo diccionario."""
-    print("[*] Consolidando resultados...")
+def _cargar_maestro_si_existe(ruta: Path) -> dict:
+    """Cargar archivo maestro si existe, sino retornar vacío."""
+    if ruta.exists():
+        try:
+            with open(ruta, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"[!]  Error cargando maestro {ruta}: {e}")
+    return {}
+
+
+def _guardar_maestro(ruta: Path, datos: dict, nombre: str):
+    """Guardar datos en archivo maestro individual."""
+    MAESTROS_DIR.mkdir(parents=True, exist_ok=True)
+    with open(ruta, 'w', encoding='utf-8') as f:
+        json.dump(datos, f, indent=2, ensure_ascii=False, default=str)
+    print(f"    [OK] Maestro {nombre} guardado: {ruta}")
+
+
+def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True, 
+                         incluir_oat_lgp=True, incluir_oat_er=True,
+                         incluir_rangos=True, incluir_escenarios=True) -> dict:
+    """
+    Consolidar resultados seleccionados en archivos maestros individuales.
+    Cada maestro se actualiza solo si se selecciona, los demás se preservan.
+    """
+    print("[*] Actualizando archivos maestros individuales...")
     
+    # 1. Actualizar maestros individuales según selección
+    if incluir_lgp:
+        print("    -> Actualizando Maestro LGP...")
+        datos_lgp = cargar_lgp()
+        if datos_lgp:
+            _guardar_maestro(MAESTRO_LGP, datos_lgp, "LGP")
+    
+    if incluir_er:
+        print("    -> Actualizando Maestro ER...")
+        datos_er = cargar_er()
+        if datos_er:
+            _guardar_maestro(MAESTRO_ER, datos_er, "ER")
+    
+    if incluir_oat or incluir_oat_lgp or incluir_oat_er:
+        if incluir_oat or incluir_oat_lgp:
+            print("    -> Actualizando Maestro OAT-LGP...")
+            datos_oat_lgp = _cargar_oat_file("oat_lgp.json", "lgp")
+            if datos_oat_lgp:
+                # Guardar sin prefijo para maestro individual
+                _guardar_maestro(MAESTRO_OAT_LGP, datos_oat_lgp, "OAT-LGP")
+        
+        if incluir_oat or incluir_oat_er:
+            print("    -> Actualizando Maestro OAT-ER...")
+            datos_oat_er = _cargar_oat_file("oat_er.json", "er")
+            if datos_oat_er:
+                _guardar_maestro(MAESTRO_OAT_ER, datos_oat_er, "OAT-ER")
+    
+    if incluir_rangos:
+        print("    -> Actualizando Maestro Rangos...")
+        datos_rangos = cargar_rangos()
+        if datos_rangos:
+            _guardar_maestro(MAESTRO_RANGOS, datos_rangos, "Rangos")
+    
+    if incluir_escenarios:
+        print("    -> Actualizando Maestros de Escenarios individuales...")
+        esc_dir = RESULTADOS_DIR / "escenarios"
+        if esc_dir.exists():
+            for esc_file in sorted(esc_dir.glob("esc_*.json")):
+                esc_id = esc_file.stem  # esc_base, esc_mejorado, etc.
+                try:
+                    with open(esc_file, 'r', encoding='utf-8') as f:
+                        datos_esc = json.load(f)
+                    
+                    # Extraer datos base y propuesto
+                    base = datos_esc.get("base", {})
+                    propuesto = datos_esc.get("propuesto", {})
+                    
+                    # Datos para maestro individual
+                    esc_data = {
+                        f"{esc_id}_lgp_a": base.get("cost"),
+                        f"{esc_id}_lgp_g": base.get("emissions"),
+                        f"{esc_id}_lgp_b": base.get("employment"),
+                        f"{esc_id}_lgp_a_prop": propuesto.get("cost") if propuesto else None,
+                        f"{esc_id}_lgp_g_prop": propuesto.get("emissions") if propuesto else None,
+                        f"{esc_id}_lgp_b_prop": propuesto.get("employment") if propuesto else None,
+                        f"{esc_id}_factible": "Si" if propuesto else "No",
+                        f"{esc_id}_completo": datos_esc,  # Todo el JSON
+                    }
+                    
+                    # Guardar maestro individual
+                    ruta_maestro = MAESTROS_DIR / f"{esc_id}.json"
+                    _guardar_maestro(ruta_maestro, esc_data, esc_id)
+                    
+                except Exception as e:
+                    print(f"[!]  Error procesando {esc_file}: {e}")
+    
+    # 2. Generar consolidado combinando TODOS los maestros existentes
+    print("[*] Generando consolidado desde maestros...")
     resultado = {
         "solver_status": "optimal",
         "consolidado_timestamp": datetime.now().isoformat(),
     }
     
-    # Cargar cada componente
-    print("    -> LGP...")
-    resultado.update(cargar_lgp())
+    # Cargar cada maestro existente (incluso si no se actualizó en esta ejecución)
+    maestros_cargados = []
     
-    print("    -> ER...")
-    resultado.update(cargar_er())
+    # Maestros principales
+    for ruta, nombre in [
+        (MAESTRO_LGP, "LGP"),
+        (MAESTRO_ER, "ER"),
+        (MAESTRO_OAT_LGP, "OAT-LGP"),
+        (MAESTRO_OAT_ER, "OAT-ER"),
+        (MAESTRO_RANGOS, "Rangos"),
+    ]:
+        datos = _cargar_maestro_si_existe(ruta)
+        if datos:
+            resultado.update(datos)
+            maestros_cargados.append(nombre)
     
-    print("    -> OAT...")
-    resultado.update(cargar_oat())
+    # Maestros de escenarios individuales (patrón esc_*.json)
+    for esc_maestro in sorted(MAESTROS_DIR.glob("esc_*.json")):
+        datos = _cargar_maestro_si_existe(esc_maestro)
+        if datos:
+            resultado.update(datos)
+            maestros_cargados.append(esc_maestro.stem)
     
-    print("    -> Rangos...")
-    rangos = cargar_rangos()
-    if rangos:
-        resultado["rangos_tabla"] = rangos
+    print(f"    Maestros incluidos: {', '.join(maestros_cargados) if maestros_cargados else 'Ninguno'}")
     
-    print("    -> Escenarios...")
-    escenarios = cargar_escenarios()
-    resultado.update(escenarios)
-    
-    # Guardar JSON consolidado
-    with open(OUTPUT_JSON, 'w', encoding='utf-8') as f:
+    # 3. Guardar consolidado final (regenerado de todos los maestros)
+    with open(RESULTADO_FINAL, 'w', encoding='utf-8') as f:
         json.dump(resultado, f, indent=2, ensure_ascii=False, default=str)
     
-    print(f"[OK] Resultados consolidados en: {OUTPUT_JSON}")
-    print(f"     Total campos: {len(resultado)}")
+    print(f"\n[OK] Archivos maestros actualizados")
+    print(f"     Consolidado final: {RESULTADO_FINAL}")
+    print(f"     Total campos combinados: {len(resultado)}")
     
     return resultado
 
@@ -304,7 +460,13 @@ def actualizar_plantillas(data: dict, dry_run: bool = True) -> list[str]:
         
         if cambios:
             print(f"\n[F] {plantilla_nombre}:")
-            print("\n".join(cambios))
+            # Solución para error de codificación en consola Windows (charmap)
+            for cambio in cambios:
+                try:
+                    print(cambio)
+                except UnicodeEncodeError:
+                    print(cambio.encode('ascii', 'replace').decode('ascii'))
+            
             log_general.append(f"{plantilla_nombre}:\n" + "\n".join(cambios))
             
             if not dry_run:
@@ -322,11 +484,20 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 EJEMPLOS:
-    # Consolidar y simular cambios
+    # Consolidar TODO y simular cambios
     python consolidar_resultados.py --dry-run
     
-    # Consolidar y aplicar cambios
+    # Consolidar TODO y aplicar cambios
     python consolidar_resultados.py --execute
+    
+    # Solo LGP y ER
+    python consolidar_resultados.py --execute --lgp --er
+    
+    # Solo escenarios
+    python consolidar_resultados.py --execute --escenarios
+    
+    # LGP, OAT y rangos (sin ER ni escenarios)
+    python consolidar_resultados.py --execute --lgp --oat --rangos
         """
     )
     parser.add_argument('--dry-run', action='store_true',
@@ -334,15 +505,37 @@ EJEMPLOS:
     parser.add_argument('--execute', action='store_true',
                         help='APLICAR cambios (crea backup primero)')
     
+    # Filtros de selección
+    parser.add_argument('--lgp', action='store_true', help='Incluir resultados LGP')
+    parser.add_argument('--er', action='store_true', help='Incluir resultados ER')
+    parser.add_argument('--oat', action='store_true', help='Incluir resultados OAT (ambos: LGP y ER)')
+    parser.add_argument('--oat-lg', dest='oat_lgp', action='store_true', help='Incluir solo OAT-LGP')
+    parser.add_argument('--oat-er', dest='oat_er', action='store_true', help='Incluir solo OAT-ER')
+    parser.add_argument('--rangos', action='store_true', help='Incluir resultados de rangos')
+    parser.add_argument('--escenarios', action='store_true', help='Incluir resultados de escenarios')
+    
     args = parser.parse_args()
+    
+    # Si no se especifica ningún filtro, incluir todo
+    ningun_filtro = not (args.lgp or args.er or args.oat or args.oat_lgp or args.oat_er or args.rangos or args.escenarios)
+    if ningun_filtro:
+        args.lgp = args.er = args.oat = args.oat_lgp = args.oat_er = args.rangos = args.escenarios = True
     
     if not args.dry_run and not args.execute:
         print("[X] Error: Debes especificar --dry-run o --execute")
         parser.print_help()
         sys.exit(1)
     
-    # Consolidar resultados
-    data = consolidar_todos()
+    # Consolidar resultados según selección
+    data = consolidar_seleccion(
+        incluir_lgp=args.lgp,
+        incluir_er=args.er,
+        incluir_oat=args.oat,
+        incluir_oat_lgp=args.oat_lgp,
+        incluir_oat_er=args.oat_er,
+        incluir_rangos=args.rangos,
+        incluir_escenarios=args.escenarios
+    )
     
     if not data:
         print("[X] No se encontraron resultados para consolidar")

@@ -41,7 +41,7 @@
 | `Diseno_Metodologico.md` | Diseño metodológico oficial (3 objetivos, 5 fases, actividades) | completo |
 | `paper_referencia.md` | Formulaciones del paper de Arenas & Salazar (2018) | completo |
 | `borrador_referencia.md` | **Guía de distribución de contenidos** — Caps 1-4 + Tabla de contenido completa | referencia |
-| `normativas.md` | Normativas y fuentes secundarias — 3 referencias pendientes de completar con Zotero | parcial (usuario) |
+| `normativas.md` | Normativas y fuentes secundarias — **Sección 3: Capacidades de Personal (CA=40, CB, CC) agregada** — 3 referencias Zotero pendientes | parcial (usuario) |
 | `guia_estilo.md` | Normas APA 7ma edición, tono académico, convenciones matemáticas | completo |
 
 **Estados posibles:** `pendiente` → `parcial` → `completo`
@@ -87,33 +87,28 @@ En las plantillas se usan estos marcadores:
 
 ## 6. Herramientas de Actualización
 
-### Script `redaccion/tools/update_results.py`
+### Script `redaccion/tools/consolidar_resultados.py`
 
-Script manual para actualizar placeholders `{{DATO:...}}` con resultados reales del solver.
+Script para consolidar resultados de múltiples fuentes (LGP, ER, OAT, Rangos) y actualizar placeholders `{{DATO:...}}` en las plantillas.
 
 **Características de seguridad:**
-- ✅ **Backup automático** antes de modificar cualquier archivo
-- ✅ **Validación** de que el solver convergió (estado "optimal")
-- ✅ **Modo simulación** (`--dry-run`) para revisar cambios sin aplicar
-- ✅ **Log detallado** de todas las modificaciones
-- ✅ **Restauración** desde backup si algo sale mal
+- ✅ **Backup automático** en `redaccion/backups/` antes de modificar archivos
+- ✅ **Validación de Convergencia** (solo procesa si el estado es "optimal")
+- ✅ **Modo simulación** (`--dry-run`) para previsualizar cambios
+- ✅ **Consolidación Modular**: Une datos de `redaccion/resultados/` en un solo flujo
 
 **Uso:**
 ```bash
-# 1. Simular cambios (recomendado primero)
-python redaccion/tools/update_results.py resultados.json --dry-run
+# 1. Consolidar y previsualizar cambios (recomendado)
+python redaccion/tools/consolidar_resultados.py --dry-run
 
-# 2. Aplicar cambios (cuando estés seguro)
-python redaccion/tools/update_results.py resultados.json --execute
-
-# 3. Restaurar si necesitas revertir
-python redaccion/tools/update_results.py --restore redaccion/backups/backup_20250412_143022
+# 2. Aplicar cambios a las plantillas
+python redaccion/tools/consolidar_resultados.py --execute
 ```
 
 **Flujo de trabajo:**
-1. Ejecutas `lgp.py` o `er.py` → generas `resultados.json`
-2. Corres `--dry-run` → revisas qué cambiaría
-3. Si todo bien, corres `--execute` → actualiza plantillas con backup automático
+1. Ejecutas modelos desde la interfaz web o API → los JSON individuales se guardan en `redaccion/resultados/`.
+2. Corres el script de consolidación para inyectar los datos en los documentos de la tesis.
 
 ---
 
@@ -122,4 +117,6 @@ python redaccion/tools/update_results.py --restore redaccion/backups/backup_2025
 | Fecha | Plantilla/Herramienta | Cambio |
 |-------|----------------------|--------|
 | 2026-04-12 | Esquema completo | Creación del sistema modular |
-| 2026-04-12 | `update_results.py` | Script de actualización manual con protecciones |
+| 2026-04-12 | `consolidar_resultados.py` | Script de consolidación modular y actualización de plantillas |
+| 2026-04-12 | `params.py`, `notacion.md`, `normativas.md` | **Corrección crítica**: CA cambiado de 22.43 (promedio erróneo) a 40 Kg/persona (valor específico centro de acopio) |
+| 2026-04-12 | `app.js` SCENARIO_PRESETS | Escenarios `super_eficiencia` y `fomento_laboral` ahora incluyen CC (capacidad detallistas) para consistencia en toda la cadena |

@@ -27,9 +27,7 @@ def _solve(solver, model, capture_log=True):
         # Try to use solver-native log files (Thread-Safe)
         sname = str(solver.name).lower()
         options = {}
-        if "highs" in sname:
-            options = {"log_file": temp_log_path}
-        elif "glpk" in sname or "cbc" in sname:
+        if "glpk" in sname or "cbc" in sname:
             options = {"log": temp_log_path}
             
         if options:

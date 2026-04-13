@@ -313,13 +313,14 @@ const PARAM_DESCRIPTIONS = {
   RA: "Rendimiento por variante de productor u (Kg/Ha·semana)",
   RC: "Rendimiento máximo del cultivo base por productor i (Kg/Ha·semana)",
   RD: "Rendimiento mínimo del cultivo base por productor i (Kg/Ha·semana)",
-  CA: "Capacidad productiva global de persona en centro de acopio (Kg/persona)",
+  CA: "Capacidad productiva de una persona en centro de acopio (40 Kg/persona)",
   M: "Límite máximo de kilómetros recorridos (km/semana)",
-  CB: "Capacidad productiva por persona en detallista k (Kg/persona)",
+  CB: "Capacidad productiva por persona en intermediario j (Kg/persona)",
+  CC: "Capacidad productiva por persona en detallista k (Kg/persona)",
   CP: "Costo de producción en productor i ($/Kg)",
   CI: "Costo de procesamiento en intermediario j ($/Kg)",
-  CT: "Costo de transporte productor i → intermediario j ($/Kg)",
-  CTT: "Costo de transporte intermediario j → detallista k ($/Kg)",
+  CT: "Costo de transporte productor i → intermediario j ($/km/viaje)",
+  CTT: "Costo de transporte intermediario j → detallista k ($/km/viaje)",
   CD: "Costo de mano de obra en detallista k ($/semana)",
   CDA: "Costo por daño en ruta productor i → intermediario j ($/Kg)",
   CDF: "Costo por daño en ruta intermediario j → detallista k ($/Kg)",
@@ -327,12 +328,13 @@ const PARAM_DESCRIPTIONS = {
   PP: "Porcentaje de daño intermediario j → detallista k (%)",
   CN: "Capacidad de producción en productor i (Kg/día)",
   CH: "Capacidad de despacho en productor i (Kg/día)",
-  CHI: "Capacidad de despacho en intermediario j (Kg/día)",
+  CRI: "Capacidad de recepción/despacho en intermediario j (Kg/día)",
   CR: "Capacidad de recepción en detallista k (Kg/día)",
   DI: "Demanda mínima en intermediario j (Kg/día)",
   DD: "Demanda mínima en detallista k (Kg/día)",
   CV: "Capacidad del vehículo en intermediario j (Kg/viaje)",
   CMO: "Costo de mano de obra en intermediario j ($/semana)",
+  CMP: "Costo de mano de obra en centro de acopio ($/semana)",
   H: "Número de hectáreas por variante de productor u (Ha·semana)",
   DPI: "Distancia/impacto ambiental ruta productor i → intermediario j (km)",
   DID: "Distancia/impacto ambiental ruta intermediario j → detallista k (km)",
@@ -2015,19 +2017,20 @@ export function renderRangesComparison(data) {
   // ── LGP Table ──
   const paramUnits = {
     // Capacidades y Demandas
-    CN: "kg/día", CH: "kg/día", CHI: "kg/día", CR: "kg/día",
+    CN: "kg/día", CH: "kg/día", CRI: "kg/día", CR: "kg/día",
     DI: "kg/día", DD: "kg/día", CV: "kg/viaje",
     // Rendimientos y Tierra
     RA: "kg/Ha·se semana", RB: "kg/Ha·se semana",
     RC: "kg/Ha·se semana", RD: "kg/Ha·se semana",
     H: "Ha/semana",
     // Costos y Mano de Obra
-    CP: "$/kg", CI: "$/kg", CT: "$/kg", CTT: "$/kg",
+    CP: "$/kg", CI: "$/kg", CT: "$/km/viaje", CTT: "$/km/viaje",
     CDA: "$/kg", CDF: "$/kg",
-    CMO: "$/semana", CD: "$/detallista",
-    CA: "kg/persona", CB: "kg/persona",
+    CMO: "$/semana", CD: "$/detallista", CMP: "$/semana",
+    CA: "kg/persona", CB: "kg/persona", CC: "kg/persona",
     // Otros
-    IT: "kg CO2/km", P: "% daño", PP: "% daño"
+    IT: "kg CO2/km", P: "% daño", PP: "% daño",
+    M: "km/semana"
   };
 
   const lgpRowsStr = rows.map(r => `<tr>

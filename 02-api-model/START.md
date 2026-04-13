@@ -49,17 +49,23 @@ curl -X POST http://localhost:8000/solve/er \
 
 ---
 
-## Exportar resultados para plantillas
+## Actualizar Resultados en Tesis
 
-```bash
-# Modo rápido: solo LGP + ER (~30 segundos)
-python export_results.py --quick --output ../redaccion/results.json
+Los resultados se guardan automáticamente en la carpeta `redaccion/resultados/` al ejecutarlos desde la interfaz web o mediante los comandos `curl` anteriores.
 
-# Export completo: LGP + ER + OAT + Rangos + 12 Escenarios (~5-10 minutos)
-python export_results.py --output ../redaccion/results.json
+Para procesar estos resultados y actualizar las tablas/datos en la redacción de la tesis:
 
-# Luego actualizar plantillas
-cd ../redaccion/tools
-python update_results.py ../results.json --dry-run  # Revisar
-python update_results.py ../results.json --execute  # Aplicar
-```
+1. Asegúrate de haber ejecutado los modelos deseados (LGP, ER, etc.).
+2. Ve a la carpeta de herramientas de redacción:
+   ```bash
+   cd ../redaccion/tools
+   ```
+3. Ejecuta el script de consolidación:
+   ```bash
+   # Primero previsualizar
+   python consolidar_resultados.py --dry-run
+   # Luego aplicar
+   python consolidar_resultados.py --execute
+   ```
+
+Para más detalles, consulta: [GUIA_EXPORTAR_RESULTADOS.md](../redaccion/GUIA_EXPORTAR_RESULTADOS.md)

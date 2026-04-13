@@ -81,9 +81,9 @@ La primera etapa consiste en resolver individualmente cada función objetivo (ec
 
 | | α (Costo) | γ (Emisiones) | β (Empleo) |
 |---------|-----------|---------------|-----------|
-| Min α | 144496313.4276463 | 1230.26816 | 1777.0 |
-| Min γ | 160111630.41777533 | 1074.237824 | 1931.0 |
-| Max β | 265733878.9000718 | 1385.295124 | 3088.0 |
+| Min α | {{DATO:resultado_individual_economico_α}} | {{DATO:resultado_individual_economico_γ}} | {{DATO:resultado_individual_economico_β}} |
+| Min γ | {{DATO:resultado_individual_ambiental_α}} | {{DATO:resultado_individual_ambiental_γ}} | {{DATO:resultado_individual_ambiental_β}} |
+| Max β | {{DATO:resultado_individual_social_α}} | {{DATO:resultado_individual_social_γ}} | {{DATO:resultado_individual_social_β}} |
 
 Nota. Elaboración propia.
 
@@ -106,8 +106,8 @@ La segunda etapa ejecuta en paralelo el modelo LGP (propuesto) y el modelo ER (r
 
 | Métrica | Valor |
 |---------|-------|
-| Costo total (α) | 144500820.2034637 |
-| Emisiones (γ) | 1212.473264 |
-| Empleo (β) | 1777.0 |
+| Costo total (α) | {{DATO:er_costo}} |
+| Emisiones (γ) | {{DATO:er_emisiones}} |
+| Empleo (β) | {{DATO:er_empleo}} |
 
 Además de los valores de las funciones objetivo, los resultados incluyen las variables de decisión operativas: flujos de producto (X_{ij}, Y_{jk}), número de viajes (Z_{ij}, ZZ_{jk}), personal contratado (S, SS_j, SSS_k), hectáreas activadas (W_i), y productores seleccionados (B_u).

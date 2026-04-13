@@ -27,7 +27,19 @@
 
 ---
 
-## 3. Empleo y Contexto Social
+## 3. Capacidades de Personal (CA, CB, CC)
+
+| Parámetro | Valor | Descripción | Justificación |
+|-----------|-------|-------------|---------------|
+| CA | 40 Kg/persona | Capacidad centro de acopio | Basado en actividades típicas: recepción, pesaje, selección básica, carga. Valor intermedio entre procesamiento en intermediarios (17-30) y recepción en detallistas (100-140) |
+| CB_j | [20, 25, 23, 18, 17, 20, 30] Kg/persona | Capacidad intermediarios | Valores específicos por intermediario según complejidad de procesamiento |
+| CC_k | [130, 140, 120, 100] Kg/persona | Capacidad detallistas | Mayor capacidad por actividades de recepción/display sin procesamiento intensivo |
+
+> **📌 Nota**: El valor de CA fue corregido de 22.43 (promedio erróneo de CB) a 40 Kg/persona en abril 2025 para reflejar adecuadamente la capacidad productiva de un centro de acopio típico en cadena de limones.
+
+---
+
+## 4. Empleo y Contexto Social
 
 | Fuente | Referencia | Uso en Modelo |
 |--------|-----------|---------------|
@@ -35,7 +47,7 @@
 
 ---
 
-## 4. Referencias del Diseño Metodológico (Revisión Bibliográfica)
+## 5. Referencias del Diseño Metodológico (Revisión Bibliográfica)
 
 Las siguientes referencias son citadas en el diseño metodológico como parte de la revisión bibliográfica sobre métodos de optimización multiobjetivo en cadenas agroalimentarias:
 
@@ -55,7 +67,7 @@ Las siguientes referencias son citadas en el diseño metodológico como parte de
 
 ---
 
-## 5. Normativas Pendientes de Documentar
+## 6. Normativas Pendientes de Documentar
 
 > Agregar aquí cualquier otra normativa, resolución, decreto o fuente oficial que se referencie en la tesis.
 > Incluir: referencia completa, qué parámetro o decisión sustenta, y cómo se vincula con el modelo.

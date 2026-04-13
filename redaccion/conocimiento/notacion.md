@@ -48,7 +48,7 @@
 
 | Símbolo | Código | Tipo | Descripción | Unidades |
 |---------|--------|------|-------------|----------|
-| CA | `m.CA` | escalar | Capacidad productiva persona en centro de acopio | Kg/persona |
+| CA | `m.CA` | escalar | Capacidad productiva persona en centro de acopio (40 Kg/persona) | Kg/persona |
 | CB_j | `m.CB[j]` | dict(J) | Capacidad productiva persona en intermediario j | Kg/persona |
 | CC_k | `m.CC[k]` | dict(K) | Capacidad productiva persona en detallista k | Kg/persona |
 

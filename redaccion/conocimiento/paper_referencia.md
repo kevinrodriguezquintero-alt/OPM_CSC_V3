@@ -122,7 +122,7 @@ $$
 | Método | ε-constraint | Lexicographic Goal Programming |
 | Prioridades | Sin jerarquía | P1→P2→P3 (Costo→Emisiones→Empleo) |
 | Implementación | AMPL + GUROBI (NEOS) | Python + Pyomo + HiGHS |
-| Transporte costo | `CT·Z·DPI` (costo × viajes × distancia) | `CT·X` (costo × kg) ❌ **INCORRECTO** |
+| Transporte costo | `CT·Z·DPI` (costo × viajes × distancia) | `CT·Z·DPI` (costo × viajes × distancia) ✅ **CORREGIDO** |
 | Epsilon social | 179 personas/semana | {{DATO:lgp_d3_minus}} |
 | Epsilon ambiental | 524,8 kg CO₂/semana | {{DATO:lgp_d2_plus}} |
 
