@@ -38,9 +38,9 @@ Interfaz web: http://localhost:3000
 | `resultados/esc_base.json` | ✅ **Actualizado API** | $917.65 | Fórmula corregida (CT·Z·DPI) |
 | `resultados/lgp.json` | ✅ **Actualizado API** | — | Fórmula corregida |
 | `resultados/er.json` | ✅ **Actualizado API** | — | Fórmula corregida |
-| `resultados/rangos.json` | ⏳ **Pendiente** | — | Actualizar desde sección "Rangos" |
-| `maestros/oat_lgp.json` | ⏳ **Pendiente** | — | Requiere regeneración completa |
-| `maestros/oat_er.json` | ⏳ **Pendiente** | — | Requiere regeneración completa |
+| `resultados/rangos.json` | ✅ **Actualizado API** | — | Shadow prices desde endpoint Rangos |
+| `maestros/oat_lgp.json` | ✅ **Actualizado API** | — | Generado desde endpoint OAT |
+| `maestros/oat_er.json` | ✅ **Actualizado API** | — | Generado desde endpoint OAT |
 
 ---
 
@@ -82,7 +82,7 @@ Abre http://localhost:3000 en tu navegador.
 - Ve a la sección "Escenarios"
 - Configura cada escenario
 - Ejecuta uno por uno
-- **Archivos generados:** `redaccion/resultados/escenarios/esc_*.json`
+- **Archivos generados:** `redaccion/resultados/esc_*.json` (raíz, no subdirectorio)
 
 ---
 
@@ -104,7 +104,7 @@ Archivos esperados:
 - `resultados/er.json` - Resultados Epsilon-Constraint
 - `resultados/oat.json` - Análisis de sensibilidad OAT
 - `resultados/rangos.json` - Rangos y precios sombra
-- `resultados/escenarios/*.json` - Escenarios individuales
+- `resultados/esc_*.json` - Escenarios individuales (en raíz)
 
 ---
 
@@ -305,22 +305,6 @@ curl -X POST http://localhost:8000/params/reset
 
 ---
 
-### 5. ER (Epsilon-Constraint) muy lento o timeout
-**Síntoma:** Cada solve toma 45-60+ segundos, ER completo tarda >6 minutos.
-
-**Causa:** HiGHS busca optimalidad estricta (0.01% gap) sin límite de tiempo.
-
-**Solución aplicada:** Configurar HiGHS en `config.py`:
-```python
-solver.options["mip_rel_gap"] = 0.01  # Aceptar 1% gap (vs 0.01% default)
-solver.options["time_limit"] = 180    # Máx 180 seg por solve
-solver.options["threads"] = 4         # Paralelismo
-solver.options["output_flag"] = False  # Menos logging
-```
-
-**Resultado:** Tiempo esperado ahora ~2-3 minutos para ER completo.
-
----
 
 ### 6. Archivos no se generan automáticamente
 **Síntoma:** No aparecen archivos en `redaccion/resultados/`.

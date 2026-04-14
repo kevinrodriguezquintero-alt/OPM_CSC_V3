@@ -1,5 +1,4 @@
 """Epsilon-Constraint Method solver (Pareto frontier: Cost vs. Emissions)."""
-import io
 import contextlib
 import pyomo.environ as pyo
 from config import get_solver

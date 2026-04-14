@@ -303,11 +303,8 @@ def _extract_cost_breakdown_from_vars(variables: dict, params, actual_total: flo
         cost_damage_id *= factor
         total_transport = cost_transport_pi + cost_transport_id
         total_damage = cost_damage_pi + cost_damage_id
-
-    # En caso de normalizacion (asegura actualizar el labor_total)
-    if calculated_total > 0 and abs(calculated_total - actual_total) > 0.01:
         total_labor = cost_labor_acopio + cost_labor_int + cost_labor_det
-        
+
     return {
         "production": round(cost_production, 2),
         "intermediation": round(cost_intermediation, 2),
@@ -489,9 +486,6 @@ def _run_and_extract(solver_name: str, steps: int, permitir_maestro: bool = Fals
         objs["producer_variants"] = _extract_producer_variants(vars_dict, params)
         return objs
     return None
-
-
-# Nota: Función _calculate_cost_breakdown_from_vars eliminada - ahora usamos _extract_cost_breakdown_from_vars
 
 
 def _run_er_and_extract(solver_name: str, steps: int, pilar: str | int = "middle") -> dict | None:
