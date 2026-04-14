@@ -1835,7 +1835,9 @@ export function renderCombinedScenariosResult(lgp, er, scenarioName = "Escenario
   }
 
   const paramsEntries = Object.entries(lgp.params_modified || {});
-  const base = lgp.base; // Should be same for both
+  // Cada método tiene su propio baseline (LGP minimiza costo, ER Iteración 78 equilibra con emisiones)
+  const lgpBase = lgp.base;
+  const erBase = er.base;
 
   // Organizar parámetros en filas: 2 de 10 y 1 de 5
   const chunkSize = 10;
@@ -1898,24 +1900,24 @@ export function renderCombinedScenariosResult(lgp, er, scenarioName = "Escenario
               <td class="!text-left font-bold !px-3 !py-2">Costo</td>
               <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmt(lgp.propuesto.cost)}</td>
               <td class="!text-center font-mono !px-3 !py-2">${fmt(er.propuesto.cost)}</td>
-              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.cost, base.cost)}</td>
-              <td class="!text-center !px-3 !py-2">${diffStr(er.propuesto.cost, base.cost)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.cost, lgpBase.cost)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(er.propuesto.cost, erBase.cost)}</td>
               <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.cost, er.propuesto.cost)}</td>
             </tr>
             <tr>
               <td class="!text-left font-bold !px-3 !py-2">Emisiones</td>
               <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmt(lgp.propuesto.emissions)}</td>
               <td class="!text-center font-mono !px-3 !py-2">${fmt(er.propuesto.emissions)}</td>
-              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.emissions, base.emissions)}</td>
-              <td class="!text-center !px-3 !py-2">${diffStr(er.propuesto.emissions, base.emissions)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.emissions, lgpBase.emissions)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(er.propuesto.emissions, erBase.emissions)}</td>
               <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.emissions, er.propuesto.emissions)}</td>
             </tr>
             <tr>
               <td class="!text-left font-bold !px-3 !py-2">Empleo</td>
               <td class="!text-center font-mono border-l border-line/50 !px-3 !py-2">${fmt(lgp.propuesto.employment)}</td>
               <td class="!text-center font-mono !px-3 !py-2">${fmt(er.propuesto.employment)}</td>
-              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.employment, base.employment, true)}</td>
-              <td class="!text-center !px-3 !py-2">${diffStr(er.propuesto.employment, base.employment, true)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.employment, lgpBase.employment, true)}</td>
+              <td class="!text-center !px-3 !py-2">${diffStr(er.propuesto.employment, erBase.employment, true)}</td>
               <td class="!text-center !px-3 !py-2">${diffStr(lgp.propuesto.employment, er.propuesto.employment, true)}</td>
             </tr>
           </tbody>

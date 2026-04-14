@@ -1,4 +1,5 @@
 import copy
+import os
 import sys
 import io
 import logging
@@ -14,8 +15,10 @@ from solvers.er import run_er
 
 router = APIRouter(prefix="/solve", tags=["solve"])
 
-# Directorio para guardar resultados automáticamente (relativo a 02-api-model, sube a raíz del proyecto)
-RESULTADOS_DIR = Path("../redaccion/resultados")
+# Determinar la raíz del proyecto de forma robusta (api/routers/solve.py -> api/routers -> api -> 02-api-model -> raíz)
+RAIZ_PROYECTO = Path(__file__).resolve().parent.parent.parent.parent
+RESULTADOS_DIR = RAIZ_PROYECTO / "redaccion" / "resultados"
+MAESTROS_DIR = RAIZ_PROYECTO / "redaccion" / "maestros"
 
 
 def _ensure_stdout_safety():
@@ -119,7 +122,7 @@ def solve_lgp():
 
 
 class ERRequest(BaseModel):
-    steps: int = Field(default=5, ge=2, le=50, description="Number of epsilon iterations")
+    steps: int = Field(default=5, ge=2, le=100, description="Number of epsilon iterations")
 
 
 @router.post("/er")
@@ -433,11 +436,48 @@ def _extract_producer_variants(variables: dict, params) -> dict:
         "total_hectares": round(total_hectares, 2)
     }
 
-def _run_and_extract(solver_name: str, steps: int) -> dict | None:
-    """Run LGP and return a unified objectives dict, or None if infeasible."""
+def _run_and_extract(solver_name: str, steps: int, permitir_maestro: bool = False, method: str = "lgp") -> dict | None:
+    """Run specified method and return a unified objectives dict, or None if infeasible.
+    Supports fixed-point (Maestro) loading for consistency.
+    """
     params = app_state.get_params_object()
-    from solvers.lgp import run_lgp
+
+    # --- Lógica de Punto Fijo (Maestro) ---
+    if permitir_maestro:
+        try:
+            # Seleccionar archivo según método
+            if method == "er":
+                PATH = MAESTROS_DIR / "er.json"
+                KEY = "er_punto_medio_completo" # El ER guarda el punto completo aquí
+            else:
+                PATH = MAESTROS_DIR / "lgp.json"
+                KEY = "lgp_completo"
+
+            if PATH.exists():
+                with open(PATH, 'r', encoding='utf-8') as f:
+                    maestro_data = json.load(f)
+                    res_completo = maestro_data.get(KEY)
+                    if res_completo:
+                        logging.info(f"    [_run_and_extract] Usando {method.upper()} Base desde maestro.")
+                        res_vars = res_completo.get("variables", {})
+                        objs = res_completo.get("objectives", {})
+                        # Re-extraer métricas para asegurar diccionarios limpios
+                        objs["metrics"] = _extract_operational_metrics(res_vars)
+                        objs["cost_breakdown"] = _extract_cost_breakdown_from_vars(res_vars, params, objs.get("cost", 0))
+                        objs["emissions_breakdown"] = _extract_emissions_breakdown(res_vars, params)
+                        objs["employment_breakdown"] = _extract_employment_breakdown(res_vars)
+                        objs["producer_variants"] = _extract_producer_variants(res_vars, params)
+                        return objs
+        except Exception as e:
+            logging.warning(f"    [!] Error cargando {method} del maestro: {e}")
+
+    # --- Ejecución normal de Solver si no hay maestro ---
+    if method == "er":
+        # Para ER, derivamos a la función especializada (paso único o frontera)
+        return _run_er_and_extract(solver_name, steps)
     
+    # LGP (3 pasos)
+    from solvers.lgp import run_lgp
     res = run_lgp(params, solver_name, capture_log=False)
     if res.get("status") == "optimal":
         objs = res["objectives"]
@@ -454,7 +494,7 @@ def _run_and_extract(solver_name: str, steps: int) -> dict | None:
 # Nota: Función _calculate_cost_breakdown_from_vars eliminada - ahora usamos _extract_cost_breakdown_from_vars
 
 
-def _run_er_and_extract(solver_name: str, steps: int, pilar: str = "middle") -> dict | None:
+def _run_er_and_extract(solver_name: str, steps: int, pilar: str | int = "middle") -> dict | None:
     """Run ER and return objectives from a specific point of the Pareto frontier or a pilar."""
     # If a specific pilar is requested, we only need to solve once for that objective
     params = app_state.get_params_object()
@@ -462,14 +502,18 @@ def _run_er_and_extract(solver_name: str, steps: int, pilar: str = "middle") -> 
     from solvers.build_model import build_model, extract_variables, _solver_status
     import pyomo.environ as pyo
 
+
     def _get_objs_and_metrics(m, vars_dict=None):
-        objs = {
-            "cost": pyo.value(m.Obj_Cost),
-            "emissions": pyo.value(m.Obj_Env),
-            "employment": pyo.value(m.Obj_Social),
-        }
         if vars_dict is None:
             vars_dict = extract_variables(m)
+        
+        objs = {
+            "cost": float(pyo.value(m.Obj_Cost)) if hasattr(m, 'Obj_Cost') else 0.0,
+            "emissions": float(pyo.value(m.Obj_Env)) if hasattr(m, 'Obj_Env') else 0.0,
+            "employment": float(pyo.value(m.Obj_Social)) if hasattr(m, 'Obj_Social') else 0.0,
+        }
+        
+        # Add all extra metrics
         objs["metrics"] = _extract_operational_metrics(vars_dict)
         objs["cost_breakdown"] = _extract_cost_breakdown_from_vars(vars_dict, params, objs["cost"])
         objs["emissions_breakdown"] = _extract_emissions_breakdown(vars_dict, params)
@@ -477,6 +521,7 @@ def _run_er_and_extract(solver_name: str, steps: int, pilar: str = "middle") -> 
         objs["producer_variants"] = _extract_producer_variants(vars_dict, params)
         return objs
 
+    # --- Caso 1: Pilares Individuales (Extremos) ---
     if pilar in ("cost", "emissions", "employment"):
         model = pyo.ConcreteModel()
         build_model(model, params)
@@ -493,29 +538,99 @@ def _run_er_and_extract(solver_name: str, steps: int, pilar: str = "middle") -> 
             return _get_objs_and_metrics(model)
         return None
 
-    # Default: Run ER and take middle point
+    # --- Caso 2: Punto Fijo (Iteración 78 del Maestro) ---
+    # Si el pilar es 'middle' (default), intentamos cargar el límite de emisiones 
+    # de la iteración 78 guardada en el maestro para asegurar consistencia.
+    maestro_epsilon = None
+    if pilar == "middle":
+        try:
+            MAESTRO_ER_PATH = MAESTROS_DIR / "er.json"
+            if MAESTRO_ER_PATH.exists():
+                with open(MAESTRO_ER_PATH, 'r', encoding='utf-8') as f:
+                    maestro_data = json.load(f)
+                    maestro_epsilon = maestro_data.get("er_emisiones")
+                    if maestro_epsilon:
+                        logging.info(f"    [_run_er_and_extract] Usando Epsilon Fijo (Iter 78) del maestro: {maestro_epsilon}")
+        except Exception as e:
+            logging.warning(f"No se pudo cargar epsilon del maestro: {e}")
+
+    # Si tenemos un epsilon del maestro, resolvemos UNA SOLA VEZ (modo Punto Fijo / Sostenible)
+    if maestro_epsilon is not None:
+        try:
+            model = pyo.ConcreteModel()
+            build_model(model, params)
+            solver = get_solver(solver_name)
+            
+            # Asegurar tipo float por seguridad
+            m_eps = float(maestro_epsilon)
+            
+            # Objetivo: Minimizar Costo
+            model.obj = pyo.Objective(expr=model.Obj_Cost, sense=pyo.minimize)
+            # Restricción: No exceder emisiones de referencia (Iteración 78)
+            model.c_sustainability = pyo.Constraint(expr=model.Obj_Env <= m_eps)
+            
+            res = solver.solve(model, tee=False)
+            if _solver_status(res) == "optimal":
+                return _get_objs_and_metrics(model)
+            else:
+                logging.warning("No se encontró solución óptima con el epsilon del maestro, cayendo a modo frontera...")
+        except Exception as solve_err:
+            logging.error(f"Error en solve de punto fijo: {solve_err}")
+
+    # --- Fallback: Ejecutar Frontera ER original ---
     res = run_er(params, solver_name, steps, capture_log=False)
     frontier = [p for p in res.get("pareto_frontier", []) if p.get("status") == "optimal"]
     if not frontier:
         return None
-    mid = frontier[len(frontier) // 2]
+
+    # Selección de punto: número de iteración (1-indexed) o medio por defecto
+    selected = None
+    try:
+        # Si pilar es un número o un string numérico, intentar usar como índice
+        if isinstance(pilar, int) or (isinstance(pilar, str) and pilar.isdigit()):
+            idx = int(pilar) - 1
+            if 0 <= idx < len(frontier):
+                selected = frontier[idx]
+    except:
+        pass
+
+    if not selected:
+        # Fallback al punto medio
+        selected = frontier[len(frontier) // 2]
     
-    objs = mid.get("objectives", {})
-    mid_vars = mid.get("variables", {})
-    objs["metrics"] = _extract_operational_metrics(mid_vars)
-    objs["cost_breakdown"] = _extract_cost_breakdown_from_vars(mid_vars, params, objs.get("cost", 0))
-    objs["emissions_breakdown"] = _extract_emissions_breakdown(mid_vars, params)
-    objs["employment_breakdown"] = _extract_employment_breakdown(mid_vars)
-    objs["producer_variants"] = _extract_producer_variants(mid_vars, params)
-    return objs
+    # Extraer objetivos y variables de la iteración seleccionada
+    res_objs = copy.deepcopy(selected.get("objectives", {}))
+    res_vars = selected.get("variables", {})
+    
+    # Rellenar con los desgloses detallados
+    res_objs["metrics"] = _extract_operational_metrics(res_vars)
+    res_objs["cost_breakdown"] = _extract_cost_breakdown_from_vars(res_vars, params, res_objs.get("cost", 0))
+    res_objs["emissions_breakdown"] = _extract_emissions_breakdown(res_vars, params)
+    res_objs["employment_breakdown"] = _extract_employment_breakdown(res_vars)
+    res_objs["producer_variants"] = _extract_producer_variants(res_vars, params)
+    
+    return res_objs
 
 
 class SensitivityRequest(BaseModel):
     params_to_test: List[str]
     percentages: List[float] = [10.0, -10.0]
     method: str = "lgp"
-    steps: int = Field(default=5, ge=2, le=20)
-    er_pilar: str = "middle"
+    steps: int = Field(default=5, ge=2, le=50)
+    er_pilar: str | int = "middle"
+
+
+def _safe_solve(meth: str, body, permitir_maestro: bool = False) -> dict | None:
+    """Wrapper to run a solve and log errors instead of crashing."""
+    try:
+        if meth == "er":
+            return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar)
+        return _run_and_extract(app_state.solver_name, body.steps, permitir_maestro=permitir_maestro)
+    except Exception as e:
+        logging.error(f"Error in _safe_solve ({meth}): {e}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 @router.post("/sensitivity")
@@ -525,14 +640,9 @@ def solve_sensitivity(body: SensitivityRequest):
     if body.method not in ("lgp", "er"):
         raise HTTPException(status_code=422, detail="method must be 'lgp' or 'er'")
 
-    def _solve() -> dict | None:
-        if body.method == "er":
-            return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar)
-        return _run_and_extract(app_state.solver_name, body.steps)
-
     base_data = copy.deepcopy(app_state.params)
     try:
-        base_objs = _solve()
+        base_objs = _safe_solve(body.method, body, permitir_maestro=True)
         if base_objs is None:
             raise HTTPException(status_code=422, detail="Base model not optimal")
 
@@ -541,10 +651,25 @@ def solve_sensitivity(body: SensitivityRequest):
             if param not in app_state.params:
                 continue
             for pct in body.percentages:
+                if abs(pct) < 1e-6:
+                    # Caso 0% - Usar el maestro directamente
+                    results.append({
+                        "param": param,
+                        "change": "0.0%",
+                        "cost": base_objs["cost"],
+                        "env":  base_objs["emissions"],
+                        "soc":  base_objs["employment"],
+                        "elas_cost": 0.0,
+                        "elas_env": 0.0,
+                        "elas_soc": 0.0,
+                        "status": "optimal"
+                    })
+                    continue
+
                 try:
                     new_data = _perturb_param(base_data, param, pct)
                     app_state.params = new_data
-                    new_objs = _solve()
+                    new_objs = _safe_solve(body.method, body, permitir_maestro=False)
                     results.append({
                         "param": param,
                         "change": f"{pct:+.1f}%",
@@ -606,8 +731,8 @@ def save_oat_result(body: SaveOatRequest):
 class ScenariosRequest(BaseModel):
     params_to_test: dict[str, float]  # { "param_name": percentage }
     method: str = "lgp"
-    steps: int = Field(default=5, ge=2, le=20)
-    er_pilar: str = "middle"
+    steps: int = Field(default=5, ge=2, le=50)
+    er_pilar: str | int = "middle"
     escenario_id: str | None = None  # ID opcional para nombre de archivo (ej: "esc1_boom")
 
 
@@ -638,28 +763,29 @@ def solve_scenarios(body: ScenariosRequest):
     if body.method not in ("lgp", "er", "both"):
         raise HTTPException(status_code=422, detail="method must be 'lgp', 'er' or 'both'")
 
-    def _safe_solve(meth: str) -> dict | None:
-        try:
-            if meth == "er":
-                return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar)
-            return _run_and_extract(app_state.solver_name, body.steps)
-        except Exception:
-            return None
-
     base_data = copy.deepcopy(app_state.params)
     
     def _run_full_scenario(meth: str):
+        # Determinamos si hay algún cambio real en los parámetros
+        tiene_cambios = any(abs(v) > 1e-6 for v in body.params_to_test.values())
+
         # Reset to base to compute base objs for this method
         app_state.params = copy.deepcopy(base_data)
-        b_objs = _safe_solve(meth)
+        # 1. Base (Maestro habilitado para rapidez y coherencia)
+        b_objs = _safe_solve(meth, body, permitir_maestro=True)
         if b_objs is None: return None
 
-        # Proposed
+        # 2. Proposed
+        if not tiene_cambios:
+            # Si no hay cambios, el propuesto es idéntico a la base (Maestro)
+            return {"base": b_objs, "propuesto": copy.deepcopy(b_objs)}
+
         p_data = copy.deepcopy(base_data)
         for p, pct in body.params_to_test.items():
             _perturb_in_place(p_data, p, pct)
         app_state.params = p_data
-        p_objs = _safe_solve(meth)
+        # 3. Solve (Maestro deshabilitado para perturbación)
+        p_objs = _safe_solve(meth, body, permitir_maestro=False)
 
         return {"base": b_objs, "propuesto": p_objs}
 
@@ -851,18 +977,27 @@ def solve_sensitivity_ranges(body: RangesRequest = RangesRequest()):
     solver = app_state.solver_name
 
     try:
-        lgp_base = _run_and_extract(solver, 5)
+        # 1. Base LGP (Usa el maestro de $126.37M)
+        lgp_base = _run_and_extract(solver, 5, permitir_maestro=True, method="lgp")
 
-        # Shadow prices — ER (Compromise point)
-        # Find target epsilon from a standard 5-step ER run
+        # 2. Base ER (Sincronizado con el Maestro ER - Iteración 78)
+        # Cargamos el maestro para obtener el epsilon (emisiones) objetivo de la tesis
+        er_maestro_data = _run_and_extract(solver, 5, permitir_maestro=True, method="er")
+        
         target_epsilon = None
-        full_er = run_er(app_state.get_params_object(), solver, steps=5, capture_log=False)
-        frontier = [p for p in full_er.get("pareto_frontier", []) if p.get("status") == "optimal"]
-        if frontier:
-            mid = frontier[len(frontier)//2]
-            target_epsilon = mid["objectives"]["emissions"]
-
-        er_base = _quick_feasible(solver, epsilon=target_epsilon)
+        if er_maestro_data:
+            target_epsilon = er_maestro_data.get("emissions")
+            er_base = er_maestro_data
+        else:
+            # Fallback si no hay maestro: buscar el punto medio de una frontera rápida
+            full_er = run_er(app_state.get_params_object(), solver, steps=5, capture_log=False)
+            frontier = [p for p in full_er.get("pareto_frontier", []) if p.get("status") == "optimal"]
+            if frontier:
+                mid = frontier[len(frontier)//2]
+                target_epsilon = mid["objectives"]["emissions"]
+                er_base = _quick_feasible(solver, epsilon=target_epsilon)
+            else:
+                er_base = None
 
         if lgp_base is None and er_base is None:
             raise HTTPException(status_code=422, detail="Modelo base infactible")

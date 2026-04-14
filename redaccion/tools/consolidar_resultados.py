@@ -126,8 +126,10 @@ def cargar_lgp() -> dict:
     return lgp_data
 
 
-def cargar_er() -> dict:
-    """Cargar resultados ER (Epsilon-Constraint) completos del punto medio."""
+def cargar_er(iter_custom: int = None) -> dict:
+    """Cargar resultados ER (Epsilon-Constraint) completos.
+    Si iter_custom es None, usa el punto medio.
+    """
     ruta = RESULTADOS_DIR / "er.json"
     if not ruta.exists():
         print(f"[!]  No se encontró {ruta}")
@@ -143,7 +145,18 @@ def cargar_er() -> dict:
     if not optimal:
         return {}
     
-    mid = optimal[len(optimal) // 2]
+    # Selección de iteración: manual (1-indexed) o central
+    if iter_custom is not None:
+        idx = iter_custom - 1
+        if 0 <= idx < len(optimal):
+            mid = optimal[idx]
+            print(f"    [ER] Usando iteración seleccionada manualmente: {iter_custom}")
+        else:
+            mid = optimal[len(optimal) // 2]
+            print(f"    [!] Iteración {iter_custom} fuera de rango. Usando punto medio por defecto.")
+    else:
+        mid = optimal[len(optimal) // 2]
+
     objs = mid.get("objectives", {})
     
     # Extraer payoff table
@@ -293,7 +306,8 @@ def _guardar_maestro(ruta: Path, datos: dict, nombre: str):
 
 def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True, 
                          incluir_oat_lgp=True, incluir_oat_er=True,
-                         incluir_rangos=True, incluir_escenarios=True) -> dict:
+                         incluir_rangos=True, incluir_escenarios=True,
+                         er_iter=None) -> dict:
     """
     Consolidar resultados seleccionados en archivos maestros individuales.
     Cada maestro se actualiza solo si se selecciona, los demás se preservan.
@@ -309,7 +323,7 @@ def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True,
     
     if incluir_er:
         print("    -> Actualizando Maestro ER...")
-        datos_er = cargar_er()
+        datos_er = cargar_er(er_iter)
         if datos_er:
             _guardar_maestro(MAESTRO_ER, datos_er, "ER")
     
@@ -493,6 +507,7 @@ EJEMPLOS:
     parser.add_argument('--oat-er', dest='oat_er', action='store_true', help='Incluir solo OAT-ER')
     parser.add_argument('--rangos', action='store_true', help='Incluir resultados de rangos')
     parser.add_argument('--escenarios', action='store_true', help='Incluir resultados de escenarios')
+    parser.add_argument('--er-iter', type=int, help='Índice de iteración para punto medio de ER (1-indexed)')
     
     args = parser.parse_args()
     
@@ -514,7 +529,8 @@ EJEMPLOS:
         incluir_oat_lgp=args.oat_lgp,
         incluir_oat_er=args.oat_er,
         incluir_rangos=args.rangos,
-        incluir_escenarios=args.escenarios
+        incluir_escenarios=args.escenarios,
+        er_iter=args.er_iter
     )
     
     if not data:
