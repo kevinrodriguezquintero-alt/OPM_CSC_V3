@@ -1,18 +1,18 @@
 {
-  "base_lgp_a": 126377407.96215127,
-  "base_lgp_g": 1220.60924,
-  "base_lgp_b": 1415.0,
-  "base_lgp_a_prop": 126377407.96215127,
-  "base_lgp_g_prop": 1220.60924,
-  "base_lgp_b_prop": 1415.0,
-  "base_er_a": 126835796.57196534,
-  "base_er_g": 1088.24672,
-  "base_er_b": 1418.0,
-  "base_er_a_prop": 126835796.57196534,
-  "base_er_g_prop": 1088.24672,
-  "base_er_b_prop": 1418.0,
-  "base_factible": "Si",
-  "base_completo": {
+  "expansion_lgp_a": 126377407.96215127,
+  "expansion_lgp_g": 1220.60924,
+  "expansion_lgp_b": 1415.0,
+  "expansion_lgp_a_prop": 104232058.73687164,
+  "expansion_lgp_g_prop": 1219.097784,
+  "expansion_lgp_b_prop": 1138.0,
+  "expansion_er_a": 126835796.57196534,
+  "expansion_er_g": 1088.24672,
+  "expansion_er_b": 1418.0,
+  "expansion_er_a_prop": 104802397.46929727,
+  "expansion_er_g_prop": 1086.4472,
+  "expansion_er_b_prop": 1144.0,
+  "expansion_factible": "Si",
+  "expansion_completo": {
     "method": "both",
     "lgp": {
       "base": {
@@ -323,32 +323,32 @@
         }
       },
       "propuesto": {
-        "cost": 126377407.96215127,
-        "emissions": 1220.60924,
-        "employment": 1415.0,
+        "cost": 104232058.73687164,
+        "emissions": 1219.097784,
+        "employment": 1138.0,
         "metrics": {
-          "pers_int": 859,
-          "pers_det": 135,
+          "pers_int": 691,
+          "pers_det": 108,
           "viajes_totales": 32,
-          "flujo_pi": 16840.0,
-          "flujo_id": 15249.999999999918,
-          "top_intermediarios": "6 (5,360 kg), 4 (4,518 kg), 5 (3,009 kg)",
+          "flujo_pi": 16950.0,
+          "flujo_id": 15262.499999999998,
+          "top_intermediarios": "6 (5,375 kg), 4 (4,522 kg), 5 (3,018 kg)",
           "inters_list": [
             {
               "id": 6,
-              "flow": 5360.0
+              "flow": 5375.0
             },
             {
               "id": 4,
-              "flow": 4518.0
+              "flow": 4522.5
             },
             {
               "id": 5,
-              "flow": 3009.0
+              "flow": 3017.5
             },
             {
               "id": 7,
-              "flow": 1290.0
+              "flow": 1312.5
             },
             {
               "id": 1,
@@ -356,30 +356,30 @@
             },
             {
               "id": 2,
-              "flow": 850.0
+              "flow": 875.0
             },
             {
               "id": 3,
-              "flow": 713.0
+              "flow": 747.5
             }
           ],
-          "all_rutas": "X[1→6] (5,360 kg); X[1→4] (4,518 kg); X[1→5] (3,009 kg); X[1→7] (1,290 kg); X[1→1] (1,100 kg); X[1→2] (850 kg); X[1→3] (713 kg); Y[4→4] (3,779 kg); Y[6→1] (2,990 kg); Y[5→4] (1,997 kg); Y[6→2] (1,995 kg); Y[1→3] (989 kg); Y[7→4] (893 kg); Y[5→2] (851 kg); Y[2→4] (816 kg); Y[3→4] (616 kg); Y[7→2] (234 kg); Y[6→3] (91 kg)",
+          "all_rutas": "X[1→6] (5,375 kg); X[1→4] (4,522 kg); X[1→5] (3,018 kg); X[1→7] (1,312 kg); X[1→1] (1,100 kg); X[1→2] (875 kg); X[1→3] (748 kg); Y[4→4] (3,782 kg); Y[5→4] (2,000 kg); Y[6→1] (1,763 kg); Y[6→4] (1,572 kg); Y[1→2] (1,007 kg); Y[6→2] (937 kg); Y[7→1] (857 kg); Y[5→2] (856 kg); Y[2→1] (793 kg); Y[6→3] (770 kg); Y[3→4] (646 kg); Y[7→3] (280 kg)",
           "routes_list": [
             {
               "route": "X[1→6]",
-              "flow": 5360.0
+              "flow": 5375.0
             },
             {
               "route": "X[1→4]",
-              "flow": 4518.0
+              "flow": 4522.5
             },
             {
               "route": "X[1→5]",
-              "flow": 3009.0
+              "flow": 3017.5
             },
             {
               "route": "X[1→7]",
-              "flow": 1290.0
+              "flow": 1312.5
             },
             {
               "route": "X[1→1]",
@@ -387,55 +387,59 @@
             },
             {
               "route": "X[1→2]",
-              "flow": 850.0
+              "flow": 875.0
             },
             {
               "route": "X[1→3]",
-              "flow": 713.0
+              "flow": 747.5
             },
             {
               "route": "Y[4→4]",
-              "flow": 3778.690909090911
-            },
-            {
-              "route": "Y[6→1]",
-              "flow": 2989.999999999964
+              "flow": 3782.454545454555
             },
             {
               "route": "Y[5→4]",
-              "flow": 1996.669107739899
+              "flow": 2000.0
+            },
+            {
+              "route": "Y[6→1]",
+              "flow": 1762.773054440928
+            },
+            {
+              "route": "Y[6→4]",
+              "flow": 1571.977272727277
+            },
+            {
+              "route": "Y[1→2]",
+              "flow": 1007.476635514019
             },
             {
               "route": "Y[6→2]",
-              "flow": 1994.903357976307
+              "flow": 936.5563833539043
             },
             {
-              "route": "Y[1→3]",
-              "flow": 988.9908256880375
-            },
-            {
-              "route": "Y[7→4]",
-              "flow": 892.5306222330747
+              "route": "Y[7→1]",
+              "flow": 856.5026464936545
             },
             {
               "route": "Y[5→2]",
-              "flow": 851.296347123113
+              "flow": 855.9669811320757
             },
             {
-              "route": "Y[2→4]",
-              "flow": 816.3366336633663
-            },
-            {
-              "route": "Y[3→4]",
-              "flow": 615.7727272727271
-            },
-            {
-              "route": "Y[7→2]",
-              "flow": 233.8002949005804
+              "route": "Y[2→1]",
+              "flow": 793.2242990654178
             },
             {
               "route": "Y[6→3]",
-              "flow": 91.00917431193781
+              "flow": 769.7041088962548
+            },
+            {
+              "route": "Y[3→4]",
+              "flow": 645.5681818181677
+            },
+            {
+              "route": "Y[7→3]",
+              "flow": 280.2958911037439
             }
           ],
           "trips_list": [
@@ -468,23 +472,23 @@
               "value": 1
             },
             {
-              "trip": "ZZ[6→1]",
-              "value": 3
-            },
-            {
               "trip": "ZZ[5→4]",
               "value": 2
             },
             {
-              "trip": "ZZ[6→2]",
+              "trip": "ZZ[6→1]",
               "value": 2
             },
             {
-              "trip": "ZZ[1→3]",
+              "trip": "ZZ[6→4]",
+              "value": 2
+            },
+            {
+              "trip": "ZZ[1→2]",
               "value": 1
             },
             {
-              "trip": "ZZ[2→4]",
+              "trip": "ZZ[2→1]",
               "value": 1
             },
             {
@@ -500,133 +504,125 @@
               "value": 1
             },
             {
+              "trip": "ZZ[6→2]",
+              "value": 1
+            },
+            {
               "trip": "ZZ[6→3]",
               "value": 1
             },
             {
-              "trip": "ZZ[7→2]",
+              "trip": "ZZ[7→1]",
               "value": 1
             },
             {
-              "trip": "ZZ[7→4]",
+              "trip": "ZZ[7→3]",
               "value": 1
             }
           ]
         },
         "cost_breakdown": {
-          "production": 9278840.0,
-          "intermediation": 2469700.0,
-          "labor_acopio": 21050000,
-          "labor_intermediario": 77455342,
-          "labor_detallista": 14140000,
-          "labor_total": 112645342,
+          "production": 9339450.0,
+          "intermediation": 2481125.0,
+          "labor_acopio": 16950000,
+          "labor_intermediario": 62210715,
+          "labor_detallista": 11140000,
+          "labor_total": 90300715,
           "transport_pi": 352.69,
-          "transport_id": 564.97,
-          "transport_total": 917.65,
-          "damage_pi": 435797.91,
-          "damage_id": 1546810.39,
-          "damage_total": 1982608.31,
-          "total": 126377407.96
+          "transport_id": 888.12,
+          "transport_total": 1240.81,
+          "damage_pi": 438500.09,
+          "damage_id": 1671027.83,
+          "damage_total": 2109527.93,
+          "total": 104232058.74
         },
         "emissions_breakdown": {
           "transport_pi": 637.16,
-          "transport_id": 583.45,
-          "total": 1220.61
+          "transport_id": 581.94,
+          "total": 1219.1
         },
         "employment_breakdown": {
-          "acopio": 421,
-          "intermediarios": 859,
-          "detallistas": 135,
-          "total": 1415,
+          "acopio": 339,
+          "intermediarios": 691,
+          "detallistas": 108,
+          "total": 1138,
           "intermediarios_detail": [
             {
               "location": 6,
-              "value": 268
+              "value": 215
             },
             {
               "location": 4,
-              "value": 251
+              "value": 201
             },
             {
               "location": 5,
-              "value": 177
+              "value": 142
             },
             {
               "location": 1,
-              "value": 55
+              "value": 44
             },
             {
               "location": 7,
-              "value": 43
+              "value": 35
             },
             {
               "location": 2,
-              "value": 34
+              "value": 28
             },
             {
               "location": 3,
-              "value": 31
+              "value": 26
             }
           ],
           "detallistas_detail": [
             {
               "location": 4,
-              "value": 81
+              "value": 64
             },
             {
               "location": 1,
-              "value": 23
+              "value": 21
             },
             {
               "location": 2,
-              "value": 22
+              "value": 16
             },
             {
               "location": 3,
-              "value": 9
+              "value": 7
             }
           ]
         },
         "producer_variants": {
           "active_variants": [
             1,
-            4,
-            6,
             7,
             8
           ],
-          "total_variants": 5,
+          "total_variants": 3,
           "hectares_by_producer": {
-            "1": 22.9
+            "1": 24.0
           },
           "hectares_breakdown": [
             {
-              "variant": 4,
-              "hectares": 6.4,
-              "yield_kg_ha": 25.78
-            },
-            {
               "variant": 7,
-              "hectares": 6.4,
+              "hectares": 9.600000000000001,
               "yield_kg_ha": 82.03
             },
             {
               "variant": 8,
-              "hectares": 6.4,
+              "hectares": 9.600000000000001,
               "yield_kg_ha": 117.18
             },
             {
               "variant": 1,
-              "hectares": 3.2,
+              "hectares": 4.800000000000001,
               "yield_kg_ha": 6.25
-            },
-            {
-              "variant": 6,
-              "hectares": 0.5,
-              "yield_kg_ha": 60
             }
           ],
-          "total_hectares": 22.9
+          "total_hectares": 24.0
         }
       }
     },
@@ -947,20 +943,20 @@
         }
       },
       "propuesto": {
-        "cost": 126835796.57196534,
-        "emissions": 1088.24672,
-        "employment": 1418.0,
+        "cost": 104802397.46929727,
+        "emissions": 1086.4472,
+        "employment": 1144.0,
         "metrics": {
-          "pers_int": 860,
-          "pers_det": 136,
+          "pers_int": 694,
+          "pers_det": 109,
           "viajes_totales": 30,
-          "flujo_pi": 16880.0,
-          "flujo_id": 15200.0,
-          "top_intermediarios": "6 (5,340 kg), 4 (4,500 kg), 5 (3,009 kg)",
+          "flujo_pi": 17050.000000000044,
+          "flujo_id": 15300.000000000053,
+          "top_intermediarios": "6 (5,350 kg), 4 (4,500 kg), 5 (3,081 kg)",
           "inters_list": [
             {
               "id": 6,
-              "flow": 5340.0
+              "flow": 5350.0
             },
             {
               "id": 4,
@@ -968,11 +964,11 @@
             },
             {
               "id": 5,
-              "flow": 3009.0
+              "flow": 3081.25
             },
             {
               "id": 7,
-              "flow": 1320.0
+              "flow": 1425.0
             },
             {
               "id": 1,
@@ -980,18 +976,18 @@
             },
             {
               "id": 2,
-              "flow": 875.0
+              "flow": 875.0000000000438
             },
             {
               "id": 3,
-              "flow": 736.0
+              "flow": 718.75
             }
           ],
-          "all_rutas": "X[1→6] (5,340 kg); X[1→4] (4,500 kg); X[1→5] (3,009 kg); X[1→7] (1,320 kg); X[1→1] (1,100 kg); X[1→2] (875 kg); X[1→3] (736 kg); Y[4→4] (3,764 kg); Y[6→4] (2,998 kg); Y[6→2] (1,000 kg); Y[1→4] (998 kg); Y[5→1] (993 kg); Y[6→1] (982 kg); Y[5→2] (967 kg); Y[5→3] (858 kg); Y[2→4] (840 kg); Y[7→2] (833 kg); Y[3→1] (624 kg); Y[7→3] (342 kg)",
+          "all_rutas": "X[1→6] (5,350 kg); X[1→4] (4,500 kg); X[1→5] (3,081 kg); X[1→7] (1,425 kg); X[1→1] (1,100 kg); X[1→2] (875 kg); X[1→3] (719 kg); Y[4→4] (3,764 kg); Y[6→4] (2,992 kg); Y[7→1] (1,000 kg); Y[6→1] (1,000 kg); Y[1→4] (998 kg); Y[6→2] (998 kg); Y[5→2] (994 kg); Y[5→3] (968 kg); Y[5→1] (925 kg); Y[2→2] (808 kg); Y[3→4] (621 kg); Y[7→3] (232 kg)",
           "routes_list": [
             {
               "route": "X[1→6]",
-              "flow": 5340.0
+              "flow": 5350.0
             },
             {
               "route": "X[1→4]",
@@ -999,11 +995,11 @@
             },
             {
               "route": "X[1→5]",
-              "flow": 3009.0
+              "flow": 3081.25
             },
             {
               "route": "X[1→7]",
-              "flow": 1320.0
+              "flow": 1425.0
             },
             {
               "route": "X[1→1]",
@@ -1011,11 +1007,11 @@
             },
             {
               "route": "X[1→2]",
-              "flow": 875.0
+              "flow": 875.0000000000438
             },
             {
               "route": "X[1→3]",
-              "flow": 736.0
+              "flow": 718.75
             },
             {
               "route": "Y[4→4]",
@@ -1023,47 +1019,47 @@
             },
             {
               "route": "Y[6→4]",
-              "flow": 2997.868953562022
+              "flow": 2992.476851851866
             },
             {
-              "route": "Y[6→2]",
+              "route": "Y[7→1]",
               "flow": 1000.0
+            },
+            {
+              "route": "Y[6→1]",
+              "flow": 999.9377620572718
             },
             {
               "route": "Y[1→4]",
               "flow": 998.148148148148
             },
             {
-              "route": "Y[5→1]",
-              "flow": 993.3244830085247
-            },
-            {
-              "route": "Y[6→1]",
-              "flow": 982.3898027057611
+              "route": "Y[6→2]",
+              "flow": 997.5366876282748
             },
             {
               "route": "Y[5→2]",
-              "flow": 966.8982090065923
+              "flow": 994.1299790384043
             },
             {
               "route": "Y[5→3]",
-              "flow": 858.1656632990245
+              "flow": 967.7083333333333
             },
             {
-              "route": "Y[2→4]",
-              "flow": 840.3465346534654
+              "route": "Y[5→1]",
+              "flow": 925.0622379427282
             },
             {
-              "route": "Y[7→2]",
-              "flow": 833.1017909934076
+              "route": "Y[2→2]",
+              "flow": 808.3333333333736
             },
             {
-              "route": "Y[3→1]",
-              "flow": 624.2857142857142
+              "route": "Y[3→4]",
+              "flow": 620.7386363636217
             },
             {
               "route": "Y[7→3]",
-              "flow": 341.8343367009757
+              "flow": 232.2916666666667
             }
           ],
           "trips_list": [
@@ -1104,11 +1100,11 @@
               "value": 1
             },
             {
-              "trip": "ZZ[2→4]",
+              "trip": "ZZ[2→2]",
               "value": 1
             },
             {
-              "trip": "ZZ[3→1]",
+              "trip": "ZZ[3→4]",
               "value": 1
             },
             {
@@ -1136,7 +1132,7 @@
               "value": 1
             },
             {
-              "trip": "ZZ[7→2]",
+              "trip": "ZZ[7→1]",
               "value": 1
             },
             {
@@ -1146,150 +1142,117 @@
           ]
         },
         "cost_breakdown": {
-          "production": 9300880.0,
-          "intermediation": 2469850.0,
-          "labor_acopio": 21100000,
-          "labor_intermediario": 77409135,
-          "labor_detallista": 14400000,
-          "labor_total": 112909135,
+          "production": 9394550.0,
+          "intermediation": 2492375.0,
+          "labor_acopio": 17050000,
+          "labor_intermediario": 62172508,
+          "labor_detallista": 11460000,
+          "labor_total": 90682508,
           "transport_pi": 348.28,
-          "transport_id": 818.89,
-          "transport_total": 1167.17,
-          "damage_pi": 436432.57,
-          "damage_id": 1718331.83,
-          "damage_total": 2154764.4,
-          "total": 126835796.57
+          "transport_id": 860.14,
+          "transport_total": 1208.42,
+          "damage_pi": 438850.58,
+          "damage_id": 1792905.48,
+          "damage_total": 2231756.05,
+          "total": 104802397.47
         },
         "emissions_breakdown": {
           "transport_pi": 577.16,
-          "transport_id": 511.08,
-          "total": 1088.25
+          "transport_id": 509.28,
+          "total": 1086.45
         },
         "employment_breakdown": {
-          "acopio": 422,
-          "intermediarios": 860,
-          "detallistas": 136,
-          "total": 1418,
+          "acopio": 341,
+          "intermediarios": 694,
+          "detallistas": 109,
+          "total": 1144,
           "intermediarios_detail": [
             {
               "location": 6,
-              "value": 267
+              "value": 214
             },
             {
               "location": 4,
-              "value": 250
+              "value": 200
             },
             {
               "location": 5,
-              "value": 177
+              "value": 145
             },
             {
               "location": 1,
-              "value": 55
-            },
-            {
-              "location": 7,
               "value": 44
             },
             {
+              "location": 7,
+              "value": 38
+            },
+            {
               "location": 2,
-              "value": 35
+              "value": 28
             },
             {
               "location": 3,
-              "value": 32
+              "value": 25
             }
           ],
           "detallistas_detail": [
             {
               "location": 4,
-              "value": 86
+              "value": 67
             },
             {
               "location": 1,
-              "value": 20
+              "value": 18
             },
             {
               "location": 2,
-              "value": 20
+              "value": 16
             },
             {
               "location": 3,
-              "value": 10
+              "value": 8
             }
           ]
         },
         "producer_variants": {
           "active_variants": [
             1,
-            4,
-            6,
             7,
             8
           ],
-          "total_variants": 5,
+          "total_variants": 3,
           "hectares_by_producer": {
-            "1": 22.9
+            "1": 24.0
           },
           "hectares_breakdown": [
             {
-              "variant": 4,
-              "hectares": 6.4,
-              "yield_kg_ha": 25.78
-            },
-            {
               "variant": 7,
-              "hectares": 6.4,
+              "hectares": 9.600000000000001,
               "yield_kg_ha": 82.03
             },
             {
               "variant": 8,
-              "hectares": 6.4,
+              "hectares": 9.600000000000001,
               "yield_kg_ha": 117.18
             },
             {
               "variant": 1,
-              "hectares": 3.2,
+              "hectares": 4.800000000000001,
               "yield_kg_ha": 6.25
-            },
-            {
-              "variant": 6,
-              "hectares": 0.5,
-              "yield_kg_ha": 60
             }
           ],
-          "total_hectares": 22.9
+          "total_hectares": 24.0
         }
       }
     },
     "params_modified": {
-      "DI": 0.0,
-      "DD": 0.0,
-      "CP": 0.0,
-      "CI": 0.0,
-      "CT": 0.0,
-      "CTT": 0.0,
-      "CDA": 0.0,
-      "CDF": 0.0,
-      "CMO": 0.0,
-      "CD": 0.0,
-      "CMP": 0.0,
-      "IT": 0.0,
-      "P": 0.0,
-      "PP": 0.0,
-      "RB": 0.0,
-      "RA": 0.0,
-      "RC": 0.0,
-      "RD": 0.0,
-      "CA": 0.0,
-      "CB": 0.0,
-      "CC": 0.0,
-      "CN": 0.0,
-      "CH": 0.0,
-      "CRI": 0.0,
-      "CR": 0.0,
-      "CV": 0.0,
-      "H": 0.0
+      "CA": 25.0,
+      "CB": 25.0,
+      "CC": 25.0,
+      "CRI": 15.0,
+      "CR": 15.0,
+      "H": 50.0
     }
   }
 }

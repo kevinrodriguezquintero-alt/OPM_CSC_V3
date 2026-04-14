@@ -128,15 +128,15 @@ En esta actividad, los resultados serán organizados mediante gráficos de sensi
 
 | # | Escenario | LGP α | LGP γ | LGP β | ER α | ER γ | ER β | Factible |
 |---|-----------|-------|-------|-------|------|------|------|----------|
-| 1 | Boom Demanda | {{DATO:boom_demanda_lgp_a}} | {{DATO:boom_demanda_lgp_g}} | {{DATO:boom_demanda_lgp_b}} | {{DATO:boom_demanda_er_a}} | {{DATO:boom_demanda_er_g}} | {{DATO:boom_demanda_er_b}} | {{DATO:boom_demanda_factible}} |
-| 2 | Crecimiento | {{DATO:crecimiento_lgp_a}} | {{DATO:crecimiento_lgp_g}} | {{DATO:crecimiento_lgp_b}} | {{DATO:crecimiento_er_a}} | {{DATO:crecimiento_er_g}} | {{DATO:crecimiento_er_b}} | {{DATO:crecimiento_factible}} |
-| 3 | Expansión | {{DATO:expansion_lgp_a}} | {{DATO:expansion_lgp_g}} | {{DATO:expansion_lgp_b}} | {{DATO:expansion_er_a}} | {{DATO:expansion_er_g}} | {{DATO:expansion_er_b}} | {{DATO:expansion_factible}} |
-| 4 | Transición Verde | {{DATO:transicion_verde_lgp_a}} | {{DATO:transicion_verde_lgp_g}} | {{DATO:transicion_verde_lgp_b}} | {{DATO:transicion_verde_er_a}} | {{DATO:transicion_verde_er_g}} | {{DATO:transicion_verde_er_b}} | {{DATO:transicion_verde_factible}} |
-| 5 | Regulación Ambiental | {{DATO:regulacion_ambiental_lgp_a}} | {{DATO:regulacion_ambiental_lgp_g}} | {{DATO:regulacion_ambiental_lgp_b}} | {{DATO:regulacion_ambiental_er_a}} | {{DATO:regulacion_ambiental_er_g}} | {{DATO:regulacion_ambiental_er_b}} | {{DATO:regulacion_ambiental_factible}} |
-| 6 | Súper Eficiencia | {{DATO:super_eficiencia_lgp_a}} | {{DATO:super_eficiencia_lgp_g}} | {{DATO:super_eficiencia_lgp_b}} | {{DATO:super_eficiencia_er_a}} | {{DATO:super_eficiencia_er_g}} | {{DATO:super_eficiencia_er_b}} | {{DATO:super_eficiencia_factible}} |
-| 7 | Fomento Laboral | {{DATO:fomento_laboral_lgp_a}} | {{DATO:fomento_laboral_lgp_g}} | {{DATO:fomento_laboral_lgp_b}} | {{DATO:fomento_laboral_er_a}} | {{DATO:fomento_laboral_er_g}} | {{DATO:fomento_laboral_er_b}} | {{DATO:fomento_laboral_factible}} |
-| 8 | Crisis Climática | {{DATO:crisis_climatica_lgp_a}} | {{DATO:crisis_climatica_lgp_g}} | {{DATO:crisis_climatica_lgp_b}} | {{DATO:crisis_climatica_er_a}} | {{DATO:crisis_climatica_er_g}} | {{DATO:crisis_climatica_er_b}} | {{DATO:crisis_climatica_factible}} |
-| 9 | Huelga Transporte | {{DATO:huelga_transporte_lgp_a}} | {{DATO:huelga_transporte_lgp_g}} | {{DATO:huelga_transporte_lgp_b}} | {{DATO:huelga_transporte_er_a}} | {{DATO:huelga_transporte_er_g}} | {{DATO:huelga_transporte_er_b}} | {{DATO:huelga_transporte_factible}} |
+| 1 | Boom Demanda | 126377407.96215127 | 1220.60924 | 1415.0 | 126835796.57196534 | 1088.24672 | 1418.0 | Si |
+| 2 | Crecimiento | 126377407.96215127 | 1220.60924 | 1415.0 | 126835796.57196534 | 1088.24672 | 1418.0 | Si |
+| 3 | Expansión | 126377407.96215127 | 1220.60924 | 1415.0 | 126835796.57196534 | 1088.24672 | 1418.0 | Si |
+| 4 | Transición Verde | 126377407.96215127 | 1220.60924 | 1415.0 | 126835796.57196534 | 1088.24672 | 1418.0 | Si |
+| 5 | Regulación Ambiental | 126377407.96215127 | 1220.60924 | 1415.0 | 126835796.57196534 | 1088.24672 | 1418.0 | Si |
+| 6 | Súper Eficiencia | 126377407.96215127 | 1220.60924 | 1415.0 | 126835796.57196534 | 1088.24672 | 1418.0 | Si |
+| 7 | Fomento Laboral | 126377407.96215127 | 1220.60924 | 1415.0 | 126835796.57196534 | 1088.24672 | 1418.0 | Si |
+| 8 | Crisis Climática | 126377407.96215127 | 1220.60924 | 1415.0 | 126835796.57196534 | 1088.24672 | 1418.0 | Si |
+| 9 | Huelga Transporte | 126377407.96215127 | 1220.60924 | 1415.0 | 126835796.57196534 | 1088.24672 | 1418.0 | Si |
 
 Nota. Elaboración propia.
 

@@ -14,6 +14,8 @@ USO:
     python consolidar_resultados.py --execute --er         # Solo ER
     python consolidar_resultados.py --execute --oat-lg     # Solo OAT-LGP
     python consolidar_resultados.py --execute --escenarios  # Todos los escenarios
+    python consolidar_resultados.py --execute --escenario boom_demanda  # Solo un escenario
+    python consolidar_resultados.py --execute --escenario boom_demanda --escenario crisis_climatica
 
 ARCHIVOS FUENTE (temporales, en redaccion/resultados/):
     - lgp.json           -> Resultados LGP (temporal, se sobrescribe)
@@ -436,9 +438,10 @@ def _guardar_maestro(ruta: Path, datos: dict, nombre: str):
     print(f"    [OK] Maestro {nombre} guardado: {ruta}")
 
 
-def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True, 
+def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True,
                          incluir_oat_lgp=True, incluir_oat_er=True,
                          incluir_rangos=True, incluir_escenarios=True,
+                         escenarios_filtro: list = None,
                          er_iter=None) -> dict:
     """
     Consolidar resultados seleccionados en archivos maestros individuales.
@@ -481,9 +484,13 @@ def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True,
     
     if incluir_escenarios:
         print("    -> Actualizando Maestros de Escenarios individuales...")
+        if escenarios_filtro:
+            print(f"       Filtro activo: {', '.join(escenarios_filtro)}")
         if RESULTADOS_DIR.exists():
             for esc_file in sorted(RESULTADOS_DIR.glob("esc_*.json")):
                 esc_id = esc_file.stem.replace("esc_", "")
+                if escenarios_filtro and esc_id not in escenarios_filtro:
+                    continue
                 try:
                     with open(esc_file, 'r', encoding='utf-8') as f:
                         datos_esc = json.load(f)
@@ -622,9 +629,15 @@ EJEMPLOS:
     # Solo LGP y ER
     python consolidar_resultados.py --execute --lgp --er
     
-    # Solo escenarios
+    # Todos los escenarios
     python consolidar_resultados.py --execute --escenarios
-    
+
+    # Un escenario específico
+    python consolidar_resultados.py --execute --escenario boom_demanda
+
+    # Varios escenarios específicos
+    python consolidar_resultados.py --execute --escenario boom_demanda --escenario crisis_climatica
+
     # LGP, OAT y rangos (sin ER ni escenarios)
     python consolidar_resultados.py --execute --lgp --oat --rangos
         """
@@ -641,11 +654,17 @@ EJEMPLOS:
     parser.add_argument('--oat-lg', dest='oat_lgp', action='store_true', help='Incluir solo OAT-LGP')
     parser.add_argument('--oat-er', dest='oat_er', action='store_true', help='Incluir solo OAT-ER')
     parser.add_argument('--rangos', action='store_true', help='Incluir resultados de rangos')
-    parser.add_argument('--escenarios', action='store_true', help='Incluir resultados de escenarios')
+    parser.add_argument('--escenarios', action='store_true', help='Incluir todos los escenarios')
+    parser.add_argument('--escenario', action='append', dest='escenario', metavar='NOMBRE',
+                        help='Incluir un escenario específico (repetible). Ej: --escenario boom_demanda')
     parser.add_argument('--er-iter', type=int, help='Índice de iteración para punto medio de ER (1-indexed)')
     
     args = parser.parse_args()
     
+    # --escenario individual implica activar incluir_escenarios
+    if args.escenario:
+        args.escenarios = True
+
     # Si no se especifica ningún filtro, incluir todo
     ningun_filtro = not (args.lgp or args.er or args.oat or args.oat_lgp or args.oat_er or args.rangos or args.escenarios)
     if ningun_filtro:
@@ -665,6 +684,7 @@ EJEMPLOS:
         incluir_oat_er=args.oat_er,
         incluir_rangos=args.rangos,
         incluir_escenarios=args.escenarios,
+        escenarios_filtro=args.escenario,
         er_iter=args.er_iter
     )
     

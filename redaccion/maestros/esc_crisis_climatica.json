@@ -1,18 +1,18 @@
 {
-  "base_lgp_a": 126377407.96215127,
-  "base_lgp_g": 1220.60924,
-  "base_lgp_b": 1415.0,
-  "base_lgp_a_prop": 126377407.96215127,
-  "base_lgp_g_prop": 1220.60924,
-  "base_lgp_b_prop": 1415.0,
-  "base_er_a": 126835796.57196534,
-  "base_er_g": 1088.24672,
-  "base_er_b": 1418.0,
-  "base_er_a_prop": 126835796.57196534,
-  "base_er_g_prop": 1088.24672,
-  "base_er_b_prop": 1418.0,
-  "base_factible": "Si",
-  "base_completo": {
+  "crisis_climatica_lgp_a": 126377407.96215127,
+  "crisis_climatica_lgp_g": 1220.60924,
+  "crisis_climatica_lgp_b": 1415.0,
+  "crisis_climatica_lgp_a_prop": 127782048.86800183,
+  "crisis_climatica_lgp_g_prop": 1231.1642,
+  "crisis_climatica_lgp_b_prop": 1414.0,
+  "crisis_climatica_er_a": 126835796.57196534,
+  "crisis_climatica_er_g": 1088.24672,
+  "crisis_climatica_er_b": 1418.0,
+  "crisis_climatica_er_a_prop": 127919051.19423452,
+  "crisis_climatica_er_g_prop": 1083.379424,
+  "crisis_climatica_er_b_prop": 1416.0,
+  "crisis_climatica_factible": "Si",
+  "crisis_climatica_completo": {
     "method": "both",
     "lgp": {
       "base": {
@@ -323,15 +323,15 @@
         }
       },
       "propuesto": {
-        "cost": 126377407.96215127,
-        "emissions": 1220.60924,
-        "employment": 1415.0,
+        "cost": 127782048.86800183,
+        "emissions": 1231.1642,
+        "employment": 1414.0,
         "metrics": {
           "pers_int": 859,
-          "pers_det": 135,
+          "pers_det": 134,
           "viajes_totales": 32,
           "flujo_pi": 16840.0,
-          "flujo_id": 15249.999999999918,
+          "flujo_id": 15110.0,
           "top_intermediarios": "6 (5,360 kg), 4 (4,518 kg), 5 (3,009 kg)",
           "inters_list": [
             {
@@ -363,7 +363,7 @@
               "flow": 713.0
             }
           ],
-          "all_rutas": "X[1→6] (5,360 kg); X[1→4] (4,518 kg); X[1→5] (3,009 kg); X[1→7] (1,290 kg); X[1→1] (1,100 kg); X[1→2] (850 kg); X[1→3] (713 kg); Y[4→4] (3,779 kg); Y[6→1] (2,990 kg); Y[5→4] (1,997 kg); Y[6→2] (1,995 kg); Y[1→3] (989 kg); Y[7→4] (893 kg); Y[5→2] (851 kg); Y[2→4] (816 kg); Y[3→4] (616 kg); Y[7→2] (234 kg); Y[6→3] (91 kg)",
+          "all_rutas": "X[1→6] (5,360 kg); X[1→4] (4,518 kg); X[1→5] (3,009 kg); X[1→7] (1,290 kg); X[1→1] (1,100 kg); X[1→2] (850 kg); X[1→3] (713 kg); Y[4→4] (3,712 kg); Y[6→2] (2,000 kg); Y[5→4] (1,984 kg); Y[6→1] (1,809 kg); Y[1→1] (990 kg); Y[6→4] (984 kg); Y[7→2] (940 kg); Y[5→3] (859 kg); Y[2→4] (813 kg); Y[3→4] (607 kg); Y[6→3] (221 kg); Y[7→1] (191 kg)",
           "routes_list": [
             {
               "route": "X[1→6]",
@@ -395,47 +395,51 @@
             },
             {
               "route": "Y[4→4]",
-              "flow": 3778.690909090911
-            },
-            {
-              "route": "Y[6→1]",
-              "flow": 2989.999999999964
-            },
-            {
-              "route": "Y[5→4]",
-              "flow": 1996.669107739899
+              "flow": 3712.26281588446
             },
             {
               "route": "Y[6→2]",
-              "flow": 1994.903357976307
+              "flow": 2000.000000000002
             },
             {
-              "route": "Y[1→3]",
-              "flow": 988.9908256880375
+              "route": "Y[5→4]",
+              "flow": 1983.74859544785
             },
             {
-              "route": "Y[7→4]",
-              "flow": 892.5306222330747
+              "route": "Y[6→1]",
+              "flow": 1808.957140592986
             },
             {
-              "route": "Y[5→2]",
-              "flow": 851.296347123113
+              "route": "Y[1→1]",
+              "flow": 989.8379970544918
             },
             {
-              "route": "Y[2→4]",
-              "flow": 816.3366336633663
-            },
-            {
-              "route": "Y[3→4]",
-              "flow": 615.7727272727271
+              "route": "Y[6→4]",
+              "flow": 983.8596476566017
             },
             {
               "route": "Y[7→2]",
-              "flow": 233.8002949005804
+              "flow": 939.9999999999982
+            },
+            {
+              "route": "Y[5→3]",
+              "flow": 859.4427563840636
+            },
+            {
+              "route": "Y[2→4]",
+              "flow": 812.6632370399684
+            },
+            {
+              "route": "Y[3→4]",
+              "flow": 607.4657039711192
             },
             {
               "route": "Y[6→3]",
-              "flow": 91.00917431193781
+              "flow": 220.5572436159364
+            },
+            {
+              "route": "Y[7→1]",
+              "flow": 191.2048623525222
             }
           ],
           "trips_list": [
@@ -468,11 +472,11 @@
               "value": 1
             },
             {
-              "trip": "ZZ[6→1]",
-              "value": 3
+              "trip": "ZZ[5→4]",
+              "value": 2
             },
             {
-              "trip": "ZZ[5→4]",
+              "trip": "ZZ[6→1]",
               "value": 2
             },
             {
@@ -480,7 +484,7 @@
               "value": 2
             },
             {
-              "trip": "ZZ[1→3]",
+              "trip": "ZZ[1→1]",
               "value": 1
             },
             {
@@ -496,7 +500,7 @@
               "value": 1
             },
             {
-              "trip": "ZZ[5→2]",
+              "trip": "ZZ[5→3]",
               "value": 1
             },
             {
@@ -504,40 +508,44 @@
               "value": 1
             },
             {
-              "trip": "ZZ[7→2]",
+              "trip": "ZZ[6→4]",
               "value": 1
             },
             {
-              "trip": "ZZ[7→4]",
+              "trip": "ZZ[7→1]",
+              "value": 1
+            },
+            {
+              "trip": "ZZ[7→2]",
               "value": 1
             }
           ]
         },
         "cost_breakdown": {
-          "production": 9278840.0,
+          "production": 10670666.0,
           "intermediation": 2469700.0,
           "labor_acopio": 21050000,
           "labor_intermediario": 77455342,
-          "labor_detallista": 14140000,
-          "labor_total": 112645342,
+          "labor_detallista": 14010000,
+          "labor_total": 112515342,
           "transport_pi": 352.69,
-          "transport_id": 564.97,
-          "transport_total": 917.65,
-          "damage_pi": 435797.91,
-          "damage_id": 1546810.39,
-          "damage_total": 1982608.31,
-          "total": 126377407.96
+          "transport_id": 682.25,
+          "transport_total": 1034.94,
+          "damage_pi": 488093.66,
+          "damage_id": 1637212.26,
+          "damage_total": 2125305.92,
+          "total": 127782048.87
         },
         "emissions_breakdown": {
           "transport_pi": 637.16,
-          "transport_id": 583.45,
-          "total": 1220.61
+          "transport_id": 594.0,
+          "total": 1231.16
         },
         "employment_breakdown": {
           "acopio": 421,
           "intermediarios": 859,
-          "detallistas": 135,
-          "total": 1415,
+          "detallistas": 134,
+          "total": 1414,
           "intermediarios_detail": [
             {
               "location": 6,
@@ -579,7 +587,7 @@
             },
             {
               "location": 2,
-              "value": 22
+              "value": 21
             },
             {
               "location": 3,
@@ -590,43 +598,43 @@
         "producer_variants": {
           "active_variants": [
             1,
-            4,
+            2,
             6,
-            7,
-            8
+            8,
+            9
           ],
           "total_variants": 5,
           "hectares_by_producer": {
-            "1": 22.9
+            "1": 26.455
           },
           "hectares_breakdown": [
             {
-              "variant": 4,
-              "hectares": 6.4,
-              "yield_kg_ha": 25.78
-            },
-            {
-              "variant": 7,
-              "hectares": 6.4,
-              "yield_kg_ha": 82.03
+              "variant": 2,
+              "hectares": 16.64,
+              "yield_kg_ha": 8.055
             },
             {
               "variant": 8,
-              "hectares": 6.4,
-              "yield_kg_ha": 117.18
+              "hectares": 4.16,
+              "yield_kg_ha": 87.885
+            },
+            {
+              "variant": 9,
+              "hectares": 3.25,
+              "yield_kg_ha": 168.75
             },
             {
               "variant": 1,
-              "hectares": 3.2,
-              "yield_kg_ha": 6.25
+              "hectares": 2.08,
+              "yield_kg_ha": 4.6875
             },
             {
               "variant": 6,
-              "hectares": 0.5,
-              "yield_kg_ha": 60
+              "hectares": 0.325,
+              "yield_kg_ha": 45.0
             }
           ],
-          "total_hectares": 22.9
+          "total_hectares": 26.45
         }
       }
     },
@@ -947,20 +955,20 @@
         }
       },
       "propuesto": {
-        "cost": 126835796.57196534,
-        "emissions": 1088.24672,
-        "employment": 1418.0,
+        "cost": 127919051.19423452,
+        "emissions": 1083.379424,
+        "employment": 1416.0,
         "metrics": {
           "pers_int": 860,
-          "pers_det": 136,
+          "pers_det": 134,
           "viajes_totales": 30,
           "flujo_pi": 16880.0,
-          "flujo_id": 15200.0,
+          "flujo_id": 15070.0,
           "top_intermediarios": "6 (5,340 kg), 4 (4,500 kg), 5 (3,009 kg)",
           "inters_list": [
             {
               "id": 6,
-              "flow": 5340.0
+              "flow": 5340.000000000004
             },
             {
               "id": 4,
@@ -972,7 +980,7 @@
             },
             {
               "id": 7,
-              "flow": 1320.0
+              "flow": 1319.999999999998
             },
             {
               "id": 1,
@@ -980,18 +988,18 @@
             },
             {
               "id": 2,
-              "flow": 875.0
+              "flow": 874.9999999999911
             },
             {
               "id": 3,
-              "flow": 736.0
+              "flow": 736.0000000000072
             }
           ],
-          "all_rutas": "X[1→6] (5,340 kg); X[1→4] (4,500 kg); X[1→5] (3,009 kg); X[1→7] (1,320 kg); X[1→1] (1,100 kg); X[1→2] (875 kg); X[1→3] (736 kg); Y[4→4] (3,764 kg); Y[6→4] (2,998 kg); Y[6→2] (1,000 kg); Y[1→4] (998 kg); Y[5→1] (993 kg); Y[6→1] (982 kg); Y[5→2] (967 kg); Y[5→3] (858 kg); Y[2→4] (840 kg); Y[7→2] (833 kg); Y[3→1] (624 kg); Y[7→3] (342 kg)",
+          "all_rutas": "X[1→6] (5,340 kg); X[1→4] (4,500 kg); X[1→5] (3,009 kg); X[1→7] (1,320 kg); X[1→1] (1,100 kg); X[1→2] (875 kg); X[1→3] (736 kg); Y[4→4] (3,697 kg); Y[6→4] (2,959 kg); Y[6→1] (1,998 kg); Y[1→2] (1,000 kg); Y[7→2] (998 kg); Y[5→1] (992 kg); Y[5→4] (916 kg); Y[5→3] (914 kg); Y[2→2] (802 kg); Y[3→4] (627 kg); Y[7→3] (166 kg)",
           "routes_list": [
             {
               "route": "X[1→6]",
-              "flow": 5340.0
+              "flow": 5340.000000000004
             },
             {
               "route": "X[1→4]",
@@ -1003,7 +1011,7 @@
             },
             {
               "route": "X[1→7]",
-              "flow": 1320.0
+              "flow": 1319.999999999998
             },
             {
               "route": "X[1→1]",
@@ -1011,59 +1019,55 @@
             },
             {
               "route": "X[1→2]",
-              "flow": 875.0
+              "flow": 874.9999999999911
             },
             {
               "route": "X[1→3]",
-              "flow": 736.0
+              "flow": 736.0000000000072
             },
             {
               "route": "Y[4→4]",
-              "flow": 3763.636363636364
+              "flow": 3697.472924187725
             },
             {
               "route": "Y[6→4]",
-              "flow": 2997.868953562022
-            },
-            {
-              "route": "Y[6→2]",
-              "flow": 1000.0
-            },
-            {
-              "route": "Y[1→4]",
-              "flow": 998.148148148148
-            },
-            {
-              "route": "Y[5→1]",
-              "flow": 993.3244830085247
+              "flow": 2959.20097263978
             },
             {
               "route": "Y[6→1]",
-              "flow": 982.3898027057611
+              "flow": 1998.412465581122
             },
             {
-              "route": "Y[5→2]",
-              "flow": 966.8982090065923
-            },
-            {
-              "route": "Y[5→3]",
-              "flow": 858.1656632990245
-            },
-            {
-              "route": "Y[2→4]",
-              "flow": 840.3465346534654
+              "route": "Y[1→2]",
+              "flow": 999.7768687244325
             },
             {
               "route": "Y[7→2]",
-              "flow": 833.1017909934076
+              "flow": 997.9460914273784
             },
             {
-              "route": "Y[3→1]",
-              "flow": 624.2857142857142
+              "route": "Y[5→1]",
+              "flow": 991.5875344188775
+            },
+            {
+              "route": "Y[5→4]",
+              "flow": 916.2647313313339
+            },
+            {
+              "route": "Y[5→3]",
+              "flow": 914.2404417703336
+            },
+            {
+              "route": "Y[2→2]",
+              "flow": 802.2770398481891
+            },
+            {
+              "route": "Y[3→4]",
+              "flow": 627.0613718411613
             },
             {
               "route": "Y[7→3]",
-              "flow": 341.8343367009757
+              "flow": 165.7595582296662
             }
           ],
           "trips_list": [
@@ -1100,15 +1104,19 @@
               "value": 3
             },
             {
-              "trip": "ZZ[1→4]",
+              "trip": "ZZ[6→1]",
+              "value": 2
+            },
+            {
+              "trip": "ZZ[1→2]",
               "value": 1
             },
             {
-              "trip": "ZZ[2→4]",
+              "trip": "ZZ[2→2]",
               "value": 1
             },
             {
-              "trip": "ZZ[3→1]",
+              "trip": "ZZ[3→4]",
               "value": 1
             },
             {
@@ -1120,19 +1128,11 @@
               "value": 1
             },
             {
-              "trip": "ZZ[5→2]",
-              "value": 1
-            },
-            {
               "trip": "ZZ[5→3]",
               "value": 1
             },
             {
-              "trip": "ZZ[6→1]",
-              "value": 1
-            },
-            {
-              "trip": "ZZ[6→2]",
+              "trip": "ZZ[5→4]",
               "value": 1
             },
             {
@@ -1146,30 +1146,30 @@
           ]
         },
         "cost_breakdown": {
-          "production": 9300880.0,
+          "production": 10696012.0,
           "intermediation": 2469850.0,
           "labor_acopio": 21100000,
           "labor_intermediario": 77409135,
-          "labor_detallista": 14400000,
-          "labor_total": 112909135,
+          "labor_detallista": 13980000,
+          "labor_total": 112489135,
           "transport_pi": 348.28,
-          "transport_id": 818.89,
-          "transport_total": 1167.17,
-          "damage_pi": 436432.57,
-          "damage_id": 1718331.83,
-          "damage_total": 2154764.4,
-          "total": 126835796.57
+          "transport_id": 828.28,
+          "transport_total": 1176.56,
+          "damage_pi": 488804.48,
+          "damage_id": 1774073.15,
+          "damage_total": 2262877.63,
+          "total": 127919051.19
         },
         "emissions_breakdown": {
           "transport_pi": 577.16,
-          "transport_id": 511.08,
-          "total": 1088.25
+          "transport_id": 506.22,
+          "total": 1083.38
         },
         "employment_breakdown": {
           "acopio": 422,
           "intermediarios": 860,
-          "detallistas": 136,
-          "total": 1418,
+          "detallistas": 134,
+          "total": 1416,
           "intermediarios_detail": [
             {
               "location": 6,
@@ -1203,11 +1203,11 @@
           "detallistas_detail": [
             {
               "location": 4,
-              "value": 86
+              "value": 82
             },
             {
               "location": 1,
-              "value": 20
+              "value": 23
             },
             {
               "location": 2,
@@ -1215,81 +1215,61 @@
             },
             {
               "location": 3,
-              "value": 10
+              "value": 9
             }
           ]
         },
         "producer_variants": {
           "active_variants": [
             1,
+            2,
             4,
-            6,
             7,
             8
           ],
           "total_variants": 5,
           "hectares_by_producer": {
-            "1": 22.9
+            "1": 31.2
           },
           "hectares_breakdown": [
             {
+              "variant": 2,
+              "hectares": 16.64,
+              "yield_kg_ha": 8.055
+            },
+            {
               "variant": 4,
-              "hectares": 6.4,
-              "yield_kg_ha": 25.78
+              "hectares": 4.16,
+              "yield_kg_ha": 19.335
             },
             {
               "variant": 7,
-              "hectares": 6.4,
-              "yield_kg_ha": 82.03
+              "hectares": 4.16,
+              "yield_kg_ha": 61.5225
             },
             {
               "variant": 8,
-              "hectares": 6.4,
-              "yield_kg_ha": 117.18
+              "hectares": 4.16,
+              "yield_kg_ha": 87.885
             },
             {
               "variant": 1,
-              "hectares": 3.2,
-              "yield_kg_ha": 6.25
-            },
-            {
-              "variant": 6,
-              "hectares": 0.5,
-              "yield_kg_ha": 60
+              "hectares": 2.08,
+              "yield_kg_ha": 4.6875
             }
           ],
-          "total_hectares": 22.9
+          "total_hectares": 31.2
         }
       }
     },
     "params_modified": {
-      "DI": 0.0,
-      "DD": 0.0,
-      "CP": 0.0,
-      "CI": 0.0,
-      "CT": 0.0,
-      "CTT": 0.0,
-      "CDA": 0.0,
-      "CDF": 0.0,
-      "CMO": 0.0,
-      "CD": 0.0,
-      "CMP": 0.0,
-      "IT": 0.0,
-      "P": 0.0,
-      "PP": 0.0,
-      "RB": 0.0,
-      "RA": 0.0,
-      "RC": 0.0,
-      "RD": 0.0,
-      "CA": 0.0,
-      "CB": 0.0,
-      "CC": 0.0,
-      "CN": 0.0,
-      "CH": 0.0,
-      "CRI": 0.0,
-      "CR": 0.0,
-      "CV": 0.0,
-      "H": 0.0
+      "CP": 15.0,
+      "P": 12.0,
+      "PP": 8.0,
+      "RA": -25.0,
+      "RC": -15.0,
+      "RD": -25.0,
+      "H": -35.0
     }
   }
 }

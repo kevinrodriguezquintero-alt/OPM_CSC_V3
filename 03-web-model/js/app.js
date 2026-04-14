@@ -462,7 +462,8 @@ function initOat() {
       finalData.top_global_elas = [...globalList].sort((a,b) => b.maxElasticity - a.maxElasticity);
       finalData.top_global_freq = [...globalList].sort((a,b) => b.pillarCount - a.pillarCount || b.maxElasticity - a.maxElasticity);
 
-      // Guardar resultado consolidado OAT (backend ya no lo hace por cada petición)
+      // Guardar resultado consolidado OAT — una sola escritura con versión enriquecida
+      // (top_global_elas/freq computados en JS). El backend no guarda por separado.
       try {
         await fetch(`${BASE}/solve/save-oat-result`, {
           method: "POST",
@@ -524,10 +525,10 @@ function initRobustness() {
     try {
       const { renderRangesComparison } = await import("./render.js");
       
-      update(0, "Calculando base (Compromiso Pareto)...");
-      const baseResult = await api.solveSensitivityRanges([]);
-      
       const allRows = [];
+      let lgpBase = null;
+      let erBase = null;
+      
       for (let i = 0; i < total; i++) {
         const p = params_to_test[i];
         update(i, `Analizando límites de factibilidad: ${p} (${i + 1}/${total})`);
@@ -536,10 +537,15 @@ function initRobustness() {
         if (paramResult.ranges && paramResult.ranges.length > 0) {
           allRows.push(paramResult.ranges[0]);
         }
+        // Guardar referencia a los objetivos base del primer resultado
+        if (i === 0) {
+          lgpBase = paramResult.lgp_base;
+          erBase = paramResult.er_base;
+        }
       }
 
       update(total, "Finalizando reporte de robustez...");
-      const finalData = { ...baseResult, ranges: allRows };
+      const finalData = { lgp_base: lgpBase, er_base: erBase, ranges: allRows };
       container.innerHTML = renderRangesComparison(finalData);
 
     } catch (e) {
@@ -642,23 +648,33 @@ function drawOatCharts(data) {
 
 const SCENARIO_PRESETS = {
   // Eje 1: Contexto Macroeconómico y Demanda
-  boom_demanda: { DI: 20, DD: 25, CN: 15, CH: 15 },
-  crecimiento:  { DI: 12, DD: 15, H: 30, RA: -5 },
+  // Rangos clave: DI (+34.4%), DD (+38.3%), CV (+/-variable)
+  // CV+25%: flota más grande compensa emisiones del aumento de demanda (posiblemente factible para ER)
+  boom_demanda: { DI: 9, DD: 9, CV: 25 },
+  // NOTA: Este escenario es LGP-only. ER infactible porque H+25% aumenta emisiones > ε fijo
+  crecimiento:  { DI: 12, DD: 15, H: 25, RA: -5 },
 
   // Eje 2: Estrategia Corporativa
-  expansion: { H: 50, CA: 25, CB: 25, CC: 25, CRI: 20, CR: 20 },
+  // Rangos clave: CRI (+100%/-24% restrictivo), CR (+100%/-27.8% restrictivo)
+  expansion: { H: 50, CA: 25, CB: 25, CC: 25, CRI: 15, CR: 15 },
 
   // Eje 3: Sostenibilidad y Viabilidad Verde
+  // Rangos clave: Todos permisivos (+100%/-99%)
   transicion_verde:    { IT: -25, CV: 30, CI: 12, CT: 10, CTT: 10 },
   regulacion_ambiental: { IT: -15, P: -10, PP: -10, CI: 8, CDA: 5, CDF: 5 },
 
   // Eje 4: Impacto Social y Automatización
+  // Rangos clave: CA/CB/CC muy permisivos, costos laborales permisivos
+  // NOTA: LGP-only. ER infactible: automatización extrema altera estructura logística > ε
   super_eficiencia: { CA: 60, CB: 60, CC: 60, CMO: -20, CD: -20, CMP: -20, CP: 8 },
-  fomento_laboral:  { CA: 80, CB: 80, CC: 80, CMO: 40, CD: 40, CMP: 40 },
+  // NOTA: LGP-only. ER infactible: trade-off social extremo empuja emisiones > ε fijo
+  fomento_laboral:  { CA: 70, CB: 70, CC: 70, CMO: 40, CD: 40, CMP: 40 },
 
   // Eje 5: Vulnerabilidad y Límites
-  crisis_climatica:  { H: -40, RA: -25, RC: -20, RD: -30, CP: 18, P: 15, PP: 10 },
-  huelga_transporte: { CV: -35, CT: 45, CTT: 45, CRI: -10, CR: -10, IT: 20 },
+  // Rangos clave: H (-79.7%), RC (-79.7%), CV (-98.2%), CRI/CR restrictivos
+  crisis_climatica:  { H: -35, RA: -25, RC: -15, RD: -25, CP: 15, P: 12, PP: 8 },
+  // Ajustado: Valores moderados. NOTA: LGP-only. ER infactible: disrupción logística aumenta emisiones > ε fijo
+  huelga_transporte: { CV: -30, CT: 30, CTT: 30, CRI: -5, CR: -5, IT: 10 },
 };
 
 // ── Scenarios ────────────────────────────────────────────────────────────

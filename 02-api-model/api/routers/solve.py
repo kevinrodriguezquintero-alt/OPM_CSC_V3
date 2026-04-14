@@ -485,11 +485,18 @@ def _run_and_extract(solver_name: str, steps: int, permitir_maestro: bool = Fals
         objs["employment_breakdown"] = _extract_employment_breakdown(vars_dict)
         objs["producer_variants"] = _extract_producer_variants(vars_dict, params)
         return objs
+    steps_info = [(s["step"], s["status"]) for s in res.get("steps", [])]
+    logging.error(f"[LGP] Infactible — status={res.get('status')}, pasos={steps_info}")
     return None
 
 
-def _run_er_and_extract(solver_name: str, steps: int, pilar: str | int = "middle") -> dict | None:
-    """Run ER and return objectives from a specific point of the Pareto frontier or a pilar."""
+def _run_er_and_extract(solver_name: str, steps: int, pilar: str | int = "middle", strict_epsilon: bool = False) -> dict | None:
+    """Run ER and return objectives from a specific point of the Pareto frontier or a pilar.
+
+    strict_epsilon: if True, when a maestro epsilon exists and the solve is infeasible,
+    return None immediately instead of falling back to the full frontier.
+    Used by OAT sensitivity to avoid running 5 iterations per variation.
+    """
     # If a specific pilar is requested, we only need to solve once for that objective
     params = app_state.get_params_object()
     from config import get_solver
@@ -567,9 +574,13 @@ def _run_er_and_extract(solver_name: str, steps: int, pilar: str | int = "middle
             if _solver_status(res) == "optimal":
                 return _get_objs_and_metrics(model)
             else:
+                if strict_epsilon:
+                    return None  # Variación infeasible con ε fijo — no correr frontera completa
                 logging.warning("No se encontró solución óptima con el epsilon del maestro, cayendo a modo frontera...")
         except Exception as solve_err:
             logging.error(f"Error en solve de punto fijo: {solve_err}")
+            if strict_epsilon:
+                return None
 
     # --- Fallback: Ejecutar Frontera ER original ---
     res = run_er(params, solver_name, steps, capture_log=False)
@@ -618,8 +629,14 @@ def _safe_solve(meth: str, body, permitir_maestro: bool = False) -> dict | None:
     """Wrapper to run a solve and log errors instead of crashing."""
     try:
         if meth == "er":
-            return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar)
-        return _run_and_extract(app_state.solver_name, body.steps, permitir_maestro=permitir_maestro)
+            # Si permitimos maestro, usar _run_and_extract que carga el resultado guardado
+            # Si no, usar _run_er_and_extract que recalcula con epsilon o frontera
+            if permitir_maestro:
+                return _run_and_extract(app_state.solver_name, body.steps, permitir_maestro=True, method="er")
+            # strict_epsilon=True para variaciones OAT: si el ε fijo del maestro es infeasible,
+            # retornar None en lugar de correr la frontera completa (5 iteraciones).
+            return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar, strict_epsilon=True)
+        return _run_and_extract(app_state.solver_name, body.steps, permitir_maestro=permitir_maestro, method="lgp")
     except Exception as e:
         logging.error(f"Error in _safe_solve ({meth}): {e}")
         import traceback
@@ -699,8 +716,8 @@ def solve_sensitivity(body: SensitivityRequest):
         "top_env": top_env,
         "top_soc": top_soc,
     }
-    # NOTA: El guardado del archivo se maneja desde el frontend para evitar
-    # sobrescritas en análisis OAT con múltiples peticiones individuales
+    # El guardado se maneja desde el frontend (save-oat-result) para asegurar
+    # una sola escritura con el resultado enriquecido (top_global_elas/freq).
     return result
 
 
@@ -831,9 +848,6 @@ def solve_scenarios(body: ScenariosRequest):
 
 # ── Sensitivity Ranges (Shadow Prices + Allowable Ranges) ────────────────
 
-RANGE_PARAMS_DEFAULT = ["CA", "CB", "CC", "CN", "RA", "RC", "CV", "DI", "DD", "IT"]
-
-
 def _quick_feasible(solver_name: str, epsilon: float = None) -> dict | None:
     """Minimize cost only (1 solve). Optionally constrained by epsilon emissions. Returns objectives dict or None."""
     import pyomo.environ as pyo
@@ -957,16 +971,20 @@ def _param_summary_value(params, name):
 
 
 class RangesRequest(BaseModel):
-    params: List[str] = RANGE_PARAMS_DEFAULT
+    params: List[str]  # Siempre se debe proporcionar desde la UI, sin default
 
 
 @router.post("/sensitivity-ranges")
-def solve_sensitivity_ranges(body: RangesRequest = RangesRequest()):
+def solve_sensitivity_ranges(body: RangesRequest):
     """
     Compute shadow prices (LGP vs ER) and allowable ranges for key params.
     Shadow prices use ±1% centered finite difference.
     Ranges use step-based feasibility checks.
+    Requires at least one parameter to analyze.
     """
+    if not body.params or len(body.params) == 0:
+        raise HTTPException(status_code=422, detail="Debe seleccionar al menos un parámetro para analizar")
+    
     base_data = copy.deepcopy(app_state.params)
     solver = app_state.solver_name
 
@@ -1039,11 +1057,34 @@ def solve_sensitivity_ranges(body: RangesRequest = RangesRequest()):
 
         result = {"lgp_base": lgp_base, "er_base": er_base, "ranges": rows}
         
-        # Guardar automáticamente
+        # Guardar automáticamente (hacer append a rangos existentes)
         try:
             RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
-            with open(RESULTADOS_DIR / "rangos.json", 'w', encoding='utf-8') as f:
-                json.dump(result, f, indent=2, ensure_ascii=False, default=str)
+            rangos_path = RESULTADOS_DIR / "rangos.json"
+            
+            # Cargar rangos existentes si hay
+            existing_ranges = []
+            if rangos_path.exists():
+                try:
+                    with open(rangos_path, 'r', encoding='utf-8') as f:
+                        existing_data = json.load(f)
+                        existing_ranges = existing_data.get("ranges", [])
+                except Exception:
+                    existing_ranges = []
+            
+            # Merge: agregar nuevos rangos, actualizar existentes
+            param_index = {r["param"]: i for i, r in enumerate(existing_ranges) if "param" in r}
+            for new_row in rows:
+                param = new_row.get("param")
+                if param and param in param_index:
+                    existing_ranges[param_index[param]] = new_row  # Actualizar
+                else:
+                    existing_ranges.append(new_row)  # Agregar nuevo
+            
+            merged_result = {"lgp_base": lgp_base, "er_base": er_base, "ranges": existing_ranges}
+            
+            with open(rangos_path, 'w', encoding='utf-8') as f:
+                json.dump(merged_result, f, indent=2, ensure_ascii=False, default=str)
         except Exception as e:
             logging.warning(f"No se pudo guardar Rangos: {e}")
         
