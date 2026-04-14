@@ -1,15 +1,15 @@
 {
-  "esc_base_lgp_a": 126377407.96215123,
+  "esc_base_lgp_a": 126284619.56215122,
   "esc_base_lgp_g": 1220.60924,
   "esc_base_lgp_b": 1415.0,
-  "esc_base_lgp_a_prop": 126377407.96215123,
+  "esc_base_lgp_a_prop": 126284619.56215122,
   "esc_base_lgp_g_prop": 1220.60924,
   "esc_base_lgp_b_prop": 1415.0,
   "esc_base_factible": "Si",
   "esc_base_completo": {
     "method": "er",
     "base": {
-      "cost": 126377407.96215123,
+      "cost": 126284619.56215122,
       "emissions": 1220.60924,
       "employment": 1415.0,
       "metrics": {
@@ -17,7 +17,7 @@
         "pers_det": 135,
         "viajes_totales": 32,
         "flujo_pi": 16840.0,
-        "flujo_id": 15249.999999999995,
+        "flujo_id": 15250.0,
         "top_intermediarios": "6 (5,360 kg), 4 (4,518 kg), 5 (3,009 kg)",
         "inters_list": [
           {
@@ -85,15 +85,15 @@
           },
           {
             "route": "Y[6→1]",
-            "flow": 2989.999999999996
+            "flow": 2990.0
           },
           {
             "route": "Y[5→4]",
-            "flow": 1996.669107740395
+            "flow": 1996.669107740377
           },
           {
             "route": "Y[6→2]",
-            "flow": 1994.903357976306
+            "flow": 1994.903357976302
           },
           {
             "route": "Y[1→3]",
@@ -101,11 +101,11 @@
           },
           {
             "route": "Y[7→4]",
-            "flow": 892.5306222326012
+            "flow": 892.5306222326192
           },
           {
             "route": "Y[5→2]",
-            "flow": 851.296347122628
+            "flow": 851.2963471226466
           },
           {
             "route": "Y[2→4]",
@@ -117,7 +117,7 @@
           },
           {
             "route": "Y[7→2]",
-            "flow": 233.8002949010656
+            "flow": 233.8002949010512
           },
           {
             "route": "Y[6→3]",
@@ -200,19 +200,19 @@
         ]
       },
       "cost_breakdown": {
-        "production": 9271296.56,
-        "intermediation": 2467692.2,
-        "labor_acopio": 21032886.93,
-        "labor_intermediario": 77392372.92,
-        "labor_detallista": 14128504.57,
-        "labor_total": 112553764.41,
-        "transport_pi": 8610.93,
-        "transport_id": 95047.35,
-        "transport_total": 103658.29,
-        "damage_pi": 435443.62,
-        "damage_id": 1545552.88,
-        "damage_total": 1980996.5,
-        "total": 126377407.96
+        "production": 9186051.6,
+        "intermediation": 2469700.0,
+        "labor_acopio": 21050000,
+        "labor_intermediario": 77455342,
+        "labor_detallista": 14140000,
+        "labor_total": 112645342,
+        "transport_pi": 352.69,
+        "transport_id": 564.97,
+        "transport_total": 917.65,
+        "damage_pi": 435797.91,
+        "damage_id": 1546810.39,
+        "damage_total": 1982608.31,
+        "total": 126284619.56
       },
       "emissions_breakdown": {
         "transport_pi": 637.16,
@@ -283,7 +283,7 @@
         ],
         "total_variants": 5,
         "hectares_by_producer": {
-          "1": 22.9
+          "1": 22.90000000000001
         },
         "hectares_breakdown": [
           {
@@ -316,7 +316,7 @@
       }
     },
     "propuesto": {
-      "cost": 126377407.96215123,
+      "cost": 126284619.56215122,
       "emissions": 1220.60924,
       "employment": 1415.0,
       "metrics": {
@@ -324,7 +324,7 @@
         "pers_det": 135,
         "viajes_totales": 32,
         "flujo_pi": 16840.0,
-        "flujo_id": 15249.999999999995,
+        "flujo_id": 15250.0,
         "top_intermediarios": "6 (5,360 kg), 4 (4,518 kg), 5 (3,009 kg)",
         "inters_list": [
           {
@@ -392,15 +392,15 @@
           },
           {
             "route": "Y[6→1]",
-            "flow": 2989.999999999996
+            "flow": 2990.0
           },
           {
             "route": "Y[5→4]",
-            "flow": 1996.669107740395
+            "flow": 1996.669107740377
           },
           {
             "route": "Y[6→2]",
-            "flow": 1994.903357976306
+            "flow": 1994.903357976302
           },
           {
             "route": "Y[1→3]",
@@ -408,11 +408,11 @@
           },
           {
             "route": "Y[7→4]",
-            "flow": 892.5306222326012
+            "flow": 892.5306222326192
           },
           {
             "route": "Y[5→2]",
-            "flow": 851.296347122628
+            "flow": 851.2963471226466
           },
           {
             "route": "Y[2→4]",
@@ -424,7 +424,7 @@
           },
           {
             "route": "Y[7→2]",
-            "flow": 233.8002949010656
+            "flow": 233.8002949010512
           },
           {
             "route": "Y[6→3]",
@@ -507,19 +507,19 @@
         ]
       },
       "cost_breakdown": {
-        "production": 9271296.56,
-        "intermediation": 2467692.2,
-        "labor_acopio": 21032886.93,
-        "labor_intermediario": 77392372.92,
-        "labor_detallista": 14128504.57,
-        "labor_total": 112553764.41,
-        "transport_pi": 8610.93,
-        "transport_id": 95047.35,
-        "transport_total": 103658.29,
-        "damage_pi": 435443.62,
-        "damage_id": 1545552.88,
-        "damage_total": 1980996.5,
-        "total": 126377407.96
+        "production": 9186051.6,
+        "intermediation": 2469700.0,
+        "labor_acopio": 21050000.0,
+        "labor_intermediario": 77455342.0,
+        "labor_detallista": 14140000.0,
+        "labor_total": 112645342.0,
+        "transport_pi": 352.69,
+        "transport_id": 564.97,
+        "transport_total": 917.65,
+        "damage_pi": 435797.91,
+        "damage_id": 1546810.39,
+        "damage_total": 1982608.31,
+        "total": 126284619.56
       },
       "emissions_breakdown": {
         "transport_pi": 637.16,
@@ -590,7 +590,7 @@
         ],
         "total_variants": 5,
         "hectares_by_producer": {
-          "1": 22.9
+          "1": 22.90000000000001
         },
         "hectares_breakdown": [
           {

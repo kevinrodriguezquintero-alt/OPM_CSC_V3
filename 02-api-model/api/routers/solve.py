@@ -274,8 +274,9 @@ def _extract_cost_breakdown_from_vars(variables: dict, params, actual_total: flo
     cost_labor_int = sum(CMO.get(j, 0) * ss_dict.get(j, 0) for j in intermediaries)
     cost_labor_det = sum(CD.get(k, 0) * sss_dict.get(k, 0) for k in retailers)
     
-    cost_transport_pi = sum(CT.get((i, j), 0) * x_flow.get((i, j), 0) for i in producers for j in intermediaries)
-    cost_transport_id = sum(CTT.get((j, k), 0) * y_flow.get((j, k), 0) for j in intermediaries for k in retailers)
+    # CORREGIDO: Usar nueva formula CT*Z*DPI y CTT*ZZ*DID (consistente con build_model.py)
+    cost_transport_pi = sum(CT.get((i, j), 0) * z_dict.get((i, j), 0) * DPI.get((i, j), 0) for i in producers for j in intermediaries)
+    cost_transport_id = sum(CTT.get((j, k), 0) * zz_dict.get((j, k), 0) * DID.get((j, k), 0) for j in intermediaries for k in retailers)
     cost_damage_pi = sum(CDA.get((i, j), 0) * P.get((i, j), 0) * x_flow.get((i, j), 0) for i in producers for j in intermediaries)
     cost_damage_id = sum(CDF.get((j, k), 0) * PP.get((j, k), 0) * y_flow.get((j, k), 0) for j in intermediaries for k in retailers)
     

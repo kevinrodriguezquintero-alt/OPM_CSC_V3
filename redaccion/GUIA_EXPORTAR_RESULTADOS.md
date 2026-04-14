@@ -29,36 +29,56 @@ Interfaz web: http://localhost:3000
 
 ---
 
+## Estado de Archivos (Actualización API)
+
+**Última actualización: 2025-04-13**
+
+| Archivo | Estado | Transporte Total | Notas |
+|---------|--------|------------------|-------|
+| `resultados/esc_base.json` | ✅ **Actualizado API** | $917.65 | Fórmula corregida (CT·Z·DPI) |
+| `resultados/lgp.json` | ✅ **Actualizado API** | — | Fórmula corregida |
+| `resultados/er.json` | ✅ **Actualizado API** | — | Fórmula corregida |
+| `resultados/rangos.json` | ⏳ **Pendiente** | — | Actualizar desde sección "Rangos" |
+| `maestros/oat_lgp.json` | ⏳ **Pendiente** | — | Requiere regeneración completa |
+| `maestros/oat_er.json` | ⏳ **Pendiente** | — | Requiere regeneración completa |
+
+---
+
 ## Paso 2: Ejecutar Modelos desde Interfaz Web
 
 Abre http://localhost:3000 en tu navegador.
 
 **Ejecuta en este orden:**
 
-### 2a. LGP (Lexicographic Goal Programming)
-- Ve a la sección "Solver" o "LGP"
-- Haz clic en "Ejecutar LGP"
-- Espera resultados
-- **Archivo generado:** `redaccion/resultados/lgp.json`
+### 2a. LGP (Lexicographic Goal Programming) — ✅ YA ACTUALIZADO
+- ~~Ve a la sección "Solver" o "LGP"~~
+- ~~Haz clic en "Ejecutar LGP"~~
+- **Archivo:** `redaccion/resultados/lgp.json` — **Actualizado con fórmula corregida**
 
-### 2b. ER (Epsilon-Constraint)
-- Ve a la sección "ER" o "Pareto"
-- Configura pasos (recomendado: 5)
-- Haz clic en "Ejecutar ER"
-- **Archivo generado:** `redaccion/resultados/er.json`
+### 2b. ER (Epsilon-Constraint) — ✅ YA ACTUALIZADO
+- ~~Ve a la sección "ER" o "Pareto"~~
+- ~~Configura pasos (recomendado: 5)~~
+- ~~Haz clic en "Ejecutar ER"~~
+- **Archivo:** `redaccion/resultados/er.json` — **Actualizado con fórmula corregida**
 
-### 2c. OAT (One-At-A-Time Sensitivity)
+### 2c. Escenario Base — ✅ YA ACTUALIZADO
+- ~~Ve a la sección "Escenarios"~~
+- ~~Ejecuta escenario base~~
+- **Archivo:** `redaccion/resultados/esc_base.json` — **Actualizado con fórmula corregida**
+
+### 2d. Rangos (Shadow Prices) — ⏳ PENDIENTE
+- Ve a la sección "Rangos"
+- Haz clic en "Analizar Rangos"
+- **Archivo a generar:** `redaccion/resultados/rangos.json`
+
+### 2e. OAT (One-At-A-Time Sensitivity) — ⏳ PENDIENTE
 - Ve a la sección "Sensibilidad" o "OAT"
 - Selecciona parámetros a analizar
 - Haz clic en "Ejecutar OAT"
-- **Archivo generado:** `redaccion/resultados/oat.json`
+- **Archivos a generar:** `redaccion/resultados/oat_lgp.json`, `oat_er.json`
+- **Nota:** Este análisis toma más tiempo (~3-5 min)
 
-### 2d. Rangos (Shadow Prices)
-- Ve a la sección "Rangos"
-- Haz clic en "Analizar Rangos"
-- **Archivo generado:** `redaccion/resultados/rangos.json`
-
-### 2e. Escenarios (opcional)
+### 2f. Escenarios personalizados (opcional)
 - Ve a la sección "Escenarios"
 - Configura cada escenario
 - Ejecuta uno por uno
@@ -316,6 +336,7 @@ Verificar que el servidor tenga permisos de escritura en esa ruta.
 
 ---
 
-*Última actualización: 2025-04-12*
+*Última actualización: 2025-04-13*
 *Flujo web implementado: 2025-04-12*
 *Sistema de maestros individuales: 2025-04-13*
+*Corrección fórmula transporte (CT·Z·DPI): 2025-04-13*

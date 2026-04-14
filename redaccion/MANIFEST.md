@@ -43,6 +43,7 @@
 | `borrador_referencia.md` | **Guía de distribución de contenidos** — Caps 1-4 + Tabla de contenido completa | referencia |
 | `normativas.md` | Normativas y fuentes secundarias — **Sección 3: Capacidades de Personal (CA=40, CB, CC) agregada** — 3 referencias Zotero pendientes | parcial (usuario) |
 | `guia_estilo.md` | Normas APA 7ma edición, tono académico, convenciones matemáticas | completo |
+| `definicion_escenarios.md` | Marco formal para creación de escenarios — 5 ejes temáticos, 10 escenarios, 27 parámetros, basado en rangos.json | completo (reconstruido 2026-04-13) |
 
 **Estados posibles:** `pendiente` → `parcial` → `completo`
 
@@ -59,6 +60,7 @@ Qué archivo del código afecta qué plantillas cuando cambia:
 | `02-api-model/solvers/lgp.py` | obj2_fase3, obj2_fase4, obj3_fase5 | Resultados LGP, desviaciones, sensibilidad |
 | `02-api-model/solvers/er.py` | obj2_fase3, obj2_fase4, obj3_fase5 | Resultados ER, frontera de Pareto, sensibilidad |
 | `02-api-model/api/state.py` | obj2_fase3 | Estructura de datos API |
+| `03-web-model/js/app.js` (SCENARIO_PRESETS) | `definicion_escenarios.md`, obj2_fase4, obj3_fase5 | Definición de escenarios, variaciones porcentuales, mapeo UI |
 
 ---
 
@@ -119,3 +121,5 @@ python redaccion/tools/consolidar_resultados.py --execute
 | 2026-04-12 | `consolidar_resultados.py` | Script de consolidación modular y actualización de plantillas |
 | 2026-04-12 | `params.py`, `notacion.md`, `normativas.md` | **Corrección crítica**: CA cambiado de 22.43 (promedio erróneo) a 40 Kg/persona (valor específico centro de acopio) |
 | 2026-04-12 | `app.js` SCENARIO_PRESETS | Escenarios `super_eficiencia` y `fomento_laboral` ahora incluyen CC (capacidad detallistas) para consistencia en toda la cadena |
+| 2026-04-13 | `definicion_escenarios.md` | Creación del documento maestro de definición de escenarios — conecta código (SCENARIO_PRESETS) con Objetivo 3 y Fase 4 |
+| 2026-04-13 | `definicion_escenarios.md` | **Reconstrucción completa**: corrección "mandarina"→"cítricos", 25→27 parámetros, escenarios actualizados con parámetros de rangos.json |
