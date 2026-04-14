@@ -91,6 +91,35 @@ MAPEO_PLACEHOLDERS = {
     "aspiracion_costo": "aspiracion_costo",
     "aspiracion_emisiones": "aspiracion_emisiones",
     "aspiracion_empleo": "aspiracion_empleo",
+
+    # Escenarios — resultados LGP y ER por escenario (nombre descriptivo)
+    **{
+        f"{esc}_{metric}": f"{esc}_{metric}"
+        for esc in (
+            "boom_demanda", "crecimiento", "expansion",
+            "transicion_verde", "regulacion_ambiental",
+            "super_eficiencia", "fomento_laboral",
+            "crisis_climatica", "huelga_transporte",
+        )
+        for metric in (
+            "lgp_a", "lgp_g", "lgp_b",
+            "lgp_a_prop", "lgp_g_prop", "lgp_b_prop",
+            "er_a", "er_g", "er_b",
+            "er_a_prop", "er_g_prop", "er_b_prop",
+            "factible",
+        )
+    },
+
+    # OAT — elasticidad media absoluta por parámetro (LGP y ER)
+    # Parámetros: DI, DD, CA, CB, CV, RC, RA, IT, CT, CTT, CP, CI, CN, CH, CMO, CD, CDA, CDF, P, PP
+    **{
+        f"oat_{met}_sens_{param}_{metric}": f"oat_{met}_sens_{param}_{metric}"
+        for met in ("lgp", "er")
+        for param in ("DI", "DD", "CA", "CB", "CV", "RC", "RA", "IT",
+                      "CT", "CTT", "CP", "CI", "CN", "CH", "CMO", "CD",
+                      "CDA", "CDF", "P", "PP", "CRI", "CR", "RB", "RD", "H")
+        for metric in ("alpha", "gamma", "beta", "clase_alpha", "clase_gamma", "clase_beta")
+    },
 }
 
 PLANTILLAS_AFECTADAS = [
@@ -111,51 +140,85 @@ def cargar_lgp() -> dict:
     with open(ruta, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
-    objs = data.get("objectives", {})
+    objs  = data.get("objectives", {})
+    steps = data.get("steps", [])
+
+    step1_cost      = (steps[0].get("objectives") or {}).get("cost")      if len(steps) > 0 else None
+    step2_emissions = (steps[1].get("objectives") or {}).get("emissions") if len(steps) > 1 else None
+    final_cost      = objs.get("cost")
+    final_emissions = objs.get("emissions")
+
+    # Desviaciones positivas respecto a las aspiraciones g₁ (costo) y g₂ (emisiones).
+    # Con restricciones de igualdad en los subproblemas 1 y 2, el resultado debe ser ~0.
+    # max(0, ...) absorbe ruido numérico de punto flotante.
+    d1_plus = round(max(0.0, (final_cost or 0) - (step1_cost or 0)), 6)
+    d2_plus = round(max(0.0, (final_emissions or 0) - (step2_emissions or 0)), 6)
+    # d3_minus: el subproblema 3 maximiza empleo sujeto a las restricciones previas;
+    # el valor alcanzado es el mejor posible bajo esas restricciones → d3⁻ = 0.
+    # Para calcular la desviación real se necesitaría β* (óptimo sin restricciones),
+    # que sólo está disponible en la payoff table del ER.
+    d3_minus = 0.0
+
     lgp_data = {
         # Placeholders para plantillas
-        "lgp_costo": objs.get("cost"),
+        "lgp_costo":    objs.get("cost"),
         "lgp_emisiones": objs.get("emissions"),
-        "lgp_empleo": objs.get("employment"),
-        "lgp_d1_plus": 0,
-        "lgp_d2_plus": 0,
-        "lgp_d3_minus": 0,
+        "lgp_empleo":   objs.get("employment"),
+        "lgp_d1_plus":  d1_plus,
+        "lgp_d2_plus":  d2_plus,
+        "lgp_d3_minus": d3_minus,
         # Datos completos para consulta/análisis
-        "lgp_completo": data,  # TODO el JSON de LGP
+        "lgp_completo": data,
     }
     return lgp_data
 
 
 def cargar_er(iter_custom: int = None) -> dict:
     """Cargar resultados ER (Epsilon-Constraint) completos.
-    Si iter_custom es None, usa el punto medio.
+
+    Selección del punto de la frontera de Pareto (1-indexed):
+      1. Si iter_custom está provisto → usa esa iteración y la persiste en el maestro.
+      2. Si no → lee knee_iteration del maestro existente (maestros/er.json).
+      3. Si tampoco hay maestro con knee_iteration → falla con mensaje claro.
+         Solución: correr con --er --er-iter <N> para registrar la selección.
     """
     ruta = RESULTADOS_DIR / "er.json"
     if not ruta.exists():
         print(f"[!]  No se encontró {ruta}")
         return {}
-    
+
     with open(ruta, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    
-    # Extraer punto medio de frontera de Pareto
+
     frontier = data.get("pareto_frontier", [])
     optimal = [p for p in frontier if p.get("status") == "optimal"]
-    
+
     if not optimal:
         return {}
-    
-    # Selección de iteración: manual (1-indexed) o central
+
+    # Resolver iteración a usar
     if iter_custom is not None:
-        idx = iter_custom - 1
-        if 0 <= idx < len(optimal):
-            mid = optimal[idx]
-            print(f"    [ER] Usando iteración seleccionada manualmente: {iter_custom}")
-        else:
-            mid = optimal[len(optimal) // 2]
-            print(f"    [!] Iteración {iter_custom} fuera de rango. Usando punto medio por defecto.")
+        iter_to_use = iter_custom
+        print(f"    [ER] Usando iteración seleccionada: {iter_to_use} (se persistirá en maestro)")
     else:
-        mid = optimal[len(optimal) // 2]
+        # Intentar leer del maestro existente
+        maestro_er = _cargar_maestro_si_existe(MAESTRO_ER)
+        iter_to_use = maestro_er.get("knee_iteration")
+        if iter_to_use is None:
+            print(
+                "[X]  ER: no se conoce el punto de codo.\n"
+                "     Ejecuta primero:  python consolidar_resultados.py --execute --er --er-iter <N>\n"
+                "     donde <N> es la iteración validada como knee point (ej: 78 de 100)."
+            )
+            return {}
+        print(f"    [ER] Usando knee_iteration={iter_to_use} (leído del maestro)")
+
+    idx = iter_to_use - 1
+    if not (0 <= idx < len(optimal)):
+        print(f"    [!] Iteración {iter_to_use} fuera de rango (frontera tiene {len(optimal)} puntos óptimos). Abortando ER.")
+        return {}
+
+    mid = optimal[idx]
 
     objs = mid.get("objectives", {})
     
@@ -181,39 +244,74 @@ def cargar_er(iter_custom: int = None) -> dict:
         "aspiracion_costo": pt.get("min_cost", {}).get("cost"),
         "aspiracion_emisiones": pt.get("min_emissions", {}).get("emissions"),
         "aspiracion_empleo": pt.get("max_social", {}).get("employment"),
+        # Selección persistida — se guarda en el maestro para reutilizar sin --er-iter
+        "knee_iteration": iter_to_use,
         # Datos completos del punto medio para consulta/análisis
-        "er_punto_medio_completo": mid,  # TODO: objectives + variables (X, Y, Z, ZZ, etc.)
-        "er_frontera_completa": data.get("pareto_frontier", []),  # Toda la frontera por si se necesita
-        "er_payoff_table": pt,  # Payoff table completa
+        "er_punto_medio_completo": mid,
+        "er_frontera_completa": data.get("pareto_frontier", []),
+        "er_payoff_table": pt,
     }
 
 
+def _clasificar_elasticidad(v) -> str:
+    """Clasificar elasticidad media absoluta en Alta / Media / Baja."""
+    if v is None:
+        return "—"
+    if v >= 1.0:
+        return "Alta"
+    if v >= 0.5:
+        return "Media"
+    return "Baja"
+
+
 def _cargar_oat_file(filename: str, prefix: str) -> dict:
-    """Cargar un archivo OAT específico con prefijo dado."""
+    """Cargar un archivo OAT y calcular elasticidad media absoluta sobre todas las variaciones (±20%).
+
+    Para cada parámetro se promedian los valores absolutos de elasticidad de TODOS los
+    niveles de variación disponibles (p.ej. ±5%, ±10%, ±15%, ±20%) y se clasifica el
+    resultado como Alta (≥1.0), Media (≥0.5) o Baja (<0.5).
+    """
     ruta = RESULTADOS_DIR / filename
     if not ruta.exists():
         return {}
-    
+
     with open(ruta, 'r', encoding='utf-8') as f:
         data = json.load(f)
-    
+
     results = data.get("results", [])
     oat_data = {}
-    
-    # 1. Extraer elasticidades para placeholders (solo +10%)
+
+    # 1. Recolectar elasticidades absolutas por parámetro (todas las variaciones)
+    param_vals: dict[str, dict[str, list]] = {}
     for r in results:
         param = r.get("param", "")
-        change = r.get("change", "")
-        
-        if change == "+10.0%":
-            oat_data[f"oat_{prefix}_sens_{param}_alpha"] = r.get("elas_cost")
-            oat_data[f"oat_{prefix}_sens_{param}_gamma"] = r.get("elas_env")
-            oat_data[f"oat_{prefix}_sens_{param}_beta"] = r.get("elas_soc")
-    
-    # 2. Guardar datos completos de OAT para consulta/análisis
-    oat_data[f"oat_{prefix}_tabla_completa"] = results  # Todos los parámetros, todos los %
-    oat_data[f"oat_{prefix}_base_objectives"] = data.get("base_objectives", {})
-    
+        if not param:
+            continue
+        if param not in param_vals:
+            param_vals[param] = {"alpha": [], "gamma": [], "beta": []}
+
+        for src_key, dest_key in [("elas_cost", "alpha"), ("elas_env", "gamma"), ("elas_soc", "beta")]:
+            v = r.get(src_key)
+            if v is not None:
+                param_vals[param][dest_key].append(abs(v))
+
+    # 2. Calcular media y clasificación por parámetro
+    for param, vals in param_vals.items():
+        avg_alpha = sum(vals["alpha"]) / len(vals["alpha"]) if vals["alpha"] else None
+        avg_gamma = sum(vals["gamma"]) / len(vals["gamma"]) if vals["gamma"] else None
+        avg_beta  = sum(vals["beta"])  / len(vals["beta"])  if vals["beta"]  else None
+
+        oat_data[f"oat_{prefix}_sens_{param}_alpha"]       = round(avg_alpha, 3) if avg_alpha is not None else None
+        oat_data[f"oat_{prefix}_sens_{param}_gamma"]       = round(avg_gamma, 3) if avg_gamma is not None else None
+        oat_data[f"oat_{prefix}_sens_{param}_beta"]        = round(avg_beta,  3) if avg_beta  is not None else None
+        oat_data[f"oat_{prefix}_sens_{param}_clase_alpha"] = _clasificar_elasticidad(avg_alpha)
+        oat_data[f"oat_{prefix}_sens_{param}_clase_gamma"] = _clasificar_elasticidad(avg_gamma)
+        oat_data[f"oat_{prefix}_sens_{param}_clase_beta"]  = _clasificar_elasticidad(avg_beta)
+
+    # 3. Guardar datos completos para consulta/análisis
+    oat_data[f"oat_{prefix}_tabla_completa"]   = results
+    oat_data[f"oat_{prefix}_base_objectives"]  = data.get("base_objectives", {})
+
     return oat_data
 
 
@@ -247,41 +345,75 @@ def cargar_rangos() -> dict:
     }
 
 
+def _extraer_objs_escenario(data: dict) -> tuple[dict, dict, dict, dict]:
+    """Extraer base y propuesto de LGP y ER desde un JSON de escenario.
+
+    Soporta dos formatos:
+      - "both": { method:"both", lgp:{base,propuesto}, er:{base,propuesto} }
+      - legacy:  { method:"lgp"|"er", base:{...}, propuesto:{...} }
+    Retorna (lgp_base, lgp_prop, er_base, er_prop) — cada uno puede ser {}.
+    """
+    method = data.get("method", "lgp")
+    if method == "both":
+        lgp = data.get("lgp") or {}
+        er  = data.get("er")  or {}
+        return (
+            lgp.get("base") or {},
+            lgp.get("propuesto") or {},
+            er.get("base") or {},
+            er.get("propuesto") or {},
+        )
+    elif method == "er":
+        base = data.get("base") or {}
+        prop = data.get("propuesto") or {}
+        return {}, {}, base, prop
+    else:  # lgp
+        base = data.get("base") or {}
+        prop = data.get("propuesto") or {}
+        return base, prop, {}, {}
+
+
 def cargar_escenarios() -> dict:
-    """Cargar todos los escenarios del directorio resultados/."""
+    """Cargar todos los escenarios del directorio resultados/.
+
+    Las claves usan el mismo nombre descriptivo del archivo (boom_demanda, etc.),
+    sin ninguna capa de traducción numérica.
+    """
     if not RESULTADOS_DIR.exists():
         return {}
-    
+
     escenarios = {}
     for esc_file in sorted(RESULTADOS_DIR.glob("esc_*.json")):
         try:
+            esc_id = esc_file.stem.replace("esc_", "")
+
             with open(esc_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            
-            # Extraer ID del escenario del nombre del archivo
-            esc_id = esc_file.stem.replace("esc_", "")[:20]
-            
-            # El JSON tiene: method, base, propuesto
-            base = data.get("base", {})
-            propuesto = data.get("propuesto", {})
-            
-            # Placeholders para plantillas
+
+            lgp_base, lgp_prop, er_base, er_prop = _extraer_objs_escenario(data)
+            factible = bool(lgp_prop and lgp_prop.get("cost") is not None)
+
             escenarios.update({
-                f"{esc_id}_lgp_a": base.get("cost"),
-                f"{esc_id}_lgp_g": base.get("emissions"),
-                f"{esc_id}_lgp_b": base.get("employment"),
-                f"{esc_id}_lgp_a_prop": propuesto.get("cost") if propuesto else None,
-                f"{esc_id}_lgp_g_prop": propuesto.get("emissions") if propuesto else None,
-                f"{esc_id}_lgp_b_prop": propuesto.get("employment") if propuesto else None,
-                f"{esc_id}_factible": "Si" if propuesto else "No",
+                f"{esc_id}_lgp_a":      lgp_base.get("cost"),
+                f"{esc_id}_lgp_g":      lgp_base.get("emissions"),
+                f"{esc_id}_lgp_b":      lgp_base.get("employment"),
+                f"{esc_id}_lgp_a_prop": lgp_prop.get("cost") if lgp_prop else None,
+                f"{esc_id}_lgp_g_prop": lgp_prop.get("emissions") if lgp_prop else None,
+                f"{esc_id}_lgp_b_prop": lgp_prop.get("employment") if lgp_prop else None,
+                f"{esc_id}_er_a":       er_base.get("cost") if er_base else None,
+                f"{esc_id}_er_g":       er_base.get("emissions") if er_base else None,
+                f"{esc_id}_er_b":       er_base.get("employment") if er_base else None,
+                f"{esc_id}_er_a_prop":  er_prop.get("cost") if er_prop else None,
+                f"{esc_id}_er_g_prop":  er_prop.get("emissions") if er_prop else None,
+                f"{esc_id}_er_b_prop":  er_prop.get("employment") if er_prop else None,
+                f"{esc_id}_factible":   "Si" if factible else "No",
             })
-            
-            # Guardar JSON completo del escenario para consulta/análisis
+
             escenarios[f"{esc_id}_completo"] = data
-            
+
         except Exception as e:
             print(f"[!]  Error cargando {esc_file}: {e}")
-    
+
     return escenarios
 
 
@@ -351,31 +483,34 @@ def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True,
         print("    -> Actualizando Maestros de Escenarios individuales...")
         if RESULTADOS_DIR.exists():
             for esc_file in sorted(RESULTADOS_DIR.glob("esc_*.json")):
-                esc_id = esc_file.stem  # esc_base, esc_mejorado, etc.
+                esc_id = esc_file.stem.replace("esc_", "")
                 try:
                     with open(esc_file, 'r', encoding='utf-8') as f:
                         datos_esc = json.load(f)
-                    
-                    # Extraer datos base y propuesto
-                    base = datos_esc.get("base", {})
-                    propuesto = datos_esc.get("propuesto", {})
-                    
-                    # Datos para maestro individual
+
+                    lgp_base, lgp_prop, er_base, er_prop = _extraer_objs_escenario(datos_esc)
+                    factible = bool(lgp_prop and lgp_prop.get("cost") is not None)
+
                     esc_data = {
-                        f"{esc_id}_lgp_a": base.get("cost"),
-                        f"{esc_id}_lgp_g": base.get("emissions"),
-                        f"{esc_id}_lgp_b": base.get("employment"),
-                        f"{esc_id}_lgp_a_prop": propuesto.get("cost") if propuesto else None,
-                        f"{esc_id}_lgp_g_prop": propuesto.get("emissions") if propuesto else None,
-                        f"{esc_id}_lgp_b_prop": propuesto.get("employment") if propuesto else None,
-                        f"{esc_id}_factible": "Si" if propuesto else "No",
-                        f"{esc_id}_completo": datos_esc,  # Todo el JSON
+                        f"{esc_id}_lgp_a":      lgp_base.get("cost"),
+                        f"{esc_id}_lgp_g":      lgp_base.get("emissions"),
+                        f"{esc_id}_lgp_b":      lgp_base.get("employment"),
+                        f"{esc_id}_lgp_a_prop": lgp_prop.get("cost") if lgp_prop else None,
+                        f"{esc_id}_lgp_g_prop": lgp_prop.get("emissions") if lgp_prop else None,
+                        f"{esc_id}_lgp_b_prop": lgp_prop.get("employment") if lgp_prop else None,
+                        f"{esc_id}_er_a":       er_base.get("cost") if er_base else None,
+                        f"{esc_id}_er_g":       er_base.get("emissions") if er_base else None,
+                        f"{esc_id}_er_b":       er_base.get("employment") if er_base else None,
+                        f"{esc_id}_er_a_prop":  er_prop.get("cost") if er_prop else None,
+                        f"{esc_id}_er_g_prop":  er_prop.get("emissions") if er_prop else None,
+                        f"{esc_id}_er_b_prop":  er_prop.get("employment") if er_prop else None,
+                        f"{esc_id}_factible":   "Si" if factible else "No",
+                        f"{esc_id}_completo":   datos_esc,
                     }
-                    
-                    # Guardar maestro individual
-                    ruta_maestro = MAESTROS_DIR / f"{esc_id}.json"
+
+                    ruta_maestro = MAESTROS_DIR / f"esc_{esc_id}.json"
                     _guardar_maestro(ruta_maestro, esc_data, esc_id)
-                    
+
                 except Exception as e:
                     print(f"[!]  Error procesando {esc_file}: {e}")
     
@@ -402,7 +537,7 @@ def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True,
             resultado.update(datos)
             maestros_cargados.append(nombre)
     
-    # Maestros de escenarios individuales (patrón esc_*.json)
+    # Maestros de escenarios individuales (patrón esc_*.json, ej: esc_boom_demanda.json)
     for esc_maestro in sorted(MAESTROS_DIR.glob("esc_*.json")):
         datos = _cargar_maestro_si_existe(esc_maestro)
         if datos:

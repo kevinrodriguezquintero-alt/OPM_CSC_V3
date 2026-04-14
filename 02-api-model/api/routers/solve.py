@@ -793,7 +793,7 @@ def solve_scenarios(body: ScenariosRequest):
         if body.method == "both":
             lgp_res = _run_full_scenario("lgp")
             er_res = _run_full_scenario("er")
-            return {
+            result = {
                 "method": "both",
                 "lgp": lgp_res,
                 "er": er_res,
@@ -803,7 +803,7 @@ def solve_scenarios(body: ScenariosRequest):
             res = _run_full_scenario(body.method)
             if res is None:
                 raise HTTPException(status_code=422, detail="Model could not be solved")
-            
+
             result = {
                 "method": body.method,
                 **res,

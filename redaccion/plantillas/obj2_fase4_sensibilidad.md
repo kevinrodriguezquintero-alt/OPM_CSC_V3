@@ -6,67 +6,61 @@ Este capítulo evalúa la robustez del modelo ante variaciones en parámetros cr
 
 ## 7.1 Parámetros Dominantes
 
-El análisis de sensibilidad evalúa la robustez del modelo ante variaciones en los parámetros críticos, identificando cuáles tienen mayor impacto en las funciones objetivo y en las decisiones operativas. Esta actividad permite comprender el comportamiento del sistema bajo diferentes escenarios y detectar cuellos de botella.
+El análisis de sensibilidad evalúa la robustez del modelo ante variaciones en los parámetros críticos, identificando cuáles tienen mayor impacto en las funciones objetivo y en las decisiones operativas. Esta actividad permite comprender el comportamiento del sistema bajo diferentes contextos y detectar cuellos de botella estructurales.
 
-Se identificarán los parámetros que resultan determinantes en el comportamiento del modelo por su influencia en las funciones objetivo y restricciones.
-
-### Criterios de selección
+Se aplicó el método OAT (*One-At-a-Time*), variando cada parámetro de forma individual en el rango ±20% (en intervalos de ±5%, ±10%, ±15%, ±20%), manteniendo los demás constantes. Para cada parámetro se reporta la **elasticidad media absoluta** (promedio del valor absoluto de la elasticidad sobre todas las variaciones del rango) respecto a cada función objetivo, y se clasifica su nivel de sensibilidad como **Alta** (|ε̄| ≥ 1,0), **Media** (0,5 ≤ |ε̄| < 1,0) o **Baja** (|ε̄| < 0,5). El análisis se ejecutó independientemente para el modelo LGP y el modelo ER.
 
 Los parámetros críticos se seleccionan según tres criterios: (1) elasticidad respecto a las funciones objetivo, (2) impacto en la factibilidad del modelo, y (3) proximidad a límites operativos identificados en el análisis de rangos.
 
-### Parámetros seleccionados
+### Análisis OAT — Modelo LGP
 
-*Tabla X. Parámetros críticos identificados para el análisis de sensibilidad.*
+*Tabla X. Sensibilidad OAT bajo LGP: elasticidad media absoluta (rango ±20%).*
 
-| Categoría | Parámetro | Sensibilidad en α | Sensibilidad en γ | Sensibilidad en β | Justificación |
-|-----------|-----------|-------------------|-------------------|-------------------|---------------|
-| Demanda | DI_j | {{DATO:oat_sens_DI_alpha}} | {{DATO:oat_sens_DI_gamma}} | {{DATO:oat_sens_DI_beta}} | {{PLACEHOLDER}} |
-| Demanda | DD_k | {{DATO:oat_sens_DD_alpha}} | {{DATO:oat_sens_DD_gamma}} | {{DATO:oat_sens_DD_beta}} | {{PLACEHOLDER}} |
-| Productividad | CA, CB | {{DATO:oat_sens_CA_alpha}} | {{DATO:oat_sens_CA_gamma}} | {{DATO:oat_sens_CA_beta}} | {{PLACEHOLDER}} |
-| Capacidad vehicular | CV_j | {{DATO:oat_sens_CV_alpha}} | {{DATO:oat_sens_CV_gamma}} | {{DATO:oat_sens_CV_beta}} | {{PLACEHOLDER}} |
-| Rendimiento | RC_i, RA_u | {{DATO:oat_sens_RC_alpha}} | {{DATO:oat_sens_RC_gamma}} | {{DATO:oat_sens_RC_beta}} | {{PLACEHOLDER}} |
-| Emisión | IT_j | {{DATO:oat_sens_IT_alpha}} | {{DATO:oat_sens_IT_gamma}} | {{DATO:oat_sens_IT_beta}} | {{PLACEHOLDER}} |
-| Transporte | CT, CTT | {{DATO:oat_sens_CT_alpha}} | {{DATO:oat_sens_CT_gamma}} | {{DATO:oat_sens_CT_beta}} | {{PLACEHOLDER}} |
+| Categoría | Parámetro | ε̄_α | Clase α | ε̄_γ | Clase γ | ε̄_β | Clase β |
+|-----------|-----------|------|---------|------|---------|------|---------|
+| Demanda | $DI_j$ | {{DATO:oat_lgp_sens_DI_alpha}} | {{DATO:oat_lgp_sens_DI_clase_alpha}} | {{DATO:oat_lgp_sens_DI_gamma}} | {{DATO:oat_lgp_sens_DI_clase_gamma}} | {{DATO:oat_lgp_sens_DI_beta}} | {{DATO:oat_lgp_sens_DI_clase_beta}} |
+| Demanda | $DD_k$ | {{DATO:oat_lgp_sens_DD_alpha}} | {{DATO:oat_lgp_sens_DD_clase_alpha}} | {{DATO:oat_lgp_sens_DD_gamma}} | {{DATO:oat_lgp_sens_DD_clase_gamma}} | {{DATO:oat_lgp_sens_DD_beta}} | {{DATO:oat_lgp_sens_DD_clase_beta}} |
+| Productividad | $CA$ | {{DATO:oat_lgp_sens_CA_alpha}} | {{DATO:oat_lgp_sens_CA_clase_alpha}} | {{DATO:oat_lgp_sens_CA_gamma}} | {{DATO:oat_lgp_sens_CA_clase_gamma}} | {{DATO:oat_lgp_sens_CA_beta}} | {{DATO:oat_lgp_sens_CA_clase_beta}} |
+| Productividad | $CB_j$ | {{DATO:oat_lgp_sens_CB_alpha}} | {{DATO:oat_lgp_sens_CB_clase_alpha}} | {{DATO:oat_lgp_sens_CB_gamma}} | {{DATO:oat_lgp_sens_CB_clase_gamma}} | {{DATO:oat_lgp_sens_CB_beta}} | {{DATO:oat_lgp_sens_CB_clase_beta}} |
+| Capacidad vehicular | $CV_j$ | {{DATO:oat_lgp_sens_CV_alpha}} | {{DATO:oat_lgp_sens_CV_clase_alpha}} | {{DATO:oat_lgp_sens_CV_gamma}} | {{DATO:oat_lgp_sens_CV_clase_gamma}} | {{DATO:oat_lgp_sens_CV_beta}} | {{DATO:oat_lgp_sens_CV_clase_beta}} |
+| Rendimiento | $RC_i$ | {{DATO:oat_lgp_sens_RC_alpha}} | {{DATO:oat_lgp_sens_RC_clase_alpha}} | {{DATO:oat_lgp_sens_RC_gamma}} | {{DATO:oat_lgp_sens_RC_clase_gamma}} | {{DATO:oat_lgp_sens_RC_beta}} | {{DATO:oat_lgp_sens_RC_clase_beta}} |
+| Rendimiento | $RA_u$ | {{DATO:oat_lgp_sens_RA_alpha}} | {{DATO:oat_lgp_sens_RA_clase_alpha}} | {{DATO:oat_lgp_sens_RA_gamma}} | {{DATO:oat_lgp_sens_RA_clase_gamma}} | {{DATO:oat_lgp_sens_RA_beta}} | {{DATO:oat_lgp_sens_RA_clase_beta}} |
+| Ambiental | $IT_j$ | {{DATO:oat_lgp_sens_IT_alpha}} | {{DATO:oat_lgp_sens_IT_clase_alpha}} | {{DATO:oat_lgp_sens_IT_gamma}} | {{DATO:oat_lgp_sens_IT_clase_gamma}} | {{DATO:oat_lgp_sens_IT_beta}} | {{DATO:oat_lgp_sens_IT_clase_beta}} |
+| Transporte | $CT_{ij}$ | {{DATO:oat_lgp_sens_CT_alpha}} | {{DATO:oat_lgp_sens_CT_clase_alpha}} | {{DATO:oat_lgp_sens_CT_gamma}} | {{DATO:oat_lgp_sens_CT_clase_gamma}} | {{DATO:oat_lgp_sens_CT_beta}} | {{DATO:oat_lgp_sens_CT_clase_beta}} |
+| Transporte | $CTT_{jk}$ | {{DATO:oat_lgp_sens_CTT_alpha}} | {{DATO:oat_lgp_sens_CTT_clase_alpha}} | {{DATO:oat_lgp_sens_CTT_gamma}} | {{DATO:oat_lgp_sens_CTT_clase_gamma}} | {{DATO:oat_lgp_sens_CTT_beta}} | {{DATO:oat_lgp_sens_CTT_clase_beta}} |
+| Costo producción | $CP_i$ | {{DATO:oat_lgp_sens_CP_alpha}} | {{DATO:oat_lgp_sens_CP_clase_alpha}} | {{DATO:oat_lgp_sens_CP_gamma}} | {{DATO:oat_lgp_sens_CP_clase_gamma}} | {{DATO:oat_lgp_sens_CP_beta}} | {{DATO:oat_lgp_sens_CP_clase_beta}} |
+| Costo procesamiento | $CI_j$ | {{DATO:oat_lgp_sens_CI_alpha}} | {{DATO:oat_lgp_sens_CI_clase_alpha}} | {{DATO:oat_lgp_sens_CI_gamma}} | {{DATO:oat_lgp_sens_CI_clase_gamma}} | {{DATO:oat_lgp_sens_CI_beta}} | {{DATO:oat_lgp_sens_CI_clase_beta}} |
 
-Nota. Elaboración propia.
+*Nota.* ε̄ = elasticidad media absoluta sobre el rango ±20%. Elaboración propia.
 
 ---
 
-### Criterios de Selección de Parámetros Críticos
+### Análisis OAT — Modelo ER
 
-Los parámetros críticos se seleccionan según tres criterios: (1) elasticidad respecto a las funciones objetivo, (2) impacto en la factibilidad del modelo, y (3) proximidad a límites operativos identificados en el análisis de rangos.
+*Tabla X. Sensibilidad OAT bajo ER (punto sostenible, Iteración 78): elasticidad media absoluta (rango ±20%).*
 
-### Parámetros de Mayor Impacto
+| Categoría | Parámetro | ε̄_α | Clase α | ε̄_γ | Clase γ | ε̄_β | Clase β |
+|-----------|-----------|------|---------|------|---------|------|---------|
+| Demanda | $DI_j$ | {{DATO:oat_er_sens_DI_alpha}} | {{DATO:oat_er_sens_DI_clase_alpha}} | {{DATO:oat_er_sens_DI_gamma}} | {{DATO:oat_er_sens_DI_clase_gamma}} | {{DATO:oat_er_sens_DI_beta}} | {{DATO:oat_er_sens_DI_clase_beta}} |
+| Demanda | $DD_k$ | {{DATO:oat_er_sens_DD_alpha}} | {{DATO:oat_er_sens_DD_clase_alpha}} | {{DATO:oat_er_sens_DD_gamma}} | {{DATO:oat_er_sens_DD_clase_gamma}} | {{DATO:oat_er_sens_DD_beta}} | {{DATO:oat_er_sens_DD_clase_beta}} |
+| Productividad | $CA$ | {{DATO:oat_er_sens_CA_alpha}} | {{DATO:oat_er_sens_CA_clase_alpha}} | {{DATO:oat_er_sens_CA_gamma}} | {{DATO:oat_er_sens_CA_clase_gamma}} | {{DATO:oat_er_sens_CA_beta}} | {{DATO:oat_er_sens_CA_clase_beta}} |
+| Productividad | $CB_j$ | {{DATO:oat_er_sens_CB_alpha}} | {{DATO:oat_er_sens_CB_clase_alpha}} | {{DATO:oat_er_sens_CB_gamma}} | {{DATO:oat_er_sens_CB_clase_gamma}} | {{DATO:oat_er_sens_CB_beta}} | {{DATO:oat_er_sens_CB_clase_beta}} |
+| Capacidad vehicular | $CV_j$ | {{DATO:oat_er_sens_CV_alpha}} | {{DATO:oat_er_sens_CV_clase_alpha}} | {{DATO:oat_er_sens_CV_gamma}} | {{DATO:oat_er_sens_CV_clase_gamma}} | {{DATO:oat_er_sens_CV_beta}} | {{DATO:oat_er_sens_CV_clase_beta}} |
+| Rendimiento | $RC_i$ | {{DATO:oat_er_sens_RC_alpha}} | {{DATO:oat_er_sens_RC_clase_alpha}} | {{DATO:oat_er_sens_RC_gamma}} | {{DATO:oat_er_sens_RC_clase_gamma}} | {{DATO:oat_er_sens_RC_beta}} | {{DATO:oat_er_sens_RC_clase_beta}} |
+| Rendimiento | $RA_u$ | {{DATO:oat_er_sens_RA_alpha}} | {{DATO:oat_er_sens_RA_clase_alpha}} | {{DATO:oat_er_sens_RA_gamma}} | {{DATO:oat_er_sens_RA_clase_gamma}} | {{DATO:oat_er_sens_RA_beta}} | {{DATO:oat_er_sens_RA_clase_beta}} |
+| Ambiental | $IT_j$ | {{DATO:oat_er_sens_IT_alpha}} | {{DATO:oat_er_sens_IT_clase_alpha}} | {{DATO:oat_er_sens_IT_gamma}} | {{DATO:oat_er_sens_IT_clase_gamma}} | {{DATO:oat_er_sens_IT_beta}} | {{DATO:oat_er_sens_IT_clase_beta}} |
+| Transporte | $CT_{ij}$ | {{DATO:oat_er_sens_CT_alpha}} | {{DATO:oat_er_sens_CT_clase_alpha}} | {{DATO:oat_er_sens_CT_gamma}} | {{DATO:oat_er_sens_CT_clase_gamma}} | {{DATO:oat_er_sens_CT_beta}} | {{DATO:oat_er_sens_CT_clase_beta}} |
+| Transporte | $CTT_{jk}$ | {{DATO:oat_er_sens_CTT_alpha}} | {{DATO:oat_er_sens_CTT_clase_alpha}} | {{DATO:oat_er_sens_CTT_gamma}} | {{DATO:oat_er_sens_CTT_clase_gamma}} | {{DATO:oat_er_sens_CTT_beta}} | {{DATO:oat_er_sens_CTT_clase_beta}} |
+| Costo producción | $CP_i$ | {{DATO:oat_er_sens_CP_alpha}} | {{DATO:oat_er_sens_CP_clase_alpha}} | {{DATO:oat_er_sens_CP_gamma}} | {{DATO:oat_er_sens_CP_clase_gamma}} | {{DATO:oat_er_sens_CP_beta}} | {{DATO:oat_er_sens_CP_clase_beta}} |
+| Costo procesamiento | $CI_j$ | {{DATO:oat_er_sens_CI_alpha}} | {{DATO:oat_er_sens_CI_clase_alpha}} | {{DATO:oat_er_sens_CI_gamma}} | {{DATO:oat_er_sens_CI_clase_gamma}} | {{DATO:oat_er_sens_CI_beta}} | {{DATO:oat_er_sens_CI_clase_beta}} |
 
-*Tabla X. Parámetros críticos identificados para el análisis de sensibilidad.*
-
-| Categoría | Parámetro | Sensibilidad en α | Sensibilidad en γ | Sensibilidad en β | Justificación |
-|-----------|-----------|-------------------|-------------------|-------------------|---------------|
-| Demanda | DI_j | {{DATO:oat_sens_DI_alpha}} | {{DATO:oat_sens_DI_gamma}} | {{DATO:oat_sens_DI_beta}} | Factor de mayor impacto. Un aumento del 10% eleva costos en 10.2%. |
-| Productividad | CA, CB | {{DATO:oat_sens_CA_alpha}} | {{DATO:oat_sens_CA_gamma}} | {{DATO:oat_sens_CA_beta}} | Mejor palanca de eficiencia; reduce costos sin afectar servicio. |
-| Mano de Obra vs Transporte | CMO, CT | Alta | Media | Alta | El sistema es más sensible a costos de personal que a combustible. |
-
-Nota. Elaboración propia.
+*Nota.* ε̄ = elasticidad media absoluta sobre el rango ±20%. Referencia: Iteración 78 (knee point) de la frontera de Pareto, ε = 1.088,25 kg CO₂. Elaboración propia.
 
 ---
 
 ## 7.2 Análisis de Escenarios
 
 Se modificarán sistemáticamente los valores de los parámetros seleccionados, generando escenarios alternativos, con el propósito de observar los efectos en las variables de decisión y en el cumplimiento de los objetivos de sostenibilidad.
-
-### Análisis OAT (One-At-a-Time)
-
-{{PLACEHOLDER: Descripción del método OAT — variación individual de cada parámetro manteniendo los demás constantes}}
-
-*Tabla X. Resultados del análisis OAT para variaciones de ±10%, ±20%, ±30%.*
-
-| Parámetro | Variación | α (LGP) | γ (LGP) | β (LGP) | α (ER) | γ (ER) | β (ER) |
-|-----------|-----------|---------|---------|---------|--------|--------|--------|
-| {{DATO:param_base}} | +10% | {{DATO:oat_result}} | {{DATO:oat_result}} | {{DATO:oat_result}} | {{DATO:oat_result}} | {{DATO:oat_result}} | {{DATO:oat_result}} |
-| {{DATO:param_base}} | -10% | {{DATO:oat_result}} | {{DATO:oat_result}} | {{DATO:oat_result}} | {{DATO:oat_result}} | {{DATO:oat_result}} | {{DATO:oat_result}} |
-| ... | ... | ... | ... | ... | ... | ... | ... |
-
-Nota. Elaboración propia.
 
 ### Análisis de Rangos de Factibilidad
 
@@ -130,22 +124,19 @@ En esta actividad, los resultados serán organizados mediante gráficos de sensi
 
 ### Resultados Comparativos LGP vs ER
 
-*Tabla X. Resultados de los 12 escenarios para LGP y ER.*
+*Tabla X. Resultados de los 9 escenarios para LGP y ER.*
 
-| # | Escenario | LGP α | LGP γ | LGP β | ER α | ER γ | ER β | Δ Costo (%) | Factible |
-|---|-----------|-------|-------|-------|------|------|------|-------------|----------|
-| 1 | Boom Demanda | {{DATO:esc1_lgp_a}} | {{DATO:esc1_lgp_g}} | {{DATO:esc1_lgp_b}} | {{DATO:esc1_er_a}} | {{DATO:esc1_er_g}} | {{DATO:esc1_er_b}} | {{PLACEHOLDER}} | {{DATO:esc1_factible}} |
-| 2 | Crecimiento | {{DATO:esc2_lgp_a}} | {{DATO:esc2_lgp_g}} | {{DATO:esc2_lgp_b}} | {{DATO:esc2_er_a}} | {{DATO:esc2_er_g}} | {{DATO:esc2_er_b}} | {{PLACEHOLDER}} | {{DATO:esc2_factible}} |
-| 3 | Restricción Op. | {{DATO:esc3_lgp_a}} | {{DATO:esc3_lgp_g}} | {{DATO:esc3_lgp_b}} | {{DATO:esc3_er_a}} | {{DATO:esc3_er_g}} | {{DATO:esc3_er_b}} | {{PLACEHOLDER}} | {{DATO:esc3_factible}} |
-| 4 | Expansión | {{DATO:esc4_lgp_a}} | {{DATO:esc4_lgp_g}} | {{DATO:esc4_lgp_b}} | {{DATO:esc4_er_a}} | {{DATO:esc4_er_g}} | {{DATO:esc4_er_b}} | {{PLACEHOLDER}} | {{DATO:esc4_factible}} |
-| 5 | Regulación Amb. | {{DATO:esc5_lgp_a}} | {{DATO:esc5_lgp_g}} | {{DATO:esc5_lgp_b}} | {{DATO:esc5_er_a}} | {{DATO:esc5_er_g}} | {{DATO:esc5_er_b}} | {{PLACEHOLDER}} | {{DATO:esc5_factible}} |
-| 6 | Transición Verde | {{DATO:esc6_lgp_a}} | {{DATO:esc6_lgp_g}} | {{DATO:esc6_lgp_b}} | {{DATO:esc6_er_a}} | {{DATO:esc6_er_g}} | {{DATO:esc6_er_b}} | {{PLACEHOLDER}} | {{DATO:esc6_factible}} |
-| 7 | Súper Eficiencia | {{DATO:esc7_lgp_a}} | {{DATO:esc7_lgp_g}} | {{DATO:esc7_lgp_b}} | {{DATO:esc7_er_a}} | {{DATO:esc7_er_g}} | {{DATO:esc7_er_b}} | {{PLACEHOLDER}} | {{DATO:esc7_factible}} |
-| 8 | Fomento Laboral | {{DATO:esc8_lgp_a}} | {{DATO:esc8_lgp_g}} | {{DATO:esc8_lgp_b}} | {{DATO:esc8_er_a}} | {{DATO:esc8_er_g}} | {{DATO:esc8_er_b}} | {{PLACEHOLDER}} | {{DATO:esc8_factible}} |
-| 9 | Crisis Climática | {{DATO:esc9_lgp_a}} | {{DATO:esc9_lgp_g}} | {{DATO:esc9_lgp_b}} | {{DATO:esc9_er_a}} | {{DATO:esc9_er_g}} | {{DATO:esc9_er_b}} | {{PLACEHOLDER}} | {{DATO:esc9_factible}} |
-| 10 | Huelga Transp. | {{DATO:esc10_lgp_a}} | {{DATO:esc10_lgp_g}} | {{DATO:esc10_lgp_b}} | {{DATO:esc10_er_a}} | {{DATO:esc10_er_g}} | {{DATO:esc10_er_b}} | {{PLACEHOLDER}} | {{DATO:esc10_factible}} |
-| 11 | Adversas | {{DATO:esc11_lgp_a}} | {{DATO:esc11_lgp_g}} | {{DATO:esc11_lgp_b}} | {{DATO:esc11_er_a}} | {{DATO:esc11_er_g}} | {{DATO:esc11_er_b}} | {{PLACEHOLDER}} | {{DATO:esc11_factible}} |
-| 12 | Crítica | {{DATO:esc12_lgp_a}} | {{DATO:esc12_lgp_g}} | {{DATO:esc12_lgp_b}} | {{DATO:esc12_er_a}} | {{DATO:esc12_er_g}} | {{DATO:esc12_er_b}} | {{PLACEHOLDER}} | {{DATO:esc12_factible}} |
+| # | Escenario | LGP α | LGP γ | LGP β | ER α | ER γ | ER β | Factible |
+|---|-----------|-------|-------|-------|------|------|------|----------|
+| 1 | Boom Demanda | {{DATO:boom_demanda_lgp_a}} | {{DATO:boom_demanda_lgp_g}} | {{DATO:boom_demanda_lgp_b}} | {{DATO:boom_demanda_er_a}} | {{DATO:boom_demanda_er_g}} | {{DATO:boom_demanda_er_b}} | {{DATO:boom_demanda_factible}} |
+| 2 | Crecimiento | {{DATO:crecimiento_lgp_a}} | {{DATO:crecimiento_lgp_g}} | {{DATO:crecimiento_lgp_b}} | {{DATO:crecimiento_er_a}} | {{DATO:crecimiento_er_g}} | {{DATO:crecimiento_er_b}} | {{DATO:crecimiento_factible}} |
+| 3 | Expansión | {{DATO:expansion_lgp_a}} | {{DATO:expansion_lgp_g}} | {{DATO:expansion_lgp_b}} | {{DATO:expansion_er_a}} | {{DATO:expansion_er_g}} | {{DATO:expansion_er_b}} | {{DATO:expansion_factible}} |
+| 4 | Transición Verde | {{DATO:transicion_verde_lgp_a}} | {{DATO:transicion_verde_lgp_g}} | {{DATO:transicion_verde_lgp_b}} | {{DATO:transicion_verde_er_a}} | {{DATO:transicion_verde_er_g}} | {{DATO:transicion_verde_er_b}} | {{DATO:transicion_verde_factible}} |
+| 5 | Regulación Ambiental | {{DATO:regulacion_ambiental_lgp_a}} | {{DATO:regulacion_ambiental_lgp_g}} | {{DATO:regulacion_ambiental_lgp_b}} | {{DATO:regulacion_ambiental_er_a}} | {{DATO:regulacion_ambiental_er_g}} | {{DATO:regulacion_ambiental_er_b}} | {{DATO:regulacion_ambiental_factible}} |
+| 6 | Súper Eficiencia | {{DATO:super_eficiencia_lgp_a}} | {{DATO:super_eficiencia_lgp_g}} | {{DATO:super_eficiencia_lgp_b}} | {{DATO:super_eficiencia_er_a}} | {{DATO:super_eficiencia_er_g}} | {{DATO:super_eficiencia_er_b}} | {{DATO:super_eficiencia_factible}} |
+| 7 | Fomento Laboral | {{DATO:fomento_laboral_lgp_a}} | {{DATO:fomento_laboral_lgp_g}} | {{DATO:fomento_laboral_lgp_b}} | {{DATO:fomento_laboral_er_a}} | {{DATO:fomento_laboral_er_g}} | {{DATO:fomento_laboral_er_b}} | {{DATO:fomento_laboral_factible}} |
+| 8 | Crisis Climática | {{DATO:crisis_climatica_lgp_a}} | {{DATO:crisis_climatica_lgp_g}} | {{DATO:crisis_climatica_lgp_b}} | {{DATO:crisis_climatica_er_a}} | {{DATO:crisis_climatica_er_g}} | {{DATO:crisis_climatica_er_b}} | {{DATO:crisis_climatica_factible}} |
+| 9 | Huelga Transporte | {{DATO:huelga_transporte_lgp_a}} | {{DATO:huelga_transporte_lgp_g}} | {{DATO:huelga_transporte_lgp_b}} | {{DATO:huelga_transporte_er_a}} | {{DATO:huelga_transporte_er_g}} | {{DATO:huelga_transporte_er_b}} | {{DATO:huelga_transporte_factible}} |
 
 Nota. Elaboración propia.
 

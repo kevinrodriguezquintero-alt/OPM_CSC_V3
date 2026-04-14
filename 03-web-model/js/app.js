@@ -642,23 +642,23 @@ function drawOatCharts(data) {
 
 const SCENARIO_PRESETS = {
   // Eje 1: Contexto Macroeconómico y Demanda
-  boom_demanda: { DI: 14.5, DD: 35 },
-  crecimiento: { DI: 15, CA: -10, CB: -10 },
-  
+  boom_demanda: { DI: 20, DD: 25, CN: 15, CH: 15 },
+  crecimiento:  { DI: 12, DD: 15, H: 30, RA: -5 },
+
   // Eje 2: Estrategia Corporativa
-  expansion: { DI: 14, CA: 20, CB: 20 },
-  
+  expansion: { H: 50, CA: 25, CB: 25, CC: 25, CRI: 20, CR: 20 },
+
   // Eje 3: Sostenibilidad y Viabilidad Verde
-  transicion_verde: { CI: 15, CT: 15, IT: -30, CV: 25 },
-  regulacion_ambiental: { DI: 10, IT: 20, CV: 20 },
-  
+  transicion_verde:    { IT: -25, CV: 30, CI: 12, CT: 10, CTT: 10 },
+  regulacion_ambiental: { IT: -15, P: -10, PP: -10, CI: 8, CDA: 5, CDF: 5 },
+
   // Eje 4: Impacto Social y Automatización
-  super_eficiencia: { CA: 50, CB: 50, CC: 50, CP: 10 },
-  fomento_laboral: { CA: 100, CB: 100, CC: 100 },
-  
+  super_eficiencia: { CA: 60, CB: 60, CC: 60, CMO: -20, CD: -20, CMP: -20, CP: 8 },
+  fomento_laboral:  { CA: 80, CB: 80, CC: 80, CMO: 40, CD: 40, CMP: 40 },
+
   // Eje 5: Vulnerabilidad y Límites
-  crisis_climatica: { RC: -35, RA: -40, CP: 20 },
-  huelga_transporte: { CV: -40, CT: 50, CTT: 50 },
+  crisis_climatica:  { H: -40, RA: -25, RC: -20, RD: -30, CP: 18, P: 15, PP: 10 },
+  huelga_transporte: { CV: -35, CT: 45, CTT: 45, CRI: -10, CR: -10, IT: 20 },
 };
 
 // ── Scenarios ────────────────────────────────────────────────────────────
@@ -764,18 +764,15 @@ function initScenarios() {
       const escenarioId = presetSelect.value || "custom";
       
       if (m === "both") {
-        update(0, "Fase 1/2: Resolviendo Metas Lexicográficas (LGP)...");
-        const lgpData = await api.solveScenarios(params_vals, "lgp", s, "middle", escenarioId);
-        
-        update(1, "Fase 2/2: Resolviendo Epsilon-Restricción (ER)...");
-        const erData = await api.solveScenarios(params_vals, "er", s, "middle", escenarioId);
-        
-        update(2, "¡Simulación mutivariables completada!");
+        update(0.5, "Resolviendo LGP + ER en paralelo (comparación completa)...");
+        const bothData = await api.solveScenarios(params_vals, "both", s, "middle", escenarioId);
+
+        update(2, "¡Simulación multivariable completada!");
         const selectedValue = presetSelect.value;
         const scenarioName = selectedValue && selectedValue !== ""
           ? presetSelect.options[presetSelect.selectedIndex].text
           : "Escenario Propuesto";
-        container.innerHTML = renderCombinedScenariosResult(lgpData, erData, scenarioName);
+        container.innerHTML = renderCombinedScenariosResult(bothData.lgp, bothData.er, scenarioName);
       } else {
         update(0.5, `Evaluando configuración bajo método ${m.toUpperCase()}...`);
         const data = await api.solveScenarios(params_vals, m, s, "middle", escenarioId);
