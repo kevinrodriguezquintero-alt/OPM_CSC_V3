@@ -18,18 +18,18 @@ Los parámetros críticos se seleccionan según tres criterios: (1) elasticidad 
 
 | Categoría | Parámetro | ε̄_α | Clase α | ε̄_γ | Clase γ | ε̄_β | Clase β |
 |-----------|-----------|------|---------|------|---------|------|---------|
-| Demanda | $DI_j$ | {{DATO:oat_lgp_sens_DI_alpha}} | {{DATO:oat_lgp_sens_DI_clase_alpha}} | {{DATO:oat_lgp_sens_DI_gamma}} | {{DATO:oat_lgp_sens_DI_clase_gamma}} | {{DATO:oat_lgp_sens_DI_beta}} | {{DATO:oat_lgp_sens_DI_clase_beta}} |
-| Demanda | $DD_k$ | {{DATO:oat_lgp_sens_DD_alpha}} | {{DATO:oat_lgp_sens_DD_clase_alpha}} | {{DATO:oat_lgp_sens_DD_gamma}} | {{DATO:oat_lgp_sens_DD_clase_gamma}} | {{DATO:oat_lgp_sens_DD_beta}} | {{DATO:oat_lgp_sens_DD_clase_beta}} |
-| Productividad | $CA$ | {{DATO:oat_lgp_sens_CA_alpha}} | {{DATO:oat_lgp_sens_CA_clase_alpha}} | {{DATO:oat_lgp_sens_CA_gamma}} | {{DATO:oat_lgp_sens_CA_clase_gamma}} | {{DATO:oat_lgp_sens_CA_beta}} | {{DATO:oat_lgp_sens_CA_clase_beta}} |
-| Productividad | $CB_j$ | {{DATO:oat_lgp_sens_CB_alpha}} | {{DATO:oat_lgp_sens_CB_clase_alpha}} | {{DATO:oat_lgp_sens_CB_gamma}} | {{DATO:oat_lgp_sens_CB_clase_gamma}} | {{DATO:oat_lgp_sens_CB_beta}} | {{DATO:oat_lgp_sens_CB_clase_beta}} |
-| Capacidad vehicular | $CV_j$ | {{DATO:oat_lgp_sens_CV_alpha}} | {{DATO:oat_lgp_sens_CV_clase_alpha}} | {{DATO:oat_lgp_sens_CV_gamma}} | {{DATO:oat_lgp_sens_CV_clase_gamma}} | {{DATO:oat_lgp_sens_CV_beta}} | {{DATO:oat_lgp_sens_CV_clase_beta}} |
-| Rendimiento | $RC_i$ | {{DATO:oat_lgp_sens_RC_alpha}} | {{DATO:oat_lgp_sens_RC_clase_alpha}} | {{DATO:oat_lgp_sens_RC_gamma}} | {{DATO:oat_lgp_sens_RC_clase_gamma}} | {{DATO:oat_lgp_sens_RC_beta}} | {{DATO:oat_lgp_sens_RC_clase_beta}} |
-| Rendimiento | $RA_u$ | {{DATO:oat_lgp_sens_RA_alpha}} | {{DATO:oat_lgp_sens_RA_clase_alpha}} | {{DATO:oat_lgp_sens_RA_gamma}} | {{DATO:oat_lgp_sens_RA_clase_gamma}} | {{DATO:oat_lgp_sens_RA_beta}} | {{DATO:oat_lgp_sens_RA_clase_beta}} |
-| Ambiental | $IT_j$ | {{DATO:oat_lgp_sens_IT_alpha}} | {{DATO:oat_lgp_sens_IT_clase_alpha}} | {{DATO:oat_lgp_sens_IT_gamma}} | {{DATO:oat_lgp_sens_IT_clase_gamma}} | {{DATO:oat_lgp_sens_IT_beta}} | {{DATO:oat_lgp_sens_IT_clase_beta}} |
-| Transporte | $CT_{ij}$ | {{DATO:oat_lgp_sens_CT_alpha}} | {{DATO:oat_lgp_sens_CT_clase_alpha}} | {{DATO:oat_lgp_sens_CT_gamma}} | {{DATO:oat_lgp_sens_CT_clase_gamma}} | {{DATO:oat_lgp_sens_CT_beta}} | {{DATO:oat_lgp_sens_CT_clase_beta}} |
-| Transporte | $CTT_{jk}$ | {{DATO:oat_lgp_sens_CTT_alpha}} | {{DATO:oat_lgp_sens_CTT_clase_alpha}} | {{DATO:oat_lgp_sens_CTT_gamma}} | {{DATO:oat_lgp_sens_CTT_clase_gamma}} | {{DATO:oat_lgp_sens_CTT_beta}} | {{DATO:oat_lgp_sens_CTT_clase_beta}} |
-| Costo producción | $CP_i$ | {{DATO:oat_lgp_sens_CP_alpha}} | {{DATO:oat_lgp_sens_CP_clase_alpha}} | {{DATO:oat_lgp_sens_CP_gamma}} | {{DATO:oat_lgp_sens_CP_clase_gamma}} | {{DATO:oat_lgp_sens_CP_beta}} | {{DATO:oat_lgp_sens_CP_clase_beta}} |
-| Costo procesamiento | $CI_j$ | {{DATO:oat_lgp_sens_CI_alpha}} | {{DATO:oat_lgp_sens_CI_clase_alpha}} | {{DATO:oat_lgp_sens_CI_gamma}} | {{DATO:oat_lgp_sens_CI_clase_gamma}} | {{DATO:oat_lgp_sens_CI_beta}} | {{DATO:oat_lgp_sens_CI_clase_beta}} |
+| Demanda | $DI_j$ | 0.952 | Media | 1.365 | Alta | 0.956 | Media |
+| Demanda | $DD_k$ | 0.036 | Baja | 0.036 | Baja | 0.026 | Baja |
+| Productividad | $CA$ | 0.175 | Baja | 0.91 | Media | 0.32 | Baja |
+| Productividad | $CB_j$ | 1.305 | Alta | 0.565 | Media | 1.77 | Alta |
+| Capacidad vehicular | $CV_j$ | 0.004 | Baja | 1.382 | Alta | 0.005 | Baja |
+| Rendimiento | $RC_i$ | 0.0 | Baja | 0.002 | Baja | 0.0 | Baja |
+| Rendimiento | $RA_u$ | 0.0 | Baja | 0.0 | Baja | 0.0 | Baja |
+| Ambiental | $IT_j$ | 0.0 | Baja | 1.0 | Alta | 0.0 | Baja |
+| Transporte | $CT_{ij}$ | 0.0 | Baja | 0.0 | Baja | 0.0 | Baja |
+| Transporte | $CTT_{jk}$ | 0.0 | Baja | 0.005 | Baja | 0.0 | Baja |
+| Costo producción | $CP_i$ | 0.073 | Baja | 0.006 | Baja | 0.0 | Baja |
+| Costo procesamiento | $CI_j$ | 0.02 | Baja | 0.0 | Baja | 0.0 | Baja |
 
 *Nota.* ε̄ = elasticidad media absoluta sobre el rango ±20%. Elaboración propia.
 
