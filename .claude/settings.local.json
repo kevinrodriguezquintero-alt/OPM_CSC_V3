@@ -8,7 +8,8 @@
       "Bash(python -c \"import ast; ast.parse\\(open\\('api/routers/solve.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "Bash(python -c \"import ast; ast.parse\\(open\\('solvers/er.py'\\).read\\(\\)\\); ast.parse\\(open\\('solvers/utils.py'\\).read\\(\\)\\); ast.parse\\(open\\('api/main.py'\\).read\\(\\)\\); print\\('OK'\\)\")",
       "Bash(git -C /c/Users/kevin/OneDrive/Escritorio/V3 log --oneline --follow -- docs/backups/params.py)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(python *)"
     ]
   }
 }

@@ -948,7 +948,8 @@
           "total_hectares": 22.9
         }
       },
-      "propuesto": null
+      "propuesto": null,
+      "propuesto_status": "infeasible"
     },
     "params_modified": {
       "DI": 12.0,
@@ -956,5 +957,8 @@
       "RA": -5.0,
       "H": 25.0
     }
-  }
+  },
+  "crecimiento_er_a_prop_status": "infeasible",
+  "crecimiento_er_g_prop_status": "infeasible",
+  "crecimiento_er_b_prop_status": "infeasible"
 }

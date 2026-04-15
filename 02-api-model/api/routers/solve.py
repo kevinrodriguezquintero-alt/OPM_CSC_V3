@@ -4,7 +4,6 @@ import io
 import json
 import logging
 import os
-import shutil
 import sys
 import traceback
 from pathlib import Path
@@ -751,7 +750,7 @@ def solve_sensitivity(body: SensitivityRequest):
                 new_data = _perturb_param(base_data, param, pct)
                 # Pasar params_dict explícito — nunca muta app_state (thread-safe)
                 new_objs = _safe_solve(body.method, body, permitir_maestro=False, params_dict=new_data)
-                results.append({
+                result_entry = {
                     "param": param,
                     "change": f"{pct:+.1f}%",
                     "obj_cost": new_objs["cost"] if new_objs else None,
@@ -760,13 +759,18 @@ def solve_sensitivity(body: SensitivityRequest):
                     "elas_cost": _calculate_elasticity(base_objs["cost"], new_objs["cost"] if new_objs else None, pct),
                     "elas_env": _calculate_elasticity(base_objs["emissions"], new_objs["emissions"] if new_objs else None, pct),
                     "elas_soc": _calculate_elasticity(base_objs["employment"], new_objs["employment"] if new_objs else None, pct),
-                })
+                    "status": "optimal" if new_objs else "infeasible",
+                }
+                if new_objs is None:
+                    result_entry["error"] = _infeasibility_hint(param, pct)
+                results.append(result_entry)
             except HTTPException:
                 raise
             except Exception:
                 results.append({
                     "param": param,
                     "change": f"{pct:+.1f}%",
+                    "status": "infeasible",
                     "error": _infeasibility_hint(param, pct),
                 })
 
@@ -784,9 +788,60 @@ def solve_sensitivity(body: SensitivityRequest):
         "top_env": top_env,
         "top_soc": top_soc,
     }
-    # El guardado se maneja desde el frontend (save-oat-result) para asegurar
-    # una sola escritura con el resultado enriquecido (top_global_elas/freq).
+    _autosave_oat(results, base_objs, body.method)
     return result
+
+
+def _autosave_oat(results: list, base_objectives: dict, method: str) -> None:
+    """Persistencia incremental OAT: merge directo al archivo canónico después de cada solve.
+
+    No crea archivos auxiliares — escribe siempre sobre oat_{method}.json.
+    Si el archivo no existe, lo crea desde cero.
+    """
+    try:
+        RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
+        filepath = RESULTADOS_DIR / f"oat_{method}.json"
+
+        existing_results = []
+        if filepath.exists():
+            try:
+                backups_dir = RESULTADOS_DIR / "backups"
+                backups_dir.mkdir(parents=True, exist_ok=True)
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = backups_dir / f"oat_{method}.json.{timestamp}.bak"
+                backup_path.write_bytes(filepath.read_bytes())
+                logging.info(f"[autosave_oat] Backup creado: {backup_path.name}")
+
+                all_backups = sorted(
+                    backups_dir.glob(f"oat_{method}.json.*.bak"),
+                    key=lambda p: p.stat().st_mtime,
+                )
+                for old in all_backups[:-3]:
+                    try:
+                        old.unlink()
+                    except Exception:
+                        pass
+            except Exception as backup_err:
+                logging.warning(f"[autosave_oat] No se pudo crear backup: {backup_err}")
+
+            try:
+                with open(filepath, "r", encoding="utf-8") as f:
+                    existing_results = json.load(f).get("results", [])
+            except Exception as e:
+                logging.warning(f"[autosave_oat] No se pudo leer archivo existente: {e}")
+
+        merged = _merge_oat_results(existing_results, results)
+        final_data = _recalculate_oat_rankings(merged, base_objectives)
+
+        with open(filepath, "w", encoding="utf-8") as f:
+            json.dump(final_data, f, indent=2, ensure_ascii=False, default=str)
+
+        logging.info(
+            f"[autosave_oat] {method}: {len(existing_results)} existentes "
+            f"+ {len(results)} nuevos = {len(merged)} total"
+        )
+    except Exception as e:
+        logging.warning(f"[autosave_oat] No se pudo guardar: {e}")
 
 
 def _merge_oat_results(existing_results: list, new_results: list) -> list:
@@ -882,116 +937,6 @@ def _recalculate_oat_rankings(results: list, base_objectives: dict) -> dict:
     }
 
 
-class SaveOatRequest(BaseModel):
-    method: str
-    data: dict
-
-
-@router.post("/save-oat-result")
-def save_oat_result(body: SaveOatRequest):
-    """Guardar resultado consolidado de análisis OAT con merge automático.
-    
-    - Carga resultados OAT existentes si los hay
-    - Hace merge de results[] por (param, change)
-    - Recalcula rankings (top_cost, top_env, top_soc, top_global_*)
-    - Actualiza base_objectives desde maestros LGP/ER actuales
-    - Guarda resultado consolidado
-    """
-    try:
-        RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
-        filename = f"oat_{body.method}.json"  # oat_lgp.json o oat_er.json
-        filepath = RESULTADOS_DIR / filename
-        
-        # 0. Backup automático del archivo existente (protección contra pérdida)
-        BACKUPS_DIR = RESULTADOS_DIR / "backups"
-        MAX_BACKUPS = 10  # Mantener solo los últimos 10 backups por archivo
-        if filepath.exists():
-            try:
-                BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
-                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_filename = f"{filename}.{timestamp}.bak"
-                backup_path = BACKUPS_DIR / backup_filename
-                shutil.copy2(filepath, backup_path)
-                logging.info(f"[save_oat_result] Backup creado: {backup_path}")
-                
-                # Rotación: eliminar backups antiguos si excedemos el límite
-                backup_pattern = f"{filename}.*.bak"
-                all_backups = sorted(BACKUPS_DIR.glob(backup_pattern), key=lambda p: p.stat().st_mtime)
-                if len(all_backups) > MAX_BACKUPS:
-                    to_delete = all_backups[:-MAX_BACKUPS]  # Mantener los más recientes
-                    for old_backup in to_delete:
-                        try:
-                            old_backup.unlink()
-                            logging.info(f"[save_oat_result] Backup antiguo eliminado: {old_backup.name}")
-                        except Exception as del_err:
-                            logging.warning(f"[save_oat_result] No se pudo eliminar backup antiguo: {del_err}")
-            except Exception as backup_err:
-                logging.warning(f"[save_oat_result] No se pudo crear backup: {backup_err}")
-        
-        # 1. Cargar resultados existentes si hay
-        existing_results = []
-        if filepath.exists():
-            try:
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    existing_data = json.load(f)
-                    existing_results = existing_data.get("results", [])
-                    logging.info(f"[save_oat_result] Cargados {len(existing_results)} resultados existentes de {filename}")
-            except Exception as e:
-                logging.warning(f"[save_oat_result] No se pudo cargar OAT existente: {e}")
-        
-        # 2. Obtener nuevos resultados del frontend
-        new_results = body.data.get("results", [])
-        new_base_obj = body.data.get("base_objectives", {})
-        
-        # 3. Merge de resultados (actualiza existentes, agrega nuevos)
-        merged_results = _merge_oat_results(existing_results, new_results)
-        logging.info(f"[save_oat_result] Merge: {len(existing_results)} existentes + {len(new_results)} nuevos = {len(merged_results)} total")
-        
-        # 4. Actualizar base_objectives desde maestros (igual que en sensitivity-ranges)
-        try:
-            if body.method == "er":
-                # Cargar ER desde maestro (punto medio / iteración 78)
-                maestro_data = _run_and_extract(app_state.solver_name, 5, permitir_maestro=True, method="er")
-            else:
-                # Cargar LGP desde maestro
-                maestro_data = _run_and_extract(app_state.solver_name, 5, permitir_maestro=True, method="lgp")
-            
-            if maestro_data:
-                updated_base = {
-                    "cost": maestro_data.get("cost"),
-                    "emissions": maestro_data.get("emissions"),
-                    "employment": maestro_data.get("employment"),
-                }
-                logging.info(f"[save_oat_result] Base objectives actualizados desde maestro: {updated_base}")
-            else:
-                # Fallback: usar los del frontend
-                updated_base = new_base_obj
-                logging.warning("[save_oat_result] No se pudo cargar maestro, usando base_objectives del frontend")
-        except Exception as e:
-            updated_base = new_base_obj
-            logging.warning(f"[save_oat_result] Error cargando maestro: {e}, usando base_objectives del frontend")
-        
-        # 5. Recalcular rankings desde resultados mergeados
-        final_data = _recalculate_oat_rankings(merged_results, updated_base)
-        
-        # 6. Guardar resultado consolidado
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(final_data, f, indent=2, ensure_ascii=False, default=str)
-        
-        return {
-            "status": "ok",
-            "filename": filename,
-            "stats": {
-                "existing": len(existing_results),
-                "new": len(new_results),
-                "total": len(merged_results),
-            }
-        }
-    except Exception as e:
-        logging.error(f"[save_oat_result] Error: {e}")
-        raise HTTPException(status_code=500, detail=f"Error guardando OAT: {e}")
-
-
 @router.get("/save-oat-result")
 def load_oat_result(method: str = "lgp"):
     """Cargar resultado OAT existente (para cache inteligente en frontend)."""
@@ -1078,20 +1023,40 @@ def solve_scenarios(body: ScenariosRequest):
     
     # Guardar automáticamente (escenarios tienen nombres dinámicos o ID personalizado)
     try:
-        # Asegurar que existe el directorio de resultados
         RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
-        
-        # Usar escenario_id si se proporciona, sino generar desde parámetros
+
         if body.escenario_id:
             filename = f"esc_{body.escenario_id}.json"
         else:
-            # Crear nombre de archivo basado en parámetros modificados
             esc_key = "_".join([f"{k}_{v}" for k, v in body.params_to_test.items()])
-            esc_key = esc_key.replace(".", "_")[:50]  # Limitar longitud
+            esc_key = esc_key.replace(".", "_")[:50]
             filename = f"esc_{esc_key}.json"
-        
+
         filepath = RESULTADOS_DIR / filename
-        with open(filepath, 'w', encoding='utf-8') as f:
+
+        # Backup del canónico antes de sobrescribir
+        if filepath.exists():
+            try:
+                backups_dir = RESULTADOS_DIR / "backups"
+                backups_dir.mkdir(parents=True, exist_ok=True)
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = backups_dir / f"{filename}.{timestamp}.bak"
+                backup_path.write_bytes(filepath.read_bytes())
+                logging.info(f"[escenarios] Backup creado: {backup_path.name}")
+
+                all_backups = sorted(
+                    backups_dir.glob(f"{filename}.*.bak"),
+                    key=lambda p: p.stat().st_mtime,
+                )
+                for old in all_backups[:-3]:
+                    try:
+                        old.unlink()
+                    except Exception:
+                        pass
+            except Exception as backup_err:
+                logging.warning(f"[escenarios] No se pudo crear backup: {backup_err}")
+
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(result, f, indent=2, ensure_ascii=False, default=str)
     except Exception as e:
         logging.warning(f"No se pudo guardar escenario: {e}")
@@ -1126,17 +1091,21 @@ def _quick_feasible(solver_name: str, epsilon: float = None, params_dict: dict |
 
 
 def _shadow_prices_for(base_data, param, base_objs, method, solver_name, delta=1.0, epsilon=None):
-    """Compute shadow prices using centered finite difference at ±delta%."""
+    """Compute shadow prices using finite difference at ±delta%.
+
+    Prefers centered difference (±delta%) for accuracy.
+    Falls back to one-sided difference when one direction is infeasible
+    (e.g. parameter already at its feasibility boundary), using base_objs
+    as the reference point. This is mathematically correct at boundary points.
+    """
     results = {}
     for sign, label in [(+1, "plus"), (-1, "minus")]:
         pct = sign * delta
         try:
             new_data = _perturb_param(base_data, param, pct)
-            # Pasar params_dict explícito — nunca muta app_state (thread-safe)
-            objs = _quick_feasible(solver_name, params_dict=new_data)
+            objs = _quick_feasible(solver_name, epsilon=epsilon, params_dict=new_data)
         except Exception:
             objs = None
-
         results[label] = objs
 
     # Calcular el cambio total en unidades físicas
@@ -1150,17 +1119,37 @@ def _shadow_prices_for(base_data, param, base_objs, method, solver_name, delta=1
     elif isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
         total_delta_units = sum(abs(item["value"] * multiplier) for item in val if isinstance(item.get("value"), (int, float)))
 
-    p, m = results["plus"], results["minus"]
-    if p is None or m is None or total_delta_units == 0:
+    if total_delta_units == 0:
         return {"cost": None, "emissions": None, "employment": None}
-    
-    # SP = Delta_Obj / (Total_Delta_Units * 2)  -- *2 porque es diferencia centrada (+delta% menos -delta%)
-    denom = 2 * total_delta_units
-    return {
-        "cost":       (p["cost"] - m["cost"]) / denom,
-        "emissions":  (p["emissions"] - m["emissions"]) / denom,
-        "employment": (p["employment"] - m["employment"]) / denom,
-    }
+
+    p, m = results["plus"], results["minus"]
+
+    if p is not None and m is not None:
+        # Diferencia centrada: SP = (f(+δ) - f(-δ)) / (2·Δunidades)
+        denom = 2 * total_delta_units
+        return {
+            "cost":       (p["cost"]       - m["cost"])       / denom,
+            "emissions":  (p["emissions"]  - m["emissions"])  / denom,
+            "employment": (p["employment"] - m["employment"]) / denom,
+        }
+
+    if p is not None and base_objs is not None:
+        # Diferencia hacia adelante: SP = (f(+δ) - f(base)) / Δunidades
+        return {
+            "cost":       (p["cost"]       - base_objs["cost"])       / total_delta_units,
+            "emissions":  (p["emissions"]  - base_objs["emissions"])  / total_delta_units,
+            "employment": (p["employment"] - base_objs["employment"]) / total_delta_units,
+        }
+
+    if m is not None and base_objs is not None:
+        # Diferencia hacia atrás: SP = (f(base) - f(-δ)) / Δunidades
+        return {
+            "cost":       (base_objs["cost"]       - m["cost"])       / total_delta_units,
+            "emissions":  (base_objs["emissions"]  - m["emissions"])  / total_delta_units,
+            "employment": (base_objs["employment"] - m["employment"]) / total_delta_units,
+        }
+
+    return {"cost": None, "emissions": None, "employment": None}
 
 
 def _find_max_feasible(base_data, param, direction, solver_name, epsilon=None):
@@ -1307,6 +1296,30 @@ def solve_sensitivity_ranges(body: RangesRequest):
     try:
         RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
         rangos_path = RESULTADOS_DIR / "rangos.json"
+
+        # Backup automático antes de sobrescribir
+        if rangos_path.exists():
+            try:
+                backups_dir = RESULTADOS_DIR / "backups"
+                backups_dir.mkdir(parents=True, exist_ok=True)
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = backups_dir / f"rangos.json.{timestamp}.bak"
+                backup_path.write_bytes(rangos_path.read_bytes())
+                logging.info(f"[rangos] Backup creado: {backup_path.name}")
+
+                # Rotación: mantener solo los últimos 10 backups
+                all_backups = sorted(
+                    backups_dir.glob("rangos.json.*.bak"),
+                    key=lambda p: p.stat().st_mtime,
+                )
+                for old in all_backups[:-3]:
+                    try:
+                        old.unlink()
+                        logging.info(f"[rangos] Backup antiguo eliminado: {old.name}")
+                    except Exception as del_err:
+                        logging.warning(f"[rangos] No se pudo eliminar backup antiguo: {del_err}")
+            except Exception as backup_err:
+                logging.warning(f"[rangos] No se pudo crear backup: {backup_err}")
 
         # Cargar rangos existentes si hay
         existing_ranges = []

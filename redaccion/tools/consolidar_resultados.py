@@ -340,9 +340,14 @@ def cargar_rangos() -> dict:
     with open(ruta, 'r', encoding='utf-8') as f:
         data = json.load(f)
     
+    ranges = data.get("ranges", [])
+    for r in ranges:
+        if isinstance(r, dict) and r.get("lgp_shadow_cost") is None and "lgp_shadow_status" not in r:
+            r["lgp_shadow_status"] = "not_computed"
+
     return {
         # Tabla de rangos para placeholders
-        "rangos_tabla": data.get("ranges", []),
+        "rangos_tabla": ranges,
         # Datos completos para consulta/análisis
         "rangos_completo": data,  # TODO: lgp_base, er_base, ranges
     }
@@ -409,6 +414,9 @@ def cargar_escenarios() -> dict:
                 f"{esc_id}_er_a_prop":  er_prop.get("cost") if er_prop else None,
                 f"{esc_id}_er_g_prop":  er_prop.get("emissions") if er_prop else None,
                 f"{esc_id}_er_b_prop":  er_prop.get("employment") if er_prop else None,
+                f"{esc_id}_er_a_prop_status": "optimal" if er_prop else "infeasible",
+                f"{esc_id}_er_g_prop_status": "optimal" if er_prop else "infeasible",
+                f"{esc_id}_er_b_prop_status": "optimal" if er_prop else "infeasible",
                 f"{esc_id}_factible":   "Si" if factible else "No",
             })
 
@@ -512,6 +520,9 @@ def consolidar_seleccion(incluir_lgp=True, incluir_er=True, incluir_oat=True,
                         f"{esc_id}_er_a_prop":  er_prop.get("cost") if er_prop else None,
                         f"{esc_id}_er_g_prop":  er_prop.get("emissions") if er_prop else None,
                         f"{esc_id}_er_b_prop":  er_prop.get("employment") if er_prop else None,
+                        f"{esc_id}_er_a_prop_status": "optimal" if er_prop else "infeasible",
+                        f"{esc_id}_er_g_prop_status": "optimal" if er_prop else "infeasible",
+                        f"{esc_id}_er_b_prop_status": "optimal" if er_prop else "infeasible",
                         f"{esc_id}_factible":   "Si" if factible else "No",
                         f"{esc_id}_completo":   datos_esc,
                     }

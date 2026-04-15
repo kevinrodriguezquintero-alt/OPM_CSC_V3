@@ -10,7 +10,7 @@ Guía paso a paso para exportar resultados de los modelos LGP/ER y poblar las pl
 
 - Servidor API corriendo en `localhost:8000`
 - Entorno virtual activado
-- Dependencias instaladas (`requests` incluido)
+- Dependencias instaladas (ver `02-api-model/requirements.txt`)
 
 ---
 
@@ -75,7 +75,8 @@ Abre http://localhost:3000 en tu navegador.
 - Ve a la sección "Sensibilidad" o "OAT"
 - Selecciona parámetros a analizar
 - Haz clic en "Ejecutar OAT"
-- **Archivos a generar:** `redaccion/resultados/oat_lgp.json`, `oat_er.json`
+- **Archivos a generar:** `redaccion/resultados/oat_lgp.json`, `redaccion/resultados/oat_er.json`
+- **Nota:** El guardado es **automático** — cada simulación se persiste en el archivo al completarse. Si se interrumpe el análisis, los resultados parciales quedan guardados y la próxima corrida solo ejecuta las simulaciones faltantes.
 - **Nota:** Este análisis toma más tiempo (~3-5 min)
 
 ### 2f. Escenarios personalizados (opcional)
@@ -102,9 +103,11 @@ type resultados\lgp.json | findstr "costo"
 Archivos esperados:
 - `resultados/lgp.json` - Resultados LGP
 - `resultados/er.json` - Resultados Epsilon-Constraint
-- `resultados/oat.json` - Análisis de sensibilidad OAT
+- `resultados/oat_lgp.json` - Análisis de sensibilidad OAT (LGP)
+- `resultados/oat_er.json` - Análisis de sensibilidad OAT (ER)
 - `resultados/rangos.json` - Rangos y precios sombra
-- `resultados/esc_*.json` - Escenarios individuales (en raíz)
+- `resultados/esc_*.json` - Escenarios individuales (en raíz de resultados/)
+- `resultados/backups/` - Backups automáticos con timestamp (máx. 3 por archivo)
 
 ---
 
@@ -212,24 +215,24 @@ cat redaccion/tools/update_log.txt
 └── ...
 
 redaccion/
-├── resultados/            # [TEMPORAL] Archivos individuales (se sobrescriben)
-│   ├── lgp.json           #    → Resultado LGP (temporal)
-│   ├── er.json            #    → Resultado ER (temporal)
-│   ├── oat_lgp.json       #    → OAT LGP (temporal)
-│   ├── oat_er.json        #    → OAT ER (temporal)
-│   ├── rangos.json        #    → Rangos (temporal)
-│   └── escenarios/        #    → Escenarios (temporal)
-│       └── esc_*.json
+├── resultados/            # Archivos individuales (se sobrescriben con cada ejecución)
+│   ├── lgp.json           #    → Resultado LGP
+│   ├── er.json            #    → Resultado ER
+│   ├── oat_lgp.json       #    → OAT LGP (guardado automático incremental)
+│   ├── oat_er.json        #    → OAT ER (guardado automático incremental)
+│   ├── rangos.json        #    → Rangos y precios sombra
+│   ├── esc_*.json         #    → Escenarios individuales (en raíz, no en subdirectorio)
+│   └── backups/           #    → Backups automáticos con timestamp (máx. 3 por archivo)
+│       └── *.bak
 │
 ├── maestros/              # [PROTEGIDO] Archivos maestros individuales
 │   ├── lgp.json           #    ← Maestro LGP (actualizable individualmente)
 │   ├── er.json            #    ← Maestro ER (actualizable individualmente)
 │   ├── oat_lgp.json       #    ← Maestro OAT-LGP (actualizable individualmente)
-│   ├── oat_er.json        #    ← Maestro OAT-ER (actualizable individualmente)
 │   ├── rangos.json        #    ← Maestro Rangos (actualizable individualmente)
-│   ├── esc_base.json      #    ← Maestro Escenario Base (actualizable individualmente)
-│   ├── esc_mejorado.json  #    ← Maestro Escenario Mejorado (actualizable individualmente)
-│   ├── esc_*.json         #    ← Maestros de otros escenarios (individualmente)
+│   ├── esc_base.json      #    ← Maestro Escenario Base
+│   ├── esc_boom_demanda.json  # ← Maestros de escenarios (uno por ID)
+│   ├── esc_*.json         #    ← (10 escenarios en total)
 │   └── resultados_finales.json  # ← Consolidado de TODOS los maestros (regenerado automáticamente)
 │
 ├── plantillas/            # Documentos de la tesis
@@ -320,7 +323,8 @@ Verificar que el servidor tenga permisos de escritura en esa ruta.
 
 ---
 
-*Última actualización: 2025-04-13*
-*Flujo web implementado: 2025-04-12*
-*Sistema de maestros individuales: 2025-04-13*
-*Corrección fórmula transporte (CT·Z·DPI): 2025-04-13*
+*Última actualización: 2026-04-15*
+*Flujo web implementado: 2026-04-12*
+*Sistema de maestros individuales: 2026-04-13*
+*Corrección fórmula transporte (CT·Z·DPI): 2026-04-13*
+*Persistencia incremental OAT + backups automáticos Rangos/Escenarios: 2026-04-15*

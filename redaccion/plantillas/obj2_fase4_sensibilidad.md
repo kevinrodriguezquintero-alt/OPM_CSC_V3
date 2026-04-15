@@ -41,18 +41,18 @@ Los parámetros críticos se seleccionan según tres criterios: (1) elasticidad 
 
 | Categoría | Parámetro | ε̄_α | Clase α | ε̄_γ | Clase γ | ε̄_β | Clase β |
 |-----------|-----------|------|---------|------|---------|------|---------|
-| Demanda | $DI_j$ | {{DATO:oat_er_sens_DI_alpha}} | {{DATO:oat_er_sens_DI_clase_alpha}} | {{DATO:oat_er_sens_DI_gamma}} | {{DATO:oat_er_sens_DI_clase_gamma}} | {{DATO:oat_er_sens_DI_beta}} | {{DATO:oat_er_sens_DI_clase_beta}} |
-| Demanda | $DD_k$ | {{DATO:oat_er_sens_DD_alpha}} | {{DATO:oat_er_sens_DD_clase_alpha}} | {{DATO:oat_er_sens_DD_gamma}} | {{DATO:oat_er_sens_DD_clase_gamma}} | {{DATO:oat_er_sens_DD_beta}} | {{DATO:oat_er_sens_DD_clase_beta}} |
-| Productividad | $CA$ | {{DATO:oat_er_sens_CA_alpha}} | {{DATO:oat_er_sens_CA_clase_alpha}} | {{DATO:oat_er_sens_CA_gamma}} | {{DATO:oat_er_sens_CA_clase_gamma}} | {{DATO:oat_er_sens_CA_beta}} | {{DATO:oat_er_sens_CA_clase_beta}} |
-| Productividad | $CB_j$ | {{DATO:oat_er_sens_CB_alpha}} | {{DATO:oat_er_sens_CB_clase_alpha}} | {{DATO:oat_er_sens_CB_gamma}} | {{DATO:oat_er_sens_CB_clase_gamma}} | {{DATO:oat_er_sens_CB_beta}} | {{DATO:oat_er_sens_CB_clase_beta}} |
-| Capacidad vehicular | $CV_j$ | {{DATO:oat_er_sens_CV_alpha}} | {{DATO:oat_er_sens_CV_clase_alpha}} | {{DATO:oat_er_sens_CV_gamma}} | {{DATO:oat_er_sens_CV_clase_gamma}} | {{DATO:oat_er_sens_CV_beta}} | {{DATO:oat_er_sens_CV_clase_beta}} |
-| Rendimiento | $RC_i$ | {{DATO:oat_er_sens_RC_alpha}} | {{DATO:oat_er_sens_RC_clase_alpha}} | {{DATO:oat_er_sens_RC_gamma}} | {{DATO:oat_er_sens_RC_clase_gamma}} | {{DATO:oat_er_sens_RC_beta}} | {{DATO:oat_er_sens_RC_clase_beta}} |
-| Rendimiento | $RA_u$ | {{DATO:oat_er_sens_RA_alpha}} | {{DATO:oat_er_sens_RA_clase_alpha}} | {{DATO:oat_er_sens_RA_gamma}} | {{DATO:oat_er_sens_RA_clase_gamma}} | {{DATO:oat_er_sens_RA_beta}} | {{DATO:oat_er_sens_RA_clase_beta}} |
-| Ambiental | $IT_j$ | {{DATO:oat_er_sens_IT_alpha}} | {{DATO:oat_er_sens_IT_clase_alpha}} | {{DATO:oat_er_sens_IT_gamma}} | {{DATO:oat_er_sens_IT_clase_gamma}} | {{DATO:oat_er_sens_IT_beta}} | {{DATO:oat_er_sens_IT_clase_beta}} |
-| Transporte | $CT_{ij}$ | {{DATO:oat_er_sens_CT_alpha}} | {{DATO:oat_er_sens_CT_clase_alpha}} | {{DATO:oat_er_sens_CT_gamma}} | {{DATO:oat_er_sens_CT_clase_gamma}} | {{DATO:oat_er_sens_CT_beta}} | {{DATO:oat_er_sens_CT_clase_beta}} |
-| Transporte | $CTT_{jk}$ | {{DATO:oat_er_sens_CTT_alpha}} | {{DATO:oat_er_sens_CTT_clase_alpha}} | {{DATO:oat_er_sens_CTT_gamma}} | {{DATO:oat_er_sens_CTT_clase_gamma}} | {{DATO:oat_er_sens_CTT_beta}} | {{DATO:oat_er_sens_CTT_clase_beta}} |
-| Costo producción | $CP_i$ | {{DATO:oat_er_sens_CP_alpha}} | {{DATO:oat_er_sens_CP_clase_alpha}} | {{DATO:oat_er_sens_CP_gamma}} | {{DATO:oat_er_sens_CP_clase_gamma}} | {{DATO:oat_er_sens_CP_beta}} | {{DATO:oat_er_sens_CP_clase_beta}} |
-| Costo procesamiento | $CI_j$ | {{DATO:oat_er_sens_CI_alpha}} | {{DATO:oat_er_sens_CI_clase_alpha}} | {{DATO:oat_er_sens_CI_gamma}} | {{DATO:oat_er_sens_CI_clase_gamma}} | {{DATO:oat_er_sens_CI_beta}} | {{DATO:oat_er_sens_CI_clase_beta}} |
+| Demanda | $DI_j$ | 0.946 | Media | 0.843 | Media | 0.914 | Media |
+| Demanda | $DD_k$ | 0.049 | Baja | 0.035 | Baja | 0.045 | Baja |
+| Productividad | $CA$ | 0.184 | Baja | 0.078 | Baja | 0.315 | Baja |
+| Productividad | $CB_j$ | {{DATO:oat_er_sens_CB_alpha}} | — | {{DATO:oat_er_sens_CB_gamma}} | — | {{DATO:oat_er_sens_CB_beta}} | — |
+| Capacidad vehicular | $CV_j$ | 0.059 | Baja | 0.88 | Media | 0.031 | Baja |
+| Rendimiento | $RC_i$ | 0.0 | Baja | 0.0 | Baja | 0.0 | Baja |
+| Rendimiento | $RA_u$ | 0.0 | Baja | 0.0 | Baja | 0.0 | Baja |
+| Ambiental | $IT_j$ | 0.065 | Baja | 0.412 | Baja | 0.033 | Baja |
+| Transporte | $CT_{ij}$ | 0.0 | Baja | 0.0 | Baja | 0.0 | Baja |
+| Transporte | $CTT_{jk}$ | 0.0 | Baja | 0.0 | Baja | 0.0 | Baja |
+| Costo producción | $CP_i$ | 0.073 | Baja | 0.0 | Baja | 0.0 | Baja |
+| Costo procesamiento | $CI_j$ | 0.019 | Baja | 0.0 | Baja | 0.0 | Baja |
 
 *Nota.* ε̄ = elasticidad media absoluta sobre el rango ±20%. Referencia: Iteración 78 (knee point) de la frontera de Pareto, ε = 1.088,25 kg CO₂. Elaboración propia.
 

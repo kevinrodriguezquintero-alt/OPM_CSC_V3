@@ -946,7 +946,8 @@
           "total_hectares": 22.9
         }
       },
-      "propuesto": null
+      "propuesto": null,
+      "propuesto_status": "infeasible"
     },
     "params_modified": {
       "CP": 8.0,
@@ -957,5 +958,8 @@
       "CB": 60.0,
       "CC": 60.0
     }
-  }
+  },
+  "super_eficiencia_er_a_prop_status": "infeasible",
+  "super_eficiencia_er_g_prop_status": "infeasible",
+  "super_eficiencia_er_b_prop_status": "infeasible"
 }

@@ -66,9 +66,6 @@ export const api = {
     return r.json();
   },
 
-  saveOatResult: (method, data) =>
-    apiFetch("/solve/save-oat-result", { method: "POST", body: { method, data } }),
-
   loadOatResult: (method) =>
     apiFetch(`/solve/save-oat-result?method=${method}`),
 };

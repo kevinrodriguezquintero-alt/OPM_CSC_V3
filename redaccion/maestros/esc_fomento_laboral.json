@@ -946,7 +946,8 @@
           "total_hectares": 22.9
         }
       },
-      "propuesto": null
+      "propuesto": null,
+      "propuesto_status": "infeasible"
     },
     "params_modified": {
       "CMO": 40.0,
@@ -956,5 +957,8 @@
       "CB": 70.0,
       "CC": 70.0
     }
-  }
+  },
+  "fomento_laboral_er_a_prop_status": "infeasible",
+  "fomento_laboral_er_g_prop_status": "infeasible",
+  "fomento_laboral_er_b_prop_status": "infeasible"
 }

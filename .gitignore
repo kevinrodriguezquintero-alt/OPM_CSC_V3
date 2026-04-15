@@ -18,12 +18,9 @@ desktop.ini
 # PYTHON - 02-api-model (API)
 # ============================================
 02-api-model/venv/
-02-api-model/__pycache__/
-02-api-model/api/__pycache__/
-02-api-model/api/routers/__pycache__/
-02-api-model/solvers/__pycache__/
-02-api-model/*.py[cod]
-02-api-model.*.so
+**/__pycache__/
+**/*.py[cod]
+02-api-model/*.so
 02-api-model/.env
 02-api-model/.env.local
 
@@ -33,7 +30,6 @@ desktop.ini
 # ============================================
 # BACKUPS AUTO-GENERADOS
 # ============================================
-redaccion/backups/backup_*/
 redaccion/resultados/backups/*.bak
 
 
@@ -52,15 +48,6 @@ PENDIENTES.md
 # Los archivos consolidados en maestros/ SÍ se versionan.
 redaccion/resultados/*.json
 !redaccion/resultados/.gitkeep
-redaccion/resultados/escenarios/*.json
-!redaccion/resultados/escenarios/.gitkeep
-
-# ============================================
-# DOCS / OUTPUTS GENERADOS
-# ============================================
-docs/*.json
-docs/*.csv
-docs/*.xlsx
 
 # ============================================
 # ARCHIVOS COMPRIMIDOS
@@ -68,11 +55,6 @@ docs/*.xlsx
 *.zip
 *.tar.gz
 *.rar
-
-# ============================================
-# EVITAR DUPLICACION ACCIDENTAL
-# ============================================
-/V3/
 
 # ============================================
 # NODE MODULES (si se agrega frontend con npm)

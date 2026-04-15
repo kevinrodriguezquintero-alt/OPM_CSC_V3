@@ -946,7 +946,8 @@
           "total_hectares": 22.9
         }
       },
-      "propuesto": null
+      "propuesto": null,
+      "propuesto_status": "infeasible"
     },
     "params_modified": {
       "CT": 30.0,
@@ -956,5 +957,8 @@
       "CR": -5.0,
       "CV": -30.0
     }
-  }
+  },
+  "huelga_transporte_er_a_prop_status": "infeasible",
+  "huelga_transporte_er_g_prop_status": "infeasible",
+  "huelga_transporte_er_b_prop_status": "infeasible"
 }
