@@ -47,12 +47,13 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-# Configuración (rutas relativas desde redaccion/tools/)
-RESULTADOS_DIR = Path("../resultados")        # Archivos temporales individuales (cambian con cada ejecución)
-PLANTILLAS_DIR = Path("../plantillas")
+# Configuración (rutas relativas al directorio del script, no al CWD)
+_HERE = Path(__file__).resolve().parent
+RESULTADOS_DIR = _HERE / "../resultados"      # Archivos temporales individuales (cambian con cada ejecución)
+PLANTILLAS_DIR = _HERE / "../plantillas"
 
 # Archivos MAESTROS individuales (actualizables independientemente)
-MAESTROS_DIR = Path("../maestros")
+MAESTROS_DIR = _HERE / "../maestros"
 MAESTRO_LGP = MAESTROS_DIR / "lgp.json"
 MAESTRO_ER = MAESTROS_DIR / "er.json"
 MAESTRO_OAT_LGP = MAESTROS_DIR / "oat_lgp.json"

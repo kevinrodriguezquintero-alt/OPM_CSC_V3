@@ -32,7 +32,17 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ params_to_test, percentages, method, steps, er_pilar }),
     });
-    if (!r.ok) throw new Error(await r.text());
+    if (!r.ok) throw new Error("Error en análisis de sensibilidad");
+    return r.json();
+  },
+
+  async checkSensitivityCache(params_to_test, percentages, method = "lgp", steps = 5, er_pilar = "middle") {
+    const r = await fetch(`${BASE}/solve/sensitivity-check`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ params_to_test, percentages, method, steps, er_pilar }),
+    });
+    if (!r.ok) throw new Error("Error verificando caché");
     return r.json();
   },
 
@@ -55,4 +65,10 @@ export const api = {
     if (!r.ok) throw new Error(await r.text());
     return r.json();
   },
+
+  saveOatResult: (method, data) =>
+    apiFetch("/solve/save-oat-result", { method: "POST", body: { method, data } }),
+
+  loadOatResult: (method) =>
+    apiFetch(`/solve/save-oat-result?method=${method}`),
 };

@@ -335,6 +335,72 @@ function initOat() {
     updateRunCount();
   });
 
+  // Función auxiliar para renderizar y guardar resultados OAT
+  async function renderAndSaveFinal(finalData, container, method, updateFn, totalStepsVal) {
+    // Recalcular Top rankings agrupado por diversidad y frecuencia
+    const sortElas = (arr, key) => {
+      const valid = arr.filter(r => r[key] !== null && r[key] !== undefined && Math.abs(r[key]) > 0);
+      const grouped = {};
+      valid.forEach(r => {
+        if (!grouped[r.param]) {
+          grouped[r.param] = { param: r.param, count: 0, maxAbs: 0, bestRow: null };
+        }
+        grouped[r.param].count++;
+        const absVal = Math.abs(r[key]);
+        if (absVal > grouped[r.param].maxAbs) {
+          grouped[r.param].maxAbs = absVal;
+          grouped[r.param].bestRow = r;
+        }
+      });
+      return Object.values(grouped)
+        .sort((a, b) => {
+          if (Math.abs(b.maxAbs - a.maxAbs) > 1e-7) return b.maxAbs - a.maxAbs;
+          return b.count - a.count;
+        })
+        .map(g => ({ ...g.bestRow, frequency: g.count }));
+    };
+
+    finalData.top_cost = sortElas(finalData.results, "elas_cost");
+    finalData.top_env  = sortElas(finalData.results, "elas_env");
+    finalData.top_soc  = sortElas(finalData.results, "elas_soc");
+
+    // Ranking Global (Agrupado por parámetro)
+    const globalAgg = {};
+    (finalData.results || []).forEach(r => {
+      if (!globalAgg[r.param]) {
+        globalAgg[r.param] = { param: r.param, maxElas: 0, pillars: new Set() };
+      }
+      const ec = Math.abs(r.elas_cost || 0);
+      const ee = Math.abs(r.elas_env || 0);
+      const es = Math.abs(r.elas_soc || 0);
+      globalAgg[r.param].maxElas = Math.max(globalAgg[r.param].maxElas, ec, ee, es);
+      if (ec > 1e-5) globalAgg[r.param].pillars.add("Costo");
+      if (ee > 1e-5) globalAgg[r.param].pillars.add("Emisiones");
+      if (es > 1e-5) globalAgg[r.param].pillars.add("Empleo");
+    });
+
+    const globalList = Object.values(globalAgg).map(g => ({
+      param: g.param,
+      maxElasticity: g.maxElas,
+      pillarCount: g.pillars.size,
+      pillarsStr: Array.from(g.pillars).join(", ")
+    }));
+
+    finalData.top_global_elas = [...globalList].sort((a,b) => b.maxElasticity - a.maxElasticity);
+    finalData.top_global_freq = [...globalList].sort((a,b) => b.pillarCount - a.pillarCount || b.maxElasticity - a.maxElasticity);
+
+    // Guardar resultado consolidado OAT
+    try {
+      await api.saveOatResult(method, finalData);
+    } catch (e) {
+      console.warn("No se pudo guardar OAT en servidor:", e);
+    }
+
+    if (updateFn) updateFn(totalStepsVal, "Analizando rankings de impacto...");
+    container.innerHTML = renderSensitivityResult(finalData);
+    drawOatCharts(finalData);
+  }
+
   btn.addEventListener("click", async () => {
     const params_to_test = [...grid.querySelectorAll(".oat-param-cb:checked")].map(cb => cb.value);
     if (params_to_test.length === 0) {
@@ -364,39 +430,78 @@ function initOat() {
     btn.disabled = true;
     try {
       const pilar = "middle";
-      const totalParams = params_to_test.length;
-      const totalSteps = totalParams * percentages.length;
+      
+      // ─────────────────────────────────────────────────────────
+      // CACHE INTELIGENTE: Verificar qué combinaciones ya existen
+      // ─────────────────────────────────────────────────────────
+      container.innerHTML = `<div class="loading">Verificando caché...</div>`;
+      
+      const cacheCheck = await api.checkSensitivityCache(params_to_test, percentages, method, steps, pilar);
+      const cachedResults = cacheCheck.cached || [];
+      const toRunItems = cacheCheck.to_run || [];
+      
+      console.log(`[OAT Cache] ${cachedResults.length} en caché, ${toRunItems.length} por ejecutar`);
+      
+      // Cargar resultados cacheados si existen
+      let finalData = null;
+      if (cachedResults.length > 0) {
+        try {
+          const savedData = await api.loadOatResult(method);
+          // Extraer solo los resultados cacheados que necesitamos
+          const neededCombos = new Set(cachedResults.map(c => `${c.param}|${c.change >= 0 ? "+" : ""}${c.change.toFixed(1)}%`));
+          const filteredResults = (savedData.results || []).filter(r => {
+            const combo = `${r.param}|${r.change}`;
+            return neededCombos.has(combo);
+          });
+          if (filteredResults.length > 0) {
+            finalData = { ...savedData, results: filteredResults };
+          }
+        } catch (e) {
+          console.warn("No se pudieron cargar resultados cacheados:", e);
+        }
+      }
+      
+      // Si todo está en caché, mostrar directamente
+      if (toRunItems.length === 0) {
+        container.innerHTML = `<div class="success">✓ Todas las combinaciones ya estaban en caché. Cargando resultados...</div>`;
+        if (!finalData) {
+          // Fallback: recargar todo del archivo
+          try { finalData = await api.loadOatResult(method); } catch (_) {}
+        }
+        if (finalData) {
+          renderAndSaveFinal(finalData, container, method, null, 0);
+        } else {
+          showError(container, "No se encontraron resultados en caché.");
+        }
+        return;
+      }
+      
+      // Ejecutar solo las combinaciones que faltan
+      const totalSteps = toRunItems.length;
       const update = showProgressBar(container, "Sensibilidad OAT", totalSteps);
       
-      let finalData = null;
-      let globalIdx = 0;
-
-      for (let i = 0; i < totalParams; i++) {
-        const p = params_to_test[i];
+      for (let i = 0; i < toRunItems.length; i++) {
+        const item = toRunItems[i];
+        const p = item.param;
+        const pct = item.change;
         
-        for (let j = 0; j < percentages.length; j++) {
-            const pct = percentages[j];
-            globalIdx++;
-            update(globalIdx, `Simulación ${globalIdx}/${totalSteps}: ${p} (${pct >= 0 ? "+" : ""}${fmt(pct)}%)`);
-            
-            try {
-                const part = await api.solveSensitivity([p], [pct], method, steps, pilar);
-                if (!finalData) {
-                    finalData = part;
-                } else {
-                    finalData.results.push(...part.results);
-                }
-            } catch (err) {
-                console.error(`Error en simulación ${p} (${pct}%):`, err);
-                // Si falla una individual, agregamos el error al set de resultados para no perder consistencia
-                if (finalData) {
-                    finalData.results.push({
-                        param: p,
-                        change: `${pct >= 0 ? "+" : ""}${fmt(pct)}%`,
-                        error: "Se perdió la conexión con el servidor en esta simulación específica."
-                    });
-                }
+        update(i + 1, `Simulación ${i + 1}/${totalSteps}: ${p} (${pct >= 0 ? "+" : ""}${fmt(pct)}%)`);
+        
+        try {
+            const part = await api.solveSensitivity([p], [pct], method, steps, pilar);
+            if (!finalData) {
+                finalData = part;
+            } else {
+                finalData.results.push(...part.results);
             }
+        } catch (err) {
+            console.error(`Error en simulación ${p} (${pct}%):`, err);
+            if (!finalData) finalData = { results: [] };
+            finalData.results.push({
+                param: p,
+                change: `${pct >= 0 ? "+" : ""}${fmt(pct)}%`,
+                error: "Se perdió la conexión con el servidor en esta simulación específica."
+            });
         }
       }
       
@@ -405,78 +510,8 @@ function initOat() {
         if (typeof r.change === "string") r.change = r.change.replace('.', ',');
       });
 
-      // Recalcular Top rankings agrupado por diversidad y frecuencia
-      const sortElas = (arr, key) => {
-        const valid = arr.filter(r => r[key] !== null && r[key] !== undefined && Math.abs(r[key]) > 0);
-        const grouped = {};
-        valid.forEach(r => {
-          if (!grouped[r.param]) {
-            grouped[r.param] = { param: r.param, count: 0, maxAbs: 0, bestRow: null };
-          }
-          grouped[r.param].count++;
-          const absVal = Math.abs(r[key]);
-          if (absVal > grouped[r.param].maxAbs) {
-            grouped[r.param].maxAbs = absVal;
-            grouped[r.param].bestRow = r;
-          }
-        });
-
-        return Object.values(grouped)
-          .sort((a, b) => {
-            if (Math.abs(b.maxAbs - a.maxAbs) > 1e-7) return b.maxAbs - a.maxAbs; // Primero por magnitud de elasticidad (Promesa del Top)
-            return b.count - a.count; // Desempate por frecuencia de impactos
-          })
-          .map(g => ({ ...g.bestRow, frequency: g.count }));
-      };
-
-      finalData.top_cost = sortElas(finalData.results, "elas_cost");
-      finalData.top_env  = sortElas(finalData.results, "elas_env");
-      finalData.top_soc  = sortElas(finalData.results, "elas_soc");
-
-      // Ranking Global (Agrupado por parámetro)
-      const globalAgg = {};
-      (finalData.results || []).forEach(r => {
-        if (!globalAgg[r.param]) {
-          globalAgg[r.param] = { 
-            param: r.param, 
-            maxElas: 0, 
-            pillars: new Set() 
-          };
-        }
-        const ec = Math.abs(r.elas_cost || 0);
-        const ee = Math.abs(r.elas_env || 0);
-        const es = Math.abs(r.elas_soc || 0);
-        globalAgg[r.param].maxElas = Math.max(globalAgg[r.param].maxElas, ec, ee, es);
-        if (ec > 1e-5) globalAgg[r.param].pillars.add("Costo");
-        if (ee > 1e-5) globalAgg[r.param].pillars.add("Emisiones");
-        if (es > 1e-5) globalAgg[r.param].pillars.add("Empleo");
-      });
-
-      const globalList = Object.values(globalAgg).map(g => ({
-        param: g.param,
-        maxElasticity: g.maxElas,
-        pillarCount: g.pillars.size,
-        pillarsStr: Array.from(g.pillars).join(", ")
-      }));
-
-      finalData.top_global_elas = [...globalList].sort((a,b) => b.maxElasticity - a.maxElasticity);
-      finalData.top_global_freq = [...globalList].sort((a,b) => b.pillarCount - a.pillarCount || b.maxElasticity - a.maxElasticity);
-
-      // Guardar resultado consolidado OAT — una sola escritura con versión enriquecida
-      // (top_global_elas/freq computados en JS). El backend no guarda por separado.
-      try {
-        await fetch(`${BASE}/solve/save-oat-result`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ method, data: finalData }),
-        });
-      } catch (e) {
-        console.warn("No se pudo guardar OAT en servidor:", e);
-      }
-
-      update(totalSteps, "Analizando rankings de impacto...");
-      container.innerHTML = renderSensitivityResult(finalData);
-      drawOatCharts(finalData);
+      // Renderizar y guardar resultados
+      await renderAndSaveFinal(finalData, container, method, update, totalSteps);
     } catch (e) {
       showError(container, e.message);
     } finally {

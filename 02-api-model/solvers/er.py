@@ -39,24 +39,35 @@ def run_er(params_obj, solver_name: str, steps: int = 5, capture_log: bool = Tru
 
     # ── PAYOFF TABLE ───────────────────────────────────────────────────────
 
+    solver_name = str(solver.name)
+
     # 1. Minimize Cost
     model.objective = pyo.Objective(expr=model.Obj_Cost, sense=pyo.minimize)
-    _, log = _solve(solver, model, capture_log)
+    res, log = _solve(solver, model, capture_log)
     log_parts.append("=== Payoff: Min Costo ===\n" + log)
+    if _solver_status(res) != "optimal":
+        return {"method": "er", "solver": solver_name, "status": "infeasible_payoff_cost",
+                "pareto_frontier": [], "log": "\n".join(log_parts)}
     payoff_min_cost = _objs()
 
     # 2. Minimize Emissions
     model.del_component(model.objective)
     model.objective = pyo.Objective(expr=model.Obj_Env, sense=pyo.minimize)
-    _, log = _solve(solver, model, capture_log)
+    res, log = _solve(solver, model, capture_log)
     log_parts.append("=== Payoff: Min Emisiones ===\n" + log)
+    if _solver_status(res) != "optimal":
+        return {"method": "er", "solver": solver_name, "status": "infeasible_payoff_emissions",
+                "pareto_frontier": [], "log": "\n".join(log_parts)}
     payoff_min_env = _objs()
 
     # 3. Maximize Social
     model.del_component(model.objective)
     model.objective = pyo.Objective(expr=model.Obj_Social, sense=pyo.maximize)
-    _, log = _solve(solver, model, capture_log)
+    res, log = _solve(solver, model, capture_log)
     log_parts.append("=== Payoff: Max Social ===\n" + log)
+    if _solver_status(res) != "optimal":
+        return {"method": "er", "solver": solver_name, "status": "infeasible_payoff_social",
+                "pareto_frontier": [], "log": "\n".join(log_parts)}
     payoff_max_soc = _objs()
 
     payoff_table = {

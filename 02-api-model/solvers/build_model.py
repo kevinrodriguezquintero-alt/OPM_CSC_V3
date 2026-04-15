@@ -175,6 +175,9 @@ def build_model(model: pyo.ConcreteModel, p) -> pyo.ConcreteModel:
         return sum(m.RA[u] * m.B[u] for u in m.U) <= m.RB
     model.var_bina = pyo.Constraint(rule=var_bina_rule)
 
+    # NOTA: Esta constraint asume productor único (|I|=1).
+    # Para múltiples productores con variantes independientes,
+    # se necesita B indexado por (u, i) y la suma restringida a U_i.
     def suma_w_rule(m, i):
         return sum(m.B[u] * m.H[u] for u in m.U) == m.W[i]
     model.suma_w = pyo.Constraint(model.I, rule=suma_w_rule)

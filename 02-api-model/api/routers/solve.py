@@ -1,15 +1,23 @@
 import copy
-import os
-import sys
+import datetime
 import io
-import logging
-from typing import List
 import json
+import logging
+import os
+import shutil
+import sys
+import traceback
 from pathlib import Path
+from types import SimpleNamespace
+from typing import List
 
+import pyomo.environ as pyo
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+
 from api.state import app_state
+from config import get_solver
+from solvers.build_model import build_model, extract_variables, _solver_status
 from solvers.lgp import run_lgp
 from solvers.er import run_er
 
@@ -78,6 +86,7 @@ _PARAM_LABEL = {
     "CDA": "costo por daño P→I",
     "CDF": "costo por daño I→D",
     "CMO": "costo de mano de obra (intermediario)",
+    "CMP": "costo de mano de obra (centro de acopio)",
     "CD":  "costo de mano de obra (detallista)",
     "IT":  "factor de impacto ambiental",
     "P":   "porcentaje de daño P→I",
@@ -289,8 +298,15 @@ def _extract_cost_breakdown_from_vars(variables: dict, params, actual_total: flo
     
     calculated_total = cost_production + cost_intermediation + total_labor + total_transport + total_damage
     
-    # Normalize to match actual total if there's a difference
+    # Detectar discrepancia entre cálculo manual y total del solver
     if calculated_total > 0 and abs(calculated_total - actual_total) > 0.01:
+        discrepancy_pct = abs(calculated_total - actual_total) / actual_total * 100
+        if discrepancy_pct > 1.0:
+            logging.warning(
+                f"[cost_breakdown] Discrepancia {discrepancy_pct:.2f}% entre "
+                f"fórmula manual ({calculated_total:,.0f}) y solver ({actual_total:,.0f}). "
+                "Verificar sincronía con build_model.py"
+            )
         factor = actual_total / calculated_total
         cost_production *= factor
         cost_intermediation *= factor
@@ -433,14 +449,18 @@ def _extract_producer_variants(variables: dict, params) -> dict:
         "total_hectares": round(total_hectares, 2)
     }
 
-def _run_and_extract(solver_name: str, steps: int, permitir_maestro: bool = False, method: str = "lgp") -> dict | None:
+def _run_and_extract(solver_name: str, steps: int, permitir_maestro: bool = False, method: str = "lgp", params_dict: dict | None = None) -> dict | None:
     """Run specified method and return a unified objectives dict, or None if infeasible.
     Supports fixed-point (Maestro) loading for consistency.
+    params_dict: when provided, use these params instead of app_state (thread-safe for OAT).
     """
-    params = app_state.get_params_object()
+    if params_dict is not None:
+        params = SimpleNamespace(**params_dict)
+    else:
+        params = app_state.get_params_object()
 
-    # --- Lógica de Punto Fijo (Maestro) ---
-    if permitir_maestro:
+    # --- Lógica de Punto Fijo (Maestro) --- (solo cuando no hay params_dict explícito)
+    if permitir_maestro and params_dict is None:
         try:
             # Seleccionar archivo según método
             if method == "er":
@@ -471,10 +491,9 @@ def _run_and_extract(solver_name: str, steps: int, permitir_maestro: bool = Fals
     # --- Ejecución normal de Solver si no hay maestro ---
     if method == "er":
         # Para ER, derivamos a la función especializada (paso único o frontera)
-        return _run_er_and_extract(solver_name, steps)
-    
+        return _run_er_and_extract(solver_name, steps, params_dict=params_dict)
+
     # LGP (3 pasos)
-    from solvers.lgp import run_lgp
     res = run_lgp(params, solver_name, capture_log=False)
     if res.get("status") == "optimal":
         objs = res["objectives"]
@@ -490,19 +509,19 @@ def _run_and_extract(solver_name: str, steps: int, permitir_maestro: bool = Fals
     return None
 
 
-def _run_er_and_extract(solver_name: str, steps: int, pilar: str | int = "middle", strict_epsilon: bool = False) -> dict | None:
+def _run_er_and_extract(solver_name: str, steps: int, pilar: str | int = "middle", strict_epsilon: bool = False, params_dict: dict | None = None) -> dict | None:
     """Run ER and return objectives from a specific point of the Pareto frontier or a pilar.
 
     strict_epsilon: if True, when a maestro epsilon exists and the solve is infeasible,
     return None immediately instead of falling back to the full frontier.
     Used by OAT sensitivity to avoid running 5 iterations per variation.
+    params_dict: when provided, use these params instead of app_state (thread-safe for OAT).
     """
     # If a specific pilar is requested, we only need to solve once for that objective
-    params = app_state.get_params_object()
-    from config import get_solver
-    from solvers.build_model import build_model, extract_variables, _solver_status
-    import pyomo.environ as pyo
-
+    if params_dict is not None:
+        params = SimpleNamespace(**params_dict)
+    else:
+        params = app_state.get_params_object()
 
     def _get_objs_and_metrics(m, vars_dict=None):
         if vars_dict is None:
@@ -625,8 +644,61 @@ class SensitivityRequest(BaseModel):
     er_pilar: str | int = "middle"
 
 
-def _safe_solve(meth: str, body, permitir_maestro: bool = False) -> dict | None:
-    """Wrapper to run a solve and log errors instead of crashing."""
+@router.post("/sensitivity-check")
+def check_sensitivity_cache(body: SensitivityRequest):
+    """Verificar qué combinaciones (param, change) ya existen en caché OAT.
+    
+    Retorna:
+    - cached: Lista de combinaciones ya calculadas (no necesitan ejecutarse)
+    - to_run: Lista de combinaciones que faltan (deben ejecutarse)
+    """
+    try:
+        filename = f"oat_{body.method}.json"
+        filepath = RESULTADOS_DIR / filename
+        
+        # Cargar resultados existentes
+        existing_combinations = set()
+        if filepath.exists():
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+                    for item in existing_data.get("results", []):
+                        param = item.get("param")
+                        change = item.get("change")
+                        if param and change:
+                            existing_combinations.add((param, change))
+            except Exception as e:
+                logging.warning(f"[check_sensitivity_cache] Error cargando OAT existente: {e}")
+        
+        # Verificar qué combinaciones existen vs. las solicitadas
+        cached = []
+        to_run = []
+        
+        for param in body.params_to_test:
+            for pct in body.percentages:
+                # Normalizar formato de change
+                change_str = f"{pct:+.1f}%"
+                if (param, change_str) in existing_combinations:
+                    cached.append({"param": param, "change": pct, "status": "cached"})
+                else:
+                    to_run.append({"param": param, "change": pct, "status": "pending"})
+        
+        return {
+            "method": body.method,
+            "cached_count": len(cached),
+            "to_run_count": len(to_run),
+            "cached": cached,
+            "to_run": to_run
+        }
+    except Exception as e:
+        logging.error(f"[check_sensitivity_cache] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error verificando caché: {e}")
+
+
+def _safe_solve(meth: str, body, permitir_maestro: bool = False, params_dict: dict | None = None) -> dict | None:
+    """Wrapper to run a solve and log errors instead of crashing.
+    params_dict: when provided, use these params directly (thread-safe — never mutates app_state).
+    """
     try:
         if meth == "er":
             # Si permitimos maestro, usar _run_and_extract que carga el resultado guardado
@@ -635,11 +707,10 @@ def _safe_solve(meth: str, body, permitir_maestro: bool = False) -> dict | None:
                 return _run_and_extract(app_state.solver_name, body.steps, permitir_maestro=True, method="er")
             # strict_epsilon=True para variaciones OAT: si el ε fijo del maestro es infeasible,
             # retornar None en lugar de correr la frontera completa (5 iteraciones).
-            return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar, strict_epsilon=True)
-        return _run_and_extract(app_state.solver_name, body.steps, permitir_maestro=permitir_maestro, method="lgp")
+            return _run_er_and_extract(app_state.solver_name, body.steps, body.er_pilar, strict_epsilon=True, params_dict=params_dict)
+        return _run_and_extract(app_state.solver_name, body.steps, permitir_maestro=permitir_maestro, method="lgp", params_dict=params_dict)
     except Exception as e:
         logging.error(f"Error in _safe_solve ({meth}): {e}")
-        import traceback
         traceback.print_exc()
         return None
 
@@ -652,55 +723,52 @@ def solve_sensitivity(body: SensitivityRequest):
         raise HTTPException(status_code=422, detail="method must be 'lgp' or 'er'")
 
     base_data = copy.deepcopy(app_state.params)
-    try:
-        base_objs = _safe_solve(body.method, body, permitir_maestro=True)
-        if base_objs is None:
-            raise HTTPException(status_code=422, detail="Base model not optimal")
+    base_objs = _safe_solve(body.method, body, permitir_maestro=True)
+    if base_objs is None:
+        raise HTTPException(status_code=422, detail="Base model not optimal")
 
-        results = []
-        for param in body.params_to_test:
-            if param not in app_state.params:
+    results = []
+    for param in body.params_to_test:
+        if param not in base_data:
+            continue
+        for pct in body.percentages:
+            if abs(pct) < 1e-6:
+                # Caso 0% - Usar el maestro directamente
+                results.append({
+                    "param": param,
+                    "change": "0.0%",
+                    "cost": base_objs["cost"],
+                    "env":  base_objs["emissions"],
+                    "soc":  base_objs["employment"],
+                    "elas_cost": 0.0,
+                    "elas_env": 0.0,
+                    "elas_soc": 0.0,
+                    "status": "optimal"
+                })
                 continue
-            for pct in body.percentages:
-                if abs(pct) < 1e-6:
-                    # Caso 0% - Usar el maestro directamente
-                    results.append({
-                        "param": param,
-                        "change": "0.0%",
-                        "cost": base_objs["cost"],
-                        "env":  base_objs["emissions"],
-                        "soc":  base_objs["employment"],
-                        "elas_cost": 0.0,
-                        "elas_env": 0.0,
-                        "elas_soc": 0.0,
-                        "status": "optimal"
-                    })
-                    continue
 
-                try:
-                    new_data = _perturb_param(base_data, param, pct)
-                    app_state.params = new_data
-                    new_objs = _safe_solve(body.method, body, permitir_maestro=False)
-                    results.append({
-                        "param": param,
-                        "change": f"{pct:+.1f}%",
-                        "obj_cost": new_objs["cost"] if new_objs else None,
-                        "obj_env": new_objs["emissions"] if new_objs else None,
-                        "obj_soc": new_objs["employment"] if new_objs else None,
-                        "elas_cost": _calculate_elasticity(base_objs["cost"], new_objs["cost"] if new_objs else None, pct),
-                        "elas_env": _calculate_elasticity(base_objs["emissions"], new_objs["emissions"] if new_objs else None, pct),
-                        "elas_soc": _calculate_elasticity(base_objs["employment"], new_objs["employment"] if new_objs else None, pct),
-                    })
-                except HTTPException:
-                    raise
-                except Exception:
-                    results.append({
-                        "param": param,
-                        "change": f"{pct:+.1f}%",
-                        "error": _infeasibility_hint(param, pct),
-                    })
-    finally:
-        app_state.params = base_data
+            try:
+                new_data = _perturb_param(base_data, param, pct)
+                # Pasar params_dict explícito — nunca muta app_state (thread-safe)
+                new_objs = _safe_solve(body.method, body, permitir_maestro=False, params_dict=new_data)
+                results.append({
+                    "param": param,
+                    "change": f"{pct:+.1f}%",
+                    "obj_cost": new_objs["cost"] if new_objs else None,
+                    "obj_env": new_objs["emissions"] if new_objs else None,
+                    "obj_soc": new_objs["employment"] if new_objs else None,
+                    "elas_cost": _calculate_elasticity(base_objs["cost"], new_objs["cost"] if new_objs else None, pct),
+                    "elas_env": _calculate_elasticity(base_objs["emissions"], new_objs["emissions"] if new_objs else None, pct),
+                    "elas_soc": _calculate_elasticity(base_objs["employment"], new_objs["employment"] if new_objs else None, pct),
+                })
+            except HTTPException:
+                raise
+            except Exception:
+                results.append({
+                    "param": param,
+                    "change": f"{pct:+.1f}%",
+                    "error": _infeasibility_hint(param, pct),
+                })
 
     valid_cost = [r for r in results if r.get("elas_cost") is not None and abs(r["elas_cost"]) > 0]
     valid_env  = [r for r in results if r.get("elas_env")  is not None and abs(r["elas_env"]) > 0]
@@ -721,6 +789,99 @@ def solve_sensitivity(body: SensitivityRequest):
     return result
 
 
+def _merge_oat_results(existing_results: list, new_results: list) -> list:
+    """Merge OAT results by (param, change) key. Updates existing, appends new.
+    
+    Key is a tuple (param, normalized_change) where change is always a string
+    like "+10.0%" or "-5.0%".
+    """
+    def _normalize_change(change) -> str:
+        """Normalize change to consistent string format."""
+        if isinstance(change, (int, float)):
+            return f"{change:+.1f}%"
+        return str(change)
+    
+    def _make_key(row: dict) -> tuple:
+        param = row.get("param", "")
+        change = _normalize_change(row.get("change", ""))
+        return (param, change)
+    
+    # Create index of existing rows
+    existing_index = {_make_key(r): i for i, r in enumerate(existing_results) if "param" in r}
+    merged = list(existing_results)  # Copy to avoid mutating input
+    
+    for new_row in new_results:
+        key = _make_key(new_row)
+        if key in existing_index:
+            merged[existing_index[key]] = new_row  # Update existing
+        else:
+            merged.append(new_row)                   # Append new
+            existing_index[key] = len(merged) - 1     # Update index
+    
+    return merged
+
+
+def _recalculate_oat_rankings(results: list, base_objectives: dict) -> dict:
+    """Recalculate OAT rankings (top_cost, top_env, top_soc, top_global_*) from merged results.
+    
+    This ensures consistency after merging results from multiple analysis runs.
+    """
+    # Filter valid results with elasticity values
+    valid_cost = [r for r in results if r.get("elas_cost") is not None and abs(r["elas_cost"]) > 0]
+    valid_env = [r for r in results if r.get("elas_env") is not None and abs(r["elas_env"]) > 0]
+    valid_soc = [r for r in results if r.get("elas_soc") is not None and abs(r["elas_soc"]) > 0]
+    
+    # Sort by absolute elasticity descending
+    top_cost = sorted(valid_cost, key=lambda x: abs(x["elas_cost"]), reverse=True)
+    top_env = sorted(valid_env, key=lambda x: abs(x["elas_env"]), reverse=True)
+    top_soc = sorted(valid_soc, key=lambda x: abs(x["elas_soc"]), reverse=True)
+    
+    # Aggregate global rankings (param -> max elasticity across pillars)
+    global_agg = {}
+    for r in results:
+        param = r.get("param")
+        if not param:
+            continue
+        if param not in global_agg:
+            global_agg[param] = {"param": param, "maxElas": 0, "pillars": set()}
+        
+        ec = abs(r.get("elas_cost") or 0)
+        ee = abs(r.get("elas_env") or 0)
+        es = abs(r.get("elas_soc") or 0)
+        
+        global_agg[param]["maxElas"] = max(global_agg[param]["maxElas"], ec, ee, es)
+        if ec > 1e-5:
+            global_agg[param]["pillars"].add("Costo")
+        if ee > 1e-5:
+            global_agg[param]["pillars"].add("Emisiones")
+        if es > 1e-5:
+            global_agg[param]["pillars"].add("Empleo")
+    
+    # Convert to list format
+    global_list = [
+        {
+            "param": g["param"],
+            "maxElasticity": g["maxElas"],
+            "pillarCount": len(g["pillars"]),
+            "pillarsStr": ", ".join(sorted(g["pillars"]))
+        }
+        for g in global_agg.values()
+    ]
+    
+    top_global_elas = sorted(global_list, key=lambda x: x["maxElasticity"], reverse=True)
+    top_global_freq = sorted(global_list, key=lambda x: (x["pillarCount"], x["maxElasticity"]), reverse=True)
+    
+    return {
+        "base_objectives": base_objectives,
+        "results": results,
+        "top_cost": top_cost,
+        "top_env": top_env,
+        "top_soc": top_soc,
+        "top_global_elas": top_global_elas,
+        "top_global_freq": top_global_freq,
+    }
+
+
 class SaveOatRequest(BaseModel):
     method: str
     data: dict
@@ -728,15 +889,128 @@ class SaveOatRequest(BaseModel):
 
 @router.post("/save-oat-result")
 def save_oat_result(body: SaveOatRequest):
-    """Guardar resultado consolidado de análisis OAT (llamado desde frontend después de completar todas las simulaciones)."""
+    """Guardar resultado consolidado de análisis OAT con merge automático.
+    
+    - Carga resultados OAT existentes si los hay
+    - Hace merge de results[] por (param, change)
+    - Recalcula rankings (top_cost, top_env, top_soc, top_global_*)
+    - Actualiza base_objectives desde maestros LGP/ER actuales
+    - Guarda resultado consolidado
+    """
     try:
         RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
         filename = f"oat_{body.method}.json"  # oat_lgp.json o oat_er.json
-        with open(RESULTADOS_DIR / filename, 'w', encoding='utf-8') as f:
-            json.dump(body.data, f, indent=2, ensure_ascii=False, default=str)
-        return {"status": "ok", "filename": filename}
+        filepath = RESULTADOS_DIR / filename
+        
+        # 0. Backup automático del archivo existente (protección contra pérdida)
+        BACKUPS_DIR = RESULTADOS_DIR / "backups"
+        MAX_BACKUPS = 10  # Mantener solo los últimos 10 backups por archivo
+        if filepath.exists():
+            try:
+                BACKUPS_DIR.mkdir(parents=True, exist_ok=True)
+                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_filename = f"{filename}.{timestamp}.bak"
+                backup_path = BACKUPS_DIR / backup_filename
+                shutil.copy2(filepath, backup_path)
+                logging.info(f"[save_oat_result] Backup creado: {backup_path}")
+                
+                # Rotación: eliminar backups antiguos si excedemos el límite
+                backup_pattern = f"{filename}.*.bak"
+                all_backups = sorted(BACKUPS_DIR.glob(backup_pattern), key=lambda p: p.stat().st_mtime)
+                if len(all_backups) > MAX_BACKUPS:
+                    to_delete = all_backups[:-MAX_BACKUPS]  # Mantener los más recientes
+                    for old_backup in to_delete:
+                        try:
+                            old_backup.unlink()
+                            logging.info(f"[save_oat_result] Backup antiguo eliminado: {old_backup.name}")
+                        except Exception as del_err:
+                            logging.warning(f"[save_oat_result] No se pudo eliminar backup antiguo: {del_err}")
+            except Exception as backup_err:
+                logging.warning(f"[save_oat_result] No se pudo crear backup: {backup_err}")
+        
+        # 1. Cargar resultados existentes si hay
+        existing_results = []
+        if filepath.exists():
+            try:
+                with open(filepath, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+                    existing_results = existing_data.get("results", [])
+                    logging.info(f"[save_oat_result] Cargados {len(existing_results)} resultados existentes de {filename}")
+            except Exception as e:
+                logging.warning(f"[save_oat_result] No se pudo cargar OAT existente: {e}")
+        
+        # 2. Obtener nuevos resultados del frontend
+        new_results = body.data.get("results", [])
+        new_base_obj = body.data.get("base_objectives", {})
+        
+        # 3. Merge de resultados (actualiza existentes, agrega nuevos)
+        merged_results = _merge_oat_results(existing_results, new_results)
+        logging.info(f"[save_oat_result] Merge: {len(existing_results)} existentes + {len(new_results)} nuevos = {len(merged_results)} total")
+        
+        # 4. Actualizar base_objectives desde maestros (igual que en sensitivity-ranges)
+        try:
+            if body.method == "er":
+                # Cargar ER desde maestro (punto medio / iteración 78)
+                maestro_data = _run_and_extract(app_state.solver_name, 5, permitir_maestro=True, method="er")
+            else:
+                # Cargar LGP desde maestro
+                maestro_data = _run_and_extract(app_state.solver_name, 5, permitir_maestro=True, method="lgp")
+            
+            if maestro_data:
+                updated_base = {
+                    "cost": maestro_data.get("cost"),
+                    "emissions": maestro_data.get("emissions"),
+                    "employment": maestro_data.get("employment"),
+                }
+                logging.info(f"[save_oat_result] Base objectives actualizados desde maestro: {updated_base}")
+            else:
+                # Fallback: usar los del frontend
+                updated_base = new_base_obj
+                logging.warning("[save_oat_result] No se pudo cargar maestro, usando base_objectives del frontend")
+        except Exception as e:
+            updated_base = new_base_obj
+            logging.warning(f"[save_oat_result] Error cargando maestro: {e}, usando base_objectives del frontend")
+        
+        # 5. Recalcular rankings desde resultados mergeados
+        final_data = _recalculate_oat_rankings(merged_results, updated_base)
+        
+        # 6. Guardar resultado consolidado
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(final_data, f, indent=2, ensure_ascii=False, default=str)
+        
+        return {
+            "status": "ok",
+            "filename": filename,
+            "stats": {
+                "existing": len(existing_results),
+                "new": len(new_results),
+                "total": len(merged_results),
+            }
+        }
     except Exception as e:
+        logging.error(f"[save_oat_result] Error: {e}")
         raise HTTPException(status_code=500, detail=f"Error guardando OAT: {e}")
+
+
+@router.get("/save-oat-result")
+def load_oat_result(method: str = "lgp"):
+    """Cargar resultado OAT existente (para cache inteligente en frontend)."""
+    try:
+        filename = f"oat_{method}.json"
+        filepath = RESULTADOS_DIR / filename
+        
+        if not filepath.exists():
+            raise HTTPException(status_code=404, detail=f"No existe archivo OAT para método {method}")
+        
+        with open(filepath, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        return data
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"[load_oat_result] Error: {e}")
+        raise HTTPException(status_code=500, detail=f"Error cargando OAT: {e}")
 
 
 class ScenariosRequest(BaseModel):
@@ -746,22 +1020,6 @@ class ScenariosRequest(BaseModel):
     er_pilar: str | int = "middle"
     escenario_id: str | None = None  # ID opcional para nombre de archivo (ej: "esc1_boom")
 
-
-def _perturb_in_place(data: dict, param_name: str, percentage: float):
-    multiplier = 1.0 + (percentage / 100.0)
-    if param_name not in data:
-        return
-    val = data[param_name]
-    if isinstance(val, (int, float)):
-        data[param_name] = val * multiplier
-    elif isinstance(val, dict):
-        for k in val:
-            if isinstance(val[k], (int, float)):
-               val[k] = val[k] * multiplier
-    elif isinstance(val, list) and len(val) > 0 and isinstance(val[0], dict):
-        for item in data[param_name]:
-            if "value" in item and isinstance(item["value"], (int, float)):
-                item["value"] = item["value"] * multiplier
 
 
 @router.post("/scenarios")
@@ -775,14 +1033,12 @@ def solve_scenarios(body: ScenariosRequest):
         raise HTTPException(status_code=422, detail="method must be 'lgp', 'er' or 'both'")
 
     base_data = copy.deepcopy(app_state.params)
-    
+
     def _run_full_scenario(meth: str):
         # Determinamos si hay algún cambio real en los parámetros
         tiene_cambios = any(abs(v) > 1e-6 for v in body.params_to_test.values())
 
-        # Reset to base to compute base objs for this method
-        app_state.params = copy.deepcopy(base_data)
-        # 1. Base (Maestro habilitado para rapidez y coherencia)
+        # 1. Base (Maestro habilitado para rapidez y coherencia) — no muta app_state
         b_objs = _safe_solve(meth, body, permitir_maestro=True)
         if b_objs is None: return None
 
@@ -793,35 +1049,32 @@ def solve_scenarios(body: ScenariosRequest):
 
         p_data = copy.deepcopy(base_data)
         for p, pct in body.params_to_test.items():
-            _perturb_in_place(p_data, p, pct)
-        app_state.params = p_data
-        # 3. Solve (Maestro deshabilitado para perturbación)
-        p_objs = _safe_solve(meth, body, permitir_maestro=False)
+            if p in p_data:
+                p_data = _perturb_param(p_data, p, pct)
+        # Pasar params_dict explícito — nunca muta app_state (thread-safe)
+        p_objs = _safe_solve(meth, body, permitir_maestro=False, params_dict=p_data)
 
         return {"base": b_objs, "propuesto": p_objs}
 
-    try:
-        if body.method == "both":
-            lgp_res = _run_full_scenario("lgp")
-            er_res = _run_full_scenario("er")
-            result = {
-                "method": "both",
-                "lgp": lgp_res,
-                "er": er_res,
-                "params_modified": body.params_to_test
-            }
-        else:
-            res = _run_full_scenario(body.method)
-            if res is None:
-                raise HTTPException(status_code=422, detail="Model could not be solved")
+    if body.method == "both":
+        lgp_res = _run_full_scenario("lgp")
+        er_res = _run_full_scenario("er")
+        result = {
+            "method": "both",
+            "lgp": lgp_res,
+            "er": er_res,
+            "params_modified": body.params_to_test
+        }
+    else:
+        res = _run_full_scenario(body.method)
+        if res is None:
+            raise HTTPException(status_code=422, detail="Model could not be solved")
 
-            result = {
-                "method": body.method,
-                **res,
-                "params_modified": body.params_to_test
-            }
-    finally:
-        app_state.params = base_data
+        result = {
+            "method": body.method,
+            **res,
+            "params_modified": body.params_to_test
+        }
     
     # Guardar automáticamente (escenarios tienen nombres dinámicos o ID personalizado)
     try:
@@ -848,14 +1101,13 @@ def solve_scenarios(body: ScenariosRequest):
 
 # ── Sensitivity Ranges (Shadow Prices + Allowable Ranges) ────────────────
 
-def _quick_feasible(solver_name: str, epsilon: float = None) -> dict | None:
-    """Minimize cost only (1 solve). Optionally constrained by epsilon emissions. Returns objectives dict or None."""
-    import pyomo.environ as pyo
-    from config import get_solver
-    from solvers.build_model import build_model, _solver_status
-
+def _quick_feasible(solver_name: str, epsilon: float = None, params_dict: dict | None = None) -> dict | None:
+    """Minimize cost only (1 solve). Optionally constrained by epsilon emissions. Returns objectives dict or None.
+    params_dict: when provided, use these params instead of app_state (thread-safe for OAT).
+    """
+    params_obj = SimpleNamespace(**params_dict) if params_dict is not None else app_state.get_params_object()
     model = pyo.ConcreteModel()
-    build_model(model, app_state.get_params_object())
+    build_model(model, params_obj)
     
     # Add epsilon constraint if provided (Compromise target)
     if epsilon is not None:
@@ -880,15 +1132,12 @@ def _shadow_prices_for(base_data, param, base_objs, method, solver_name, delta=1
         pct = sign * delta
         try:
             new_data = _perturb_param(base_data, param, pct)
-            app_state.params = new_data
-            # Use quick solve (1 step) instead of full LGP for shadow prices (much faster)
-            objs = _quick_feasible(solver_name)
+            # Pasar params_dict explícito — nunca muta app_state (thread-safe)
+            objs = _quick_feasible(solver_name, params_dict=new_data)
         except Exception:
             objs = None
-            
-        results[label] = objs
 
-    app_state.params = base_data
+        results[label] = objs
 
     # Calcular el cambio total en unidades físicas
     multiplier = delta / 100.0
@@ -922,10 +1171,9 @@ def _find_max_feasible(base_data, param, direction, solver_name, epsilon=None):
 
     # Verificar primero si el límite máximo es factible para ahorrar iteraciones
     try:
-        app_state.params = _perturb_param(base_data, param, direction * high)
-        objs = _quick_feasible(solver_name, epsilon=epsilon)
+        perturbed = _perturb_param(base_data, param, direction * high)
+        objs = _quick_feasible(solver_name, epsilon=epsilon, params_dict=perturbed)
         if objs is not None:
-            app_state.params = base_data
             return high
     except Exception:
         pass
@@ -935,8 +1183,8 @@ def _find_max_feasible(base_data, param, direction, solver_name, epsilon=None):
     while (high - low) > tolerance:
         mid = (low + high) / 2.0
         try:
-            app_state.params = _perturb_param(base_data, param, direction * mid)
-            objs = _quick_feasible(solver_name, epsilon=epsilon)
+            perturbed = _perturb_param(base_data, param, direction * mid)
+            objs = _quick_feasible(solver_name, epsilon=epsilon, params_dict=perturbed)
             if objs is not None:
                 low = mid
                 best_ok = mid
@@ -944,8 +1192,7 @@ def _find_max_feasible(base_data, param, direction, solver_name, epsilon=None):
                 high = mid
         except Exception:
             high = mid
-            
-    app_state.params = base_data
+
     return round(best_ok, 1)
 
 
@@ -988,106 +1235,103 @@ def solve_sensitivity_ranges(body: RangesRequest):
     base_data = copy.deepcopy(app_state.params)
     solver = app_state.solver_name
 
-    try:
-        # 1. Base LGP (Usa el maestro de $126.37M)
-        lgp_base = _run_and_extract(solver, 5, permitir_maestro=True, method="lgp")
+    # 1. Base LGP (Usa el maestro de $126.37M)
+    lgp_base = _run_and_extract(solver, 5, permitir_maestro=True, method="lgp")
 
-        # 2. Base ER (Sincronizado con el Maestro ER - Iteración 78)
-        # Cargamos el maestro para obtener el epsilon (emisiones) objetivo de la tesis
-        er_maestro_data = _run_and_extract(solver, 5, permitir_maestro=True, method="er")
-        
-        target_epsilon = None
-        if er_maestro_data:
-            target_epsilon = er_maestro_data.get("emissions")
-            er_base = er_maestro_data
+    # 2. Base ER (Sincronizado con el Maestro ER - Iteración 78)
+    # Cargamos el maestro para obtener el epsilon (emisiones) objetivo de la tesis
+    er_maestro_data = _run_and_extract(solver, 5, permitir_maestro=True, method="er")
+
+    target_epsilon = None
+    if er_maestro_data:
+        target_epsilon = er_maestro_data.get("emissions")
+        er_base = er_maestro_data
+    else:
+        # Fallback si no hay maestro: buscar el punto medio de una frontera rápida
+        full_er = run_er(app_state.get_params_object(), solver, steps=5, capture_log=False)
+        frontier = [p for p in full_er.get("pareto_frontier", []) if p.get("status") == "optimal"]
+        if frontier:
+            mid = frontier[len(frontier)//2]
+            target_epsilon = mid["objectives"]["emissions"]
+            er_base = _quick_feasible(solver, epsilon=target_epsilon)
         else:
-            # Fallback si no hay maestro: buscar el punto medio de una frontera rápida
-            full_er = run_er(app_state.get_params_object(), solver, steps=5, capture_log=False)
-            frontier = [p for p in full_er.get("pareto_frontier", []) if p.get("status") == "optimal"]
-            if frontier:
-                mid = frontier[len(frontier)//2]
-                target_epsilon = mid["objectives"]["emissions"]
-                er_base = _quick_feasible(solver, epsilon=target_epsilon)
+            er_base = None
+
+    if lgp_base is None and er_base is None:
+        raise HTTPException(status_code=422, detail="Modelo base infactible")
+
+    rows = []
+    for param in body.params:
+        if param not in base_data:
+            continue
+
+        entry = {
+            "param": param,
+            "label": _PARAM_LABEL.get(param, param),
+            "base_value": _param_summary_value(base_data, param),
+        }
+
+        # Shadow prices — LGP
+        if lgp_base:
+            sp = _shadow_prices_for(base_data, param, lgp_base, "lgp", solver)
+            entry["lgp_shadow_cost"] = sp["cost"]
+            entry["lgp_shadow_env"] = sp["emissions"]
+            entry["lgp_shadow_soc"] = sp["employment"]
+        else:
+            entry["lgp_shadow_cost"] = entry["lgp_shadow_env"] = entry["lgp_shadow_soc"] = None
+
+        # Shadow prices — ER (Compromise / Fixed Epsilon)
+        if er_base:
+            sp = _shadow_prices_for(base_data, param, er_base, "er", solver, epsilon=target_epsilon)
+            entry["er_shadow_cost"] = sp["cost"]
+            entry["er_shadow_env"] = sp["emissions"]
+            entry["er_shadow_soc"] = sp["employment"]
+        else:
+            entry["er_shadow_cost"] = entry["er_shadow_env"] = entry["er_shadow_soc"] = None
+
+        # Allowable ranges (Physical feasibility buffer — No epsilon constraint)
+        ai = _find_max_feasible(base_data, param, +1, solver, epsilon=None)
+        ad = _find_max_feasible(base_data, param, -1, solver, epsilon=None)
+        bv = entry["base_value"]
+
+        entry["allowable_increase_pct"] = ai
+        entry["allowable_decrease_pct"] = ad
+        entry["min_value"] = round(bv * (1 - ad / 100), 4) if bv and ad else None
+        entry["max_value"] = round(bv * (1 + ai / 100), 4) if bv and ai else None
+
+        rows.append(entry)
+
+    result = {"lgp_base": lgp_base, "er_base": er_base, "ranges": rows}
+
+    # Guardar automáticamente (hacer append a rangos existentes)
+    try:
+        RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
+        rangos_path = RESULTADOS_DIR / "rangos.json"
+
+        # Cargar rangos existentes si hay
+        existing_ranges = []
+        if rangos_path.exists():
+            try:
+                with open(rangos_path, 'r', encoding='utf-8') as f:
+                    existing_data = json.load(f)
+                    existing_ranges = existing_data.get("ranges", [])
+            except Exception:
+                existing_ranges = []
+
+        # Merge: agregar nuevos rangos, actualizar existentes
+        param_index = {r["param"]: i for i, r in enumerate(existing_ranges) if "param" in r}
+        for new_row in rows:
+            param = new_row.get("param")
+            if param and param in param_index:
+                existing_ranges[param_index[param]] = new_row  # Actualizar
             else:
-                er_base = None
+                existing_ranges.append(new_row)  # Agregar nuevo
 
-        if lgp_base is None and er_base is None:
-            raise HTTPException(status_code=422, detail="Modelo base infactible")
+        merged_result = {"lgp_base": lgp_base, "er_base": er_base, "ranges": existing_ranges}
 
-        rows = []
-        for param in body.params:
-            if param not in base_data:
-                continue
+        with open(rangos_path, 'w', encoding='utf-8') as f:
+            json.dump(merged_result, f, indent=2, ensure_ascii=False, default=str)
+    except Exception as e:
+        logging.warning(f"No se pudo guardar Rangos: {e}")
 
-            entry = {
-                "param": param,
-                "label": _PARAM_LABEL.get(param, param),
-                "base_value": _param_summary_value(base_data, param),
-            }
-
-            # Shadow prices — LGP
-            if lgp_base:
-                sp = _shadow_prices_for(base_data, param, lgp_base, "lgp", solver)
-                entry["lgp_shadow_cost"] = sp["cost"]
-                entry["lgp_shadow_env"] = sp["emissions"]
-                entry["lgp_shadow_soc"] = sp["employment"]
-            else:
-                entry["lgp_shadow_cost"] = entry["lgp_shadow_env"] = entry["lgp_shadow_soc"] = None
-
-            # Shadow prices — ER (Compromise / Fixed Epsilon)
-            if er_base:
-                sp = _shadow_prices_for(base_data, param, er_base, "er", solver, epsilon=target_epsilon)
-                entry["er_shadow_cost"] = sp["cost"]
-                entry["er_shadow_env"] = sp["emissions"]
-                entry["er_shadow_soc"] = sp["employment"]
-            else:
-                entry["er_shadow_cost"] = entry["er_shadow_env"] = entry["er_shadow_soc"] = None
-
-            # Allowable ranges (Physical feasibility buffer — No epsilon constraint)
-            ai = _find_max_feasible(base_data, param, +1, solver, epsilon=None)
-            ad = _find_max_feasible(base_data, param, -1, solver, epsilon=None)
-            bv = entry["base_value"]
-
-            entry["allowable_increase_pct"] = ai
-            entry["allowable_decrease_pct"] = ad
-            entry["min_value"] = round(bv * (1 - ad / 100), 4) if bv and ad else None
-            entry["max_value"] = round(bv * (1 + ai / 100), 4) if bv and ai else None
-
-            rows.append(entry)
-
-        result = {"lgp_base": lgp_base, "er_base": er_base, "ranges": rows}
-        
-        # Guardar automáticamente (hacer append a rangos existentes)
-        try:
-            RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
-            rangos_path = RESULTADOS_DIR / "rangos.json"
-            
-            # Cargar rangos existentes si hay
-            existing_ranges = []
-            if rangos_path.exists():
-                try:
-                    with open(rangos_path, 'r', encoding='utf-8') as f:
-                        existing_data = json.load(f)
-                        existing_ranges = existing_data.get("ranges", [])
-                except Exception:
-                    existing_ranges = []
-            
-            # Merge: agregar nuevos rangos, actualizar existentes
-            param_index = {r["param"]: i for i, r in enumerate(existing_ranges) if "param" in r}
-            for new_row in rows:
-                param = new_row.get("param")
-                if param and param in param_index:
-                    existing_ranges[param_index[param]] = new_row  # Actualizar
-                else:
-                    existing_ranges.append(new_row)  # Agregar nuevo
-            
-            merged_result = {"lgp_base": lgp_base, "er_base": er_base, "ranges": existing_ranges}
-            
-            with open(rangos_path, 'w', encoding='utf-8') as f:
-                json.dump(merged_result, f, indent=2, ensure_ascii=False, default=str)
-        except Exception as e:
-            logging.warning(f"No se pudo guardar Rangos: {e}")
-        
-        return result
-    finally:
-        app_state.params = base_data
+    return result
